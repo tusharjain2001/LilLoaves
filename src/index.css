@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+@theme {
+  /* Fonts */
+  --font-parkinsans: "Parkinsans", sans-serif;
+  --font-ligema: "Ligema DEMO", "Parkinsans", sans-serif;
+  --font-dm: "DM Sans", sans-serif;
+
+  /* Brand colors */
+  --color-cocoa: #57423d; /* primary brown - body text, headings */
+  --color-taupe: #7a6253; /* toggle border + active pill */
+  --color-espresso: #38291f; /* mobile dropdown text */
+  --color-mocha: #7c6456; /* footer background */
+  --color-latte: #958175; /* muted subtitle text */
+  --color-clay: #ab866f; /* category strip separators */
+  --color-cream: #fbfbf8; /* navbar pill, dropdown, stepper inactive circle */
+  --color-vanilla: #fcf7ea; /* hero stripe + toggle background */
+  --color-butter: #faf3e0; /* hero base background */
+  --color-sand: #f8efd6; /* hero wave cream */
+  --color-blush: #e2d2cd; /* nav icon button bg + pill border */
+  --color-rose: #f0dcd7; /* order sub-bar background */
+  --color-petal: #eed9d3; /* mobile dropdown active item bg */
+  --color-oat: #ebe9dd; /* category strip background */
+}
