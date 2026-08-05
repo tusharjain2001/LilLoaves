@@ -263,8 +263,8 @@ export default function Home() {
 
       {/* WHO ARE WE */}
       <section className="w-full bg-cream px-[16px] py-[60px] lg:py-[100px]">
-        <div className="mx-auto flex w-full max-w-[1024px] flex-col items-center gap-[52px] lg:flex-row lg:items-center lg:justify-center lg:gap-[82px]">
-          <div className="flex w-full flex-col gap-[29px] text-cocoa lg:w-[691px]">
+        <div className="mx-auto flex w-full max-w-[1188px] flex-col items-center gap-[52px] lg:flex-row lg:items-center lg:justify-center lg:gap-[82px]">
+          <div className="flex w-full flex-col gap-[29px] text-cocoa lg:w-[691px] lg:shrink-0">
             <p className="font-ligema text-[19px] uppercase lg:text-[22.8px]">
               who are we
             </p>
@@ -302,7 +302,7 @@ export default function Home() {
             <img
               src={stickerSmiley}
               alt=""
-              className="absolute -left-[6px] -top-[24px] h-[85px] w-[74px] lg:-left-[5px] lg:-top-[24px] lg:h-[97px] lg:w-[85px]"
+              className="absolute -left-[6px] -top-[24px] h-[85px] w-[74px] lg:left-[35px] lg:-top-[41px] lg:h-[97px] lg:w-[85px]"
             />
             <img
               src={ribbonTape}
@@ -372,12 +372,12 @@ export default function Home() {
 
       {/* TESTIMONIAL */}
       <section className="relative w-full bg-cream px-[16px] py-[60px] lg:py-[100px]">
-        <div className="mx-auto flex w-full max-w-[1024px] flex-col gap-[25px] lg:flex-row lg:items-center lg:justify-center lg:gap-[82px]">
-          <div className="relative flex flex-col gap-[25px] lg:w-[602px] lg:gap-[67px]">
+        <div className="mx-auto flex w-full max-w-[1201px] flex-col gap-[25px] lg:flex-row lg:items-center lg:justify-center lg:gap-[82px]">
+          <div className="relative flex flex-col gap-[25px] lg:w-[602px] lg:shrink-0 lg:gap-[67px]">
             <img
               src={iconQuotes}
               alt=""
-              className="hidden h-[61px] w-[61px] lg:absolute lg:-left-[85px] lg:-top-[35px] lg:block"
+              className="hidden h-[61px] w-[61px] lg:absolute lg:-left-[24px] lg:top-[63px] lg:block"
             />
             <div className="flex flex-col gap-[21px] text-cocoa lg:gap-[34px]">
               <p className="font-ligema text-[19px] uppercase lg:text-[22.8px]">
@@ -409,7 +409,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-[25px] lg:w-[517px]">
+          <div className="flex flex-col items-center gap-[25px] lg:w-[517px] lg:shrink-0">
             <img
               src={photoTestimonial}
               alt="Slicing a freshly baked loaf of sourdough"

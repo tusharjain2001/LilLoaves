@@ -37,11 +37,13 @@ const HERO_FLOWERS_MOBILE = [
   { left: 346, top: 271 },
 ];
 
+/* Figma's 405px hero band contains the navbar; here the navbar is a separate
+   in-flow element (120px), so the band and everything inside it shifts up by that. */
 const HERO_FLOWERS_DESKTOP = [
-  { left: 110, top: 171 },
-  { left: 1348.41, top: 171 },
-  { left: 321, top: 275 },
-  { left: 1119.41, top: 275 },
+  { left: 110, top: 51 },
+  { left: 1348.41, top: 51 },
+  { left: 321, top: 155 },
+  { left: 1119.41, top: 155 },
 ];
 
 const SPECIALS = [
@@ -347,7 +349,7 @@ export default function Menu() {
     <main className="w-full overflow-x-hidden bg-cream">
       {/* HERO */}
       <section className={`relative w-full overflow-hidden ${HERO_STRIPES}`}>
-        <div className="relative mx-auto h-[360px] w-full max-w-[1440px] lg:h-[405px]">
+        <div className="relative mx-auto h-[360px] w-full max-w-[1440px] lg:h-[285px]">
           <div className="lg:hidden">
             {HERO_FLOWERS_MOBILE.map((f, i) => (
               <img
@@ -371,12 +373,14 @@ export default function Menu() {
             ))}
           </div>
 
-          <div className="absolute left-1/2 top-[154px] h-[86px] w-[310px] -translate-x-1/2 lg:top-[211px] lg:h-[114px] lg:w-[410px]">
-            <div className="absolute inset-0 grid place-items-center">
-              <div className="h-[310px] w-[86px] rotate-90 lg:h-[410px] lg:w-[114px]">
-                <img src={blobButton} alt="" className="h-full w-full" />
-              </div>
-            </div>
+          <div className="absolute left-1/2 top-[154px] h-[86px] w-[310px] -translate-x-1/2 lg:top-[91px] lg:h-[114px] lg:w-[410px]">
+            {/* Blob art is drawn vertically in Figma; rotate it a quarter turn and
+                pin it to the button's centre so it sits behind the label. */}
+            <img
+              src={blobButton}
+              alt=""
+              className="absolute left-1/2 top-1/2 h-[310px] w-[86px] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 lg:h-[410px] lg:w-[114px]"
+            />
             <p className="relative grid h-full place-items-center px-[16px] text-center font-ligema text-[15.2px] uppercase text-white lg:text-[22.8px]">
               VIEW OUR Products
             </p>
