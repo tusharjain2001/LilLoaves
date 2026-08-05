@@ -170,7 +170,7 @@ export default function Home() {
                 </p>
                 <div className="flex flex-col items-center gap-[14px] lg:gap-[22px]">
                   <div className="flex items-center gap-[9px] lg:gap-[13px]">
-                    <p className="font-ligema text-[105px] leading-none text-cocoa lg:text-[161px]">
+                    <p className="font-script text-[73.5px] leading-none text-cocoa lg:text-[112.7px]">
                       hand
                     </p>
                     <img
@@ -178,11 +178,11 @@ export default function Home() {
                       alt=""
                       className="h-[29px] w-[35px] lg:h-[45px] lg:w-[53px]"
                     />
-                    <p className="font-ligema text-[82px] leading-none text-cocoa lg:text-[126px]">
+                    <p className="font-ligema text-[38.9px] leading-none text-cocoa lg:text-[59.8px]">
                       SHAPED
                     </p>
                   </div>
-                  <p className="[-webkit-text-stroke:1.3px_#57423d] [-webkit-text-fill-color:transparent] font-ligema text-[108px] leading-none text-transparent lg:text-[166px] lg:[-webkit-text-stroke:2px_#57423d]">
+                  <p className="[-webkit-text-stroke:1.3px_#57423d] [-webkit-text-fill-color:transparent] font-ligema text-[51.3px] leading-none text-transparent lg:text-[78.8px] lg:[-webkit-text-stroke:2px_#57423d]">
                     LOAVES
                   </p>
                 </div>
@@ -228,8 +228,8 @@ export default function Home() {
         <div className="mx-auto flex w-full max-w-[1024px] flex-col items-center gap-[46px] lg:gap-[90px]">
           <div className="flex flex-col items-center gap-[39px] lg:gap-[64px]">
             <div className="flex flex-col items-center gap-[10px] text-center text-cocoa">
-              <p className="font-ligema text-[39px] lg:text-[48px]">
-                Our PRODUCTS
+              <p className="font-ligema text-[18.5px] lg:text-[22.8px]">
+                <span className="font-script">Our</span> PRODUCTS
               </p>
               <p className="font-parkinsans text-[15px] lg:text-[20px]">
                 We serve 4 delecteble items on our menu. All items are
@@ -252,7 +252,7 @@ export default function Home() {
                   alt={name}
                   className="h-[282px] w-full object-cover lg:h-[412px] lg:w-[259px]"
                 />
-                <p className="font-ligema text-[27px] uppercase text-cocoa lg:text-[40px]">
+                <p className="font-ligema text-[12.8px] uppercase text-cocoa lg:text-[19px]">
                   {name}
                 </p>
               </div>
@@ -265,7 +265,7 @@ export default function Home() {
       <section className="w-full bg-cream px-[16px] py-[60px] lg:py-[100px]">
         <div className="mx-auto flex w-full max-w-[1024px] flex-col items-center gap-[52px] lg:flex-row lg:items-center lg:justify-center lg:gap-[82px]">
           <div className="flex w-full flex-col gap-[29px] text-cocoa lg:w-[691px]">
-            <p className="font-ligema text-[40px] uppercase lg:text-[48px]">
+            <p className="font-ligema text-[19px] uppercase lg:text-[22.8px]">
               who are we
             </p>
             <div className="flex flex-col gap-[16px] text-justify font-parkinsans text-[16px] leading-relaxed">
@@ -326,8 +326,8 @@ export default function Home() {
                 alt=""
                 className="absolute left-[100px] h-[97px] w-[61px] -rotate-90 lg:left-[148px] lg:h-[125px] lg:w-[79px]"
               />
-              <p className="relative font-ligema text-[38px] text-cocoa lg:text-[48px]">
-                SEASONAL Specials
+              <p className="relative font-ligema text-[18.1px] text-cocoa lg:text-[22.8px]">
+                SEASONAL <span className="font-script">Specials</span>
               </p>
             </div>
 
@@ -380,7 +380,7 @@ export default function Home() {
               className="hidden h-[61px] w-[61px] lg:absolute lg:-left-[85px] lg:-top-[35px] lg:block"
             />
             <div className="flex flex-col gap-[21px] text-cocoa lg:gap-[34px]">
-              <p className="font-ligema text-[40px] uppercase lg:text-[48px]">
+              <p className="font-ligema text-[19px] uppercase lg:text-[22.8px]">
                 Hear it from our customers
               </p>
               <p className="text-justify font-dm text-[16px] leading-relaxed text-[#2e2017]">

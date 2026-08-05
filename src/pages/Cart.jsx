@@ -253,7 +253,7 @@ export default function Cart() {
 
               <div className="flex w-full flex-col gap-[15px] lg:gap-[24px]">
                 <div className="flex w-full flex-col gap-[10px] lg:gap-[16px]">
-                  <p className="font-ligema text-[24px] uppercase tracking-[1.2px] text-cocoa lg:text-[40px] lg:tracking-[2px]">
+                  <p className="font-ligema text-[11.4px] uppercase tracking-[0.6px] text-cocoa lg:text-[19px] lg:tracking-[0.9px]">
                     Contact Information
                   </p>
                   <div className="flex w-full gap-[18px] lg:gap-[29px]">
@@ -270,7 +270,7 @@ export default function Cart() {
                 </div>
 
                 <div className="flex w-full flex-col gap-[10px] lg:gap-[16px]">
-                  <p className="font-ligema text-[24px] uppercase tracking-[1.2px] text-cocoa lg:text-[40px] lg:tracking-[2px]">
+                  <p className="font-ligema text-[11.4px] uppercase tracking-[0.6px] text-cocoa lg:text-[19px] lg:tracking-[0.9px]">
                     Shipping Address
                   </p>
                   <div className="flex w-full flex-col gap-[15px] lg:gap-[24px]">
@@ -352,7 +352,7 @@ export default function Cart() {
             <div className="flex w-full flex-col gap-[64px] rounded-[16px] border border-[#d8cbbe] bg-[#f7f5f1] px-[20px] py-[24px] lg:px-[28px] lg:py-[39px]">
               <div className="flex w-full flex-col gap-[8px]">
                 <div className="flex w-full flex-col gap-[24px]">
-                  <p className="font-ligema text-[28px] uppercase text-cocoa lg:text-[36px]">
+                  <p className="font-ligema text-[13.3px] uppercase text-cocoa lg:text-[17.1px]">
                     Order Summary
                   </p>
                   <div className="flex w-full flex-col gap-[18px]">
@@ -419,7 +419,7 @@ export default function Cart() {
             className="pointer-events-none absolute left-1/2 top-0 h-[178px] w-[1096px] max-w-none -translate-x-1/2"
           />
           <div className="relative flex flex-col items-center gap-[7px] px-[16px]">
-            <p className="font-ligema text-[34px] uppercase text-cocoa">
+            <p className="font-ligema text-[16.1px] uppercase text-cocoa">
               Pick up from
             </p>
             <div className="flex items-center gap-[8px] rounded-[11px] border border-[rgba(204,138,122,0.39)] bg-[#f4e7e3] px-[10px] py-[10px]">
@@ -434,7 +434,7 @@ export default function Cart() {
         <div className="flex w-full flex-col gap-[24px] px-[16px] py-[24px]">
           {/* Contact Information */}
           <div className="flex w-full flex-col gap-[12px] rounded-[12px] border border-[#d8cbbe] bg-[#fffffd] p-[24px]">
-            <p className="font-ligema text-[27px] uppercase tracking-[1.5px] text-cocoa">
+            <p className="font-ligema text-[12.8px] uppercase tracking-[0.7px] text-cocoa">
               Contact Information
             </p>
             <div className="flex w-full flex-col gap-[16px]">
@@ -473,7 +473,7 @@ export default function Cart() {
           {/* Select pickup date/time */}
           <div className="flex w-full flex-col items-center gap-[27px] rounded-[12px] bg-[#fbfbf8] py-[16px]">
             <div className="flex flex-col items-center gap-[19px]">
-              <p className="font-ligema text-[27px] uppercase text-cocoa">
+              <p className="font-ligema text-[12.8px] uppercase text-cocoa">
                 Please Select
               </p>
               <div className="flex items-center gap-[10px]">

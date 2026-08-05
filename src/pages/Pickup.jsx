@@ -68,7 +68,7 @@ export default function Pickup() {
           className="absolute inset-0 h-full w-full"
         />
         <div className="relative z-10 mx-auto flex h-full w-full max-w-[1440px] flex-col items-center justify-center gap-[16px] px-[16px] text-center lg:gap-[24px]">
-          <h2 className="font-ligema text-[48px] uppercase leading-[40px] text-cocoa">
+          <h2 className="font-ligema text-[22.8px] uppercase leading-[19px] text-cocoa">
             Pick up from
           </h2>
           <div className="inline-flex items-center gap-[8px] rounded-[16px] border border-[rgba(204,138,122,0.39)] bg-[#f4e7e3] px-[14px] py-[10px]">
@@ -91,7 +91,7 @@ export default function Pickup() {
           className="w-full rounded-[10px] border border-[#d8cbbe] bg-[#fffffd] px-[16px] py-[24px] lg:rounded-[16px] lg:p-[32px]"
         >
           <div className="flex w-full flex-col items-start gap-[16px] lg:gap-[24px]">
-            <h2 className="font-ligema text-[24px] uppercase tracking-[1px] text-cocoa lg:text-[40px] lg:tracking-[2px]">
+            <h2 className="font-ligema text-[11.4px] uppercase tracking-[0.5px] text-cocoa lg:text-[19px] lg:tracking-[0.9px]">
               Contact Information
             </h2>
 
@@ -152,7 +152,7 @@ export default function Pickup() {
       {/* PLEASE SELECT - date / time */}
       <section className="mx-auto w-full max-w-[1440px] px-[16px] pb-[48px] pt-[32px] lg:pb-[146px] lg:pt-[146px]">
         <div className="mx-auto flex w-full max-w-[456px] flex-col items-center gap-[28px] lg:gap-[45px]">
-          <h2 className="text-center font-ligema text-[40px] uppercase text-cocoa lg:text-[64px]">
+          <h2 className="text-center font-ligema text-[19px] uppercase text-cocoa lg:text-[30.4px]">
             please select
           </h2>
           <div className="flex w-full items-center gap-[15px] lg:gap-[24px]">

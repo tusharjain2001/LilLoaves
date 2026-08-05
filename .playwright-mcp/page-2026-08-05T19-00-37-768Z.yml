@@ -1,0 +1,156 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - link "Lil' Loaves home" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - img "Lil' Loaves" [ref=e9]
+      - navigation [ref=e10]:
+        - link "About us" [ref=e11] [cursor=pointer]:
+          - /url: /about
+        - link "Menu" [ref=e12] [cursor=pointer]:
+          - /url: /menu
+        - generic [ref=e13]: Inner Crust Club
+        - link "Gallery" [ref=e14] [cursor=pointer]:
+          - /url: /gallery
+        - link "Contact Us" [ref=e15] [cursor=pointer]:
+          - /url: /contact
+      - generic [ref=e16]:
+        - button "Search" [ref=e17]
+        - link "Profile" [ref=e18] [cursor=pointer]:
+          - /url: /profile
+        - link "Cart" [ref=e19] [cursor=pointer]:
+          - /url: /cart
+  - main [ref=e21]:
+    - generic [ref=e24]:
+      - img "Lil' Loaves" [ref=e25]
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - paragraph [ref=e28]: Welcome to Lil’ Loaves!
+          - generic [ref=e29]:
+            - generic [ref=e30]:
+              - paragraph [ref=e31]: hand
+              - paragraph [ref=e32]: SHAPED
+            - paragraph [ref=e33]: LOAVES
+        - button "Explore Our Menu" [ref=e34] [cursor=pointer]
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - paragraph [ref=e39]: 100% Freshly Baked
+        - paragraph [ref=e41]: Homegrown Brand
+      - paragraph [ref=e42]: From naturally fermented sourdough to freshly baked cookies and seasonal treats, everything we make is handcrafted in small batches and made to be shared.
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - paragraph [ref=e47]: Our PRODUCTS
+          - paragraph [ref=e48]: We serve 4 delecteble items on our menu. All items are freshly baked straight to our bakery.
+        - button "View Specials" [ref=e49] [cursor=pointer]
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - img "Breads" [ref=e52]
+          - paragraph [ref=e53]: Breads
+        - generic [ref=e54]:
+          - img "Cookies" [ref=e55]
+          - paragraph [ref=e56]: Cookies
+        - generic [ref=e57]:
+          - img "Muffins" [ref=e58]
+          - paragraph [ref=e59]: Muffins
+        - generic [ref=e60]:
+          - img "Crackers" [ref=e61]
+          - paragraph [ref=e62]: Crackers
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - paragraph [ref=e66]: who are we
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Lil’ Loaves is inspired by our two corgis, Doc and Chief (the “loaves” behind the business) a compliment that always came during those happy pauses on our walks, whenever people stopped to admire their unmistakable shape.
+          - paragraph [ref=e69]: Unfortunately, we lost Doc in early 2026, and soon after, we lost our Dad as well the man who supported us in everything we did. Their passing is now our tribute our efforts to build something meaningful from losing something meaningful.
+          - paragraph [ref=e70]: Through the moments of saying “goodbye”, we’ve learned a lot. We learned to slow down and find peace in the simple rhythms, like baking. We were reminded to embrace our family and to lean on each other more often. Most of all, we learned that real healing happens when you are supported by friends, family, and community.
+      - img "Our two corgis, Doc and Chief" [ref=e72]
+    - generic [ref=e74]:
+      - generic [ref=e75]:
+        - paragraph [ref=e77]: SEASONAL Specials
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - img "Danish Pastries" [ref=e80]
+            - paragraph [ref=e82]: $23
+            - paragraph [ref=e83]: Danish Pastries
+          - generic [ref=e84]:
+            - img "Croissants" [ref=e85]
+            - paragraph [ref=e87]: $23
+            - paragraph [ref=e88]: Croissants
+          - generic [ref=e89]:
+            - img "Bagels" [ref=e90]
+            - paragraph [ref=e92]: $23
+            - paragraph [ref=e93]: Bagels
+          - generic [ref=e94]:
+            - img "Donuts" [ref=e95]
+            - paragraph [ref=e97]: $23
+            - paragraph [ref=e98]: Donuts
+      - button "View Specials" [ref=e99] [cursor=pointer]
+    - generic [ref=e101]:
+      - generic [ref=e103]:
+        - paragraph [ref=e104]: Hear it from our customers
+        - paragraph [ref=e105]: I ordered the sourdough after seeing it online, and it completely exceeded my expectations. The crust had the perfect crunch, while the inside was incredibly soft and flavorful. You can tell every loaf is made with patience and genuine care. It’s rare to find bread that tastes this fresh and homemade, and it reminded me of the kind my grandmother used to bake. Lil’ Loaves has quickly become our new weekend tradition.-Emily R.
+      - img "Slicing a freshly baked loaf of sourdough" [ref=e113]
+    - generic [ref=e115]:
+      - paragraph [ref=e116]: Frequently asked questions
+      - generic [ref=e117]:
+        - button [ref=e119]:
+          - generic [ref=e120]:
+            - paragraph [ref=e121]: Do you bake everything fresh?
+            - paragraph [ref=e122]: Yes! Every loaf and baked good is handcrafted in small batches using quality ingredients and traditional baking methods.
+        - button [ref=e124]:
+          - paragraph [ref=e126]: Do you offer seasonal specials?
+        - button [ref=e128]:
+          - paragraph [ref=e130]: How do I place an order?
+        - button [ref=e132]:
+          - paragraph [ref=e134]: Can I customize my Lunch Box Special?
+        - button [ref=e136]:
+          - paragraph [ref=e138]: Do you use preservatives?
+        - button [ref=e140]:
+          - paragraph [ref=e142]: How can I stay updated on new products?
+  - contentinfo [ref=e143]:
+    - generic [ref=e144]:
+      - generic [ref=e145]:
+        - img "Lil' Loaves" [ref=e146]
+        - paragraph [ref=e148]: example@lilloaves.com
+      - generic [ref=e149]:
+        - paragraph [ref=e150]: 📍 Find us here
+        - img "Map of Lil' Loaves pickup locations" [ref=e151]
+      - generic [ref=e152]:
+        - generic [ref=e153]:
+          - paragraph [ref=e154]: Bakery
+          - list [ref=e155]:
+            - listitem [ref=e156]:
+              - link "Home" [ref=e157] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e158]:
+              - link "About Us" [ref=e159] [cursor=pointer]:
+                - /url: /about
+            - listitem [ref=e160]:
+              - link "Menu" [ref=e161] [cursor=pointer]:
+                - /url: /menu
+            - listitem [ref=e162]:
+              - link "Gallery" [ref=e163] [cursor=pointer]:
+                - /url: /gallery
+        - generic [ref=e164]:
+          - paragraph [ref=e165]: Quick Links
+          - list [ref=e166]:
+            - listitem [ref=e167]:
+              - link "Profile" [ref=e168] [cursor=pointer]:
+                - /url: /profile
+            - listitem [ref=e169]:
+              - link "Orders" [ref=e170] [cursor=pointer]:
+                - /url: /profile
+            - listitem [ref=e171]:
+              - link "Contact Us" [ref=e172] [cursor=pointer]:
+                - /url: /contact
+            - listitem [ref=e173]: Refunds & Returns
+    - generic [ref=e176]:
+      - generic [ref=e177]:
+        - link "Facebook" [ref=e178] [cursor=pointer]:
+          - /url: https://www.facebook.com
+        - link "Instagram" [ref=e179] [cursor=pointer]:
+          - /url: https://www.instagram.com
+      - generic [ref=e180]:
+        - generic [ref=e181]: Terms of Service
+        - generic [ref=e184]: Privacy Policy
+        - paragraph [ref=e187]: © 2026 Lil’ Loaves Bakery. All Rights Reserved.

@@ -52,7 +52,7 @@ export default function PageHero({ title }) {
             alt=""
             className="absolute inset-0 h-full w-full"
           />
-          <h1 className="relative font-ligema text-[40px] uppercase text-white lg:text-[48px]">
+          <h1 className="relative font-ligema text-[19px] uppercase text-white lg:text-[22.8px]">
             {title}
           </h1>
         </div>

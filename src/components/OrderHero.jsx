@@ -25,7 +25,7 @@ export default function OrderHero({
         {STEPS.map((label, i) => (
           <div key={label} className="flex items-center gap-[8px] lg:gap-[15px]">
             <span
-              className={`grid h-[29px] w-[29px] place-items-center rounded-full font-ligema text-[15px] lg:h-[32px] lg:w-[32px] lg:text-[17px] ${
+              className={`grid h-[29px] w-[29px] place-items-center rounded-full font-ligema text-[7.1px] lg:h-[32px] lg:w-[32px] lg:text-[8.1px] ${
                 i + 1 === step ? "bg-cocoa text-white" : "bg-cream text-cocoa"
               }`}
             >
@@ -76,7 +76,7 @@ export default function OrderHero({
           {/* centered heading + delivery/pickup toggle */}
           <div className="absolute left-1/2 top-[197px] flex w-[329px] -translate-x-1/2 flex-col items-center gap-[28px] lg:top-[114px]">
             <div className="flex w-full flex-col items-center gap-[6px] text-center">
-              <h1 className="font-ligema text-[48px] uppercase leading-[40px] text-cocoa">
+              <h1 className="font-ligema text-[22.8px] uppercase leading-[19px] text-cocoa">
                 {title}
               </h1>
               <p className="font-parkinsans text-[16px] text-latte">

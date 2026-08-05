@@ -123,7 +123,7 @@ export default function Product() {
             <div className="flex w-full flex-col items-center gap-[32px] lg:w-[608px] lg:items-start lg:gap-[51px]">
               <div className="flex w-full flex-col items-center gap-[31px] lg:items-start lg:gap-[50px]">
                 <div className="flex flex-col items-center gap-[11px] text-center lg:items-start lg:gap-[17px] lg:text-left">
-                  <p className="font-ligema text-[35px] uppercase text-cocoa lg:text-[56px]">
+                  <p className="font-ligema text-[16.6px] uppercase text-cocoa lg:text-[26.6px]">
                     Sourdough Bread
                   </p>
                   <div className="flex items-center gap-[10px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
@@ -227,8 +227,8 @@ export default function Product() {
       {/* RELATED ITEMS */}
       <section className="w-full bg-cream px-[16px] py-[60px]">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[24px] lg:gap-[29px]">
-          <p className="text-center font-ligema text-[40px] text-cocoa lg:text-[48px]">
-            YOU MAY ALSO Like
+          <p className="text-center font-ligema text-[19px] text-cocoa lg:text-[22.8px]">
+            YOU MAY ALSO <span className="font-script">Like</span>
           </p>
           <div className="flex w-full max-w-[370px] flex-col items-center gap-[14px] lg:max-w-none lg:w-auto lg:flex-row lg:justify-center lg:gap-[16px]">
             {RELATED_ITEMS.map(({ name, desc, price, img }) => (

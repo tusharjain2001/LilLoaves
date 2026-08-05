@@ -1,9 +1,38 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Parkinsans";
+  src: url("./assets/fonts/parkinsans-latin.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("./assets/fonts/dmsans-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pacifico";
+  src: url("./assets/fonts/pacifico-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* The design's display face is "Ligema DEMO", licensed for personal use only, so
+   it cannot ship here. Its uppercase reads as a geometric sans (Parkinsans stands
+   in) and its lowercase is a looped script (Pacifico stands in). Ligema also draws
+   unusually small on the em square, so type sizes taken from Figma are scaled down
+   at each usage - roughly 0.475x for the sans and 0.70x for the script - to fill
+   the same boxes as the design. */
+
 @theme {
   /* Fonts */
   --font-parkinsans: "Parkinsans", sans-serif;
-  --font-ligema: "Ligema DEMO", "Parkinsans", sans-serif;
+  --font-ligema: "Parkinsans", sans-serif;
+  --font-script: "Pacifico", cursive;
   --font-dm: "DM Sans", sans-serif;
 
   /* Brand colors */

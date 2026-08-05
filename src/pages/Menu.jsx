@@ -257,7 +257,7 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
           <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-cocoa font-parkinsans text-[13px] text-white lg:size-[30px] lg:text-[20px]">
             {step}
           </span>
-          <p className="whitespace-nowrap font-ligema text-[18px] uppercase text-cocoa lg:text-[36px]">
+          <p className="whitespace-nowrap font-ligema text-[8.5px] uppercase text-cocoa lg:text-[17.1px]">
             {title}
           </p>
         </div>
@@ -377,7 +377,7 @@ export default function Menu() {
                 <img src={blobButton} alt="" className="h-full w-full" />
               </div>
             </div>
-            <p className="relative grid h-full place-items-center px-[16px] text-center font-ligema text-[32px] uppercase text-white lg:text-[48px]">
+            <p className="relative grid h-full place-items-center px-[16px] text-center font-ligema text-[15.2px] uppercase text-white lg:text-[22.8px]">
               VIEW OUR Products
             </p>
           </div>
@@ -396,8 +396,8 @@ export default function Menu() {
                 alt=""
                 className="absolute left-[100px] h-[97px] w-[61px] -rotate-90 lg:left-[148px] lg:h-[125px] lg:w-[79px]"
               />
-              <p className="relative font-ligema text-[38px] text-cocoa lg:text-[48px]">
-                SEASONAL Specials
+              <p className="relative font-ligema text-[18.1px] text-cocoa lg:text-[22.8px]">
+                SEASONAL <span className="font-script">Specials</span>
               </p>
             </div>
 
@@ -423,7 +423,9 @@ export default function Menu() {
       <section className="w-full bg-cream px-[16px] py-[60px] lg:py-[80px]">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[40px] lg:gap-[64px]">
           <div className="flex flex-col items-center gap-[12px] text-center text-cocoa lg:gap-[19px]">
-            <p className="font-ligema text-[40px] lg:text-[48px]">Our MENU</p>
+            <p className="font-ligema text-[19px] lg:text-[22.8px]">
+              <span className="font-script">Our</span> MENU
+            </p>
             <p className="max-w-[758px] font-parkinsans text-[15px] lg:text-[20px]">
               We offer a variety of delicacies from 4 types of baked items,
               you can click on add to cart any time you desire to place an
@@ -489,8 +491,8 @@ export default function Menu() {
                   alt=""
                   className="absolute right-[-6px] h-[61px] w-[91px] lg:right-[-10px] lg:h-[104px] lg:w-[165px]"
                 />
-                <p className="relative text-center font-ligema text-[32px] text-cocoa lg:text-[64px]">
-                  LUNCH BOX Specials
+                <p className="relative text-center font-ligema text-[15.2px] text-cocoa lg:text-[30.4px]">
+                  LUNCH BOX <span className="font-script">Specials</span>
                 </p>
               </div>
               <p className="max-w-[828px] text-center font-parkinsans text-[15px] text-cocoa lg:text-[20px]">
@@ -510,7 +512,7 @@ export default function Menu() {
 
           {/* What's inside */}
           <div className="flex w-full max-w-[1294px] flex-col items-center gap-[16px] lg:gap-[24px]">
-            <p className="font-ligema text-[24px] uppercase text-cocoa lg:text-[40px]">
+            <p className="font-ligema text-[11.4px] uppercase text-cocoa lg:text-[19px]">
               WHAT&rsquo;S INSIDE
             </p>
             <div className="flex w-full flex-col gap-[20px] rounded-[16px] bg-[rgba(251,251,248,0.57)] p-[16px] lg:flex-row lg:items-center lg:justify-center lg:gap-[21px]">
@@ -526,7 +528,7 @@ export default function Menu() {
                       />
                     </div>
                     <div className="flex flex-col gap-[4px] text-cocoa">
-                      <p className="font-ligema text-[22px] uppercase lg:text-[40px]">
+                      <p className="font-ligema text-[10.4px] uppercase lg:text-[19px]">
                         {item.label}
                       </p>
                       <p className="font-parkinsans text-[13px] lg:text-[20px]">
@@ -549,7 +551,7 @@ export default function Menu() {
           {/* Build your lunch box */}
           <div className="flex w-full max-w-[1294px] flex-col items-center gap-[24px] lg:gap-[35px]">
             <div className="flex flex-col items-center gap-[4px] text-center text-cocoa">
-              <p className="font-ligema text-[22px] uppercase lg:text-[40px]">
+              <p className="font-ligema text-[10.4px] uppercase lg:text-[19px]">
                 BUILD YOUR LUNCH BOX
               </p>
               <p className="font-parkinsans text-[14px] lg:text-[20px]">

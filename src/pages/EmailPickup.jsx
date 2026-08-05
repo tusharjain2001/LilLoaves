@@ -35,8 +35,8 @@ export default function EmailPickup() {
 
         <div className="relative mt-[78px] flex items-end justify-center gap-[28px]">
           <img src={flowerBlush} alt="" className="h-[71.88px] w-[79.413px] shrink-0" />
-          <p className="font-ligema text-[64px] leading-[normal] whitespace-nowrap text-cocoa">
-            Thank You, MOONA!
+          <p className="font-ligema text-[30.4px] leading-[normal] whitespace-nowrap text-cocoa">
+            <span className="font-script">Thank You,</span> MOONA!
           </p>
           <img src={flowerBlush} alt="" className="h-[71.88px] w-[79.413px] shrink-0" />
         </div>
@@ -54,7 +54,7 @@ export default function EmailPickup() {
 
             <div className="flex w-full flex-col gap-[17px]">
               <div className="flex w-full flex-col gap-[4px] rounded-[16px] bg-[#f9f1db] px-[16px] py-[8px] text-center text-cocoa">
-                <p className="font-ligema text-[36px] leading-[normal] uppercase">
+                <p className="font-ligema text-[17.1px] leading-[normal] uppercase">
                   Pickup Details
                 </p>
                 <p className="font-parkinsans text-[17px] font-normal leading-[normal]">
@@ -67,7 +67,7 @@ export default function EmailPickup() {
                     key={slot.label}
                     className={`flex w-[48.5%] flex-col gap-[4px] rounded-[16px] border border-solid border-[rgba(239,216,149,0.75)] ${slot.cardPadding}`}
                   >
-                    <p className="w-full text-center font-ligema text-[36px] leading-[normal] uppercase text-cocoa">
+                    <p className="w-full text-center font-ligema text-[17.1px] leading-[normal] uppercase text-cocoa">
                       {slot.label}
                     </p>
                     <div
@@ -83,7 +83,7 @@ export default function EmailPickup() {
             </div>
 
             <div className="flex w-full flex-col items-center gap-[17px] rounded-[16px] bg-rose/48 py-[32px]">
-              <p className="w-full text-center font-ligema text-[36px] leading-[normal] uppercase text-cocoa">
+              <p className="w-full text-center font-ligema text-[17.1px] leading-[normal] uppercase text-cocoa">
                 Order Summary
               </p>
               <div className="flex w-full flex-col items-center gap-[24px]">

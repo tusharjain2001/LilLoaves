@@ -106,7 +106,7 @@ export default function About() {
                 className="absolute left-1/2 top-1/2 h-[370px] w-[244.69px] -translate-x-1/2 -translate-y-1/2 rotate-90 lg:h-[681px] lg:w-[450px]"
               />
               <div className="absolute left-[34px] top-[57px] flex w-[313px] flex-col items-start gap-[10px] lg:left-[63px] lg:top-[104px] lg:w-[576px] lg:gap-[19px]">
-                <h1 className="font-ligema text-[35px] uppercase leading-none text-white lg:text-[64px]">
+                <h1 className="font-ligema text-[16.6px] uppercase leading-none text-white lg:text-[30.4px]">
                   welcome to Lil&rsquo; Loaves!
                 </h1>
                 <p className="font-dm text-[11px] text-white lg:text-[20px]">
@@ -178,7 +178,7 @@ export default function About() {
               alt=""
               className="absolute left-[-3px] top-[23px] size-[83px] lg:left-[29px] lg:top-[60px]"
             />
-            <p className="relative max-w-[290px] text-center font-ligema text-[52px] uppercase leading-[42px] text-cocoa lg:max-w-none lg:leading-normal lg:tracking-[2.6px]">
+            <p className="relative max-w-[290px] text-center font-ligema text-[24.7px] uppercase leading-[19.9px] text-cocoa lg:max-w-none lg:leading-normal lg:tracking-[1.2px]">
               Every loaf tells a story of love, loss, and new beginnings.
             </p>
           </div>
@@ -189,7 +189,7 @@ export default function About() {
       <section className="w-full bg-cream px-[16px] py-[60px]">
         <div className="mx-auto flex w-full max-w-[1299px] flex-col items-center gap-[52px] lg:flex-row lg:items-center lg:justify-center lg:gap-[18px]">
           <div className="flex w-full flex-col gap-[29px] text-cocoa lg:w-[745px] lg:gap-[25px]">
-            <h2 className="font-ligema text-[40px] uppercase lg:text-[48px]">
+            <h2 className="font-ligema text-[19px] uppercase lg:text-[22.8px]">
               Tribute
             </h2>
             <div className="flex flex-col gap-[16px] text-justify font-parkinsans text-[16px]">

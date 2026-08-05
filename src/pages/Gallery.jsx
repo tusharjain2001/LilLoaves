@@ -88,7 +88,7 @@ function GridCell({ cell }) {
   if (cell.kind === "text") {
     return (
       <div className="col-span-1 flex flex-col justify-center lg:col-span-2">
-        <p className="font-ligema text-[54px] leading-[0.82] text-cocoa lg:text-[120px]">
+        <p className="font-script text-[37.8px] leading-[0.82] text-cocoa lg:text-[84px]">
           Lil
         </p>
         <div className="relative w-fit">
@@ -97,7 +97,7 @@ function GridCell({ cell }) {
             alt=""
             className="pointer-events-none absolute -right-[14px] top-1/2 h-[64px] w-auto -translate-y-1/2 rotate-[-90deg] lg:-right-[22px] lg:h-[132px]"
           />
-          <p className="relative font-ligema text-[54px] leading-[0.82] text-cocoa lg:text-[120px]">
+          <p className="relative font-script text-[37.8px] leading-[0.82] text-cocoa lg:text-[84px]">
             Memories
           </p>
         </div>
@@ -121,7 +121,7 @@ export default function Gallery() {
       <section className="relative w-full overflow-hidden bg-cream">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start gap-[40px] px-[16px] py-[60px] lg:h-[409px] lg:justify-center lg:gap-[64px] lg:px-[72px] lg:py-0">
           <div className="flex flex-col gap-[15px] text-cocoa lg:gap-[24px]">
-            <h2 className="font-ligema text-[39px] uppercase leading-[1] lg:text-[64px]">
+            <h2 className="font-ligema text-[18.5px] uppercase leading-[1] lg:text-[30.4px]">
               A Peek Inside Lil&apos; Loaves
             </h2>
             <p className="font-parkinsans text-[15px] text-justify lg:w-[1126px] lg:text-[24px]">
@@ -177,7 +177,7 @@ export default function Gallery() {
             />
 
             <div className="flex flex-col gap-[20px] lg:gap-[34px]">
-              <h2 className="font-ligema text-[32px] uppercase leading-[1] text-cocoa lg:text-[48px]">
+              <h2 className="font-ligema text-[15.2px] uppercase leading-[1] text-cocoa lg:text-[22.8px]">
                 Hear it from our customers
               </h2>
               <div className="font-dm text-[16px] text-justify text-[#2e2017]">
@@ -231,13 +231,13 @@ export default function Gallery() {
                 className="absolute left-1/2 top-1/2 h-[136px] w-[100px] -translate-x-1/2 -translate-y-1/2 rotate-[106deg] lg:h-[183px] lg:w-[136px]"
               />
               <div className="absolute inset-0 flex rotate-[16deg] flex-col items-center justify-center leading-[1.05]">
-                <span className="font-ligema text-[15px] uppercase text-white lg:text-[21px]">
+                <span className="font-ligema text-[7.1px] uppercase text-white lg:text-[10px]">
                   Good Food
                 </span>
-                <span className="font-ligema text-[15px] uppercase text-[#c75e02] lg:text-[21px]">
+                <span className="font-ligema text-[7.1px] uppercase text-[#c75e02] lg:text-[10px]">
                   &amp;
                 </span>
-                <span className="font-ligema text-[15px] uppercase text-white lg:text-[21px]">
+                <span className="font-ligema text-[7.1px] uppercase text-white lg:text-[10px]">
                   Good Mood
                 </span>
               </div>
