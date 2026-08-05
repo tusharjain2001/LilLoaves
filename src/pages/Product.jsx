@@ -74,7 +74,7 @@ export default function Product() {
   return (
     <main className="w-full bg-cream">
       {/* GALLERY + PRODUCT INFO */}
-      <section className="w-full bg-cream px-[16px] py-[60px] lg:px-[72px] lg:pb-[24px] lg:pt-[44px]">
+      <section className="w-full bg-cream px-[16px] py-[60px] lg:px-[72px] lg:pb-[68px] lg:pt-[88px]">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start gap-[16px] lg:gap-[26px]">
           <button
             type="button"
@@ -91,7 +91,7 @@ export default function Product() {
             </span>
           </button>
 
-          <div className="flex w-full flex-col items-center gap-[77px] lg:flex-row lg:items-center lg:justify-center lg:gap-[123px]">
+          <div className="flex w-full flex-col items-center gap-[77px] lg:flex-row lg:items-center lg:gap-[123px]">
             {/* Gallery */}
             <div className="flex w-full flex-col items-start gap-[17px] lg:w-[532px] lg:shrink-0 lg:gap-[27px]">
               <div className="relative aspect-[370/234] w-full overflow-hidden rounded-[8px] bg-[#d8cbbe] lg:aspect-[531/372] lg:rounded-[13px]">
@@ -121,55 +121,57 @@ export default function Product() {
 
             {/* Info */}
             <div className="flex w-full flex-col items-center gap-[32px] lg:w-[608px] lg:items-start lg:gap-[51px]">
-              <div className="flex w-full flex-col items-center gap-[31px] lg:items-start lg:gap-[50px]">
-                <div className="flex flex-col items-center gap-[11px] text-center lg:items-start lg:gap-[17px] lg:text-left">
-                  <p className="font-ligema text-[16.6px] uppercase text-cocoa lg:text-[26.6px]">
-                    Sourdough Bread
-                  </p>
-                  <div className="flex items-center gap-[10px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
-                    <p className="text-[23px] text-cocoa lg:text-[36px]">$21.13</p>
-                    <p className="text-[20px] text-[#d8cbbe] line-through decoration-solid lg:text-[32px]">
-                      $21.13
+              <div className="flex w-full flex-col items-center gap-[32px] lg:items-start lg:gap-[56px]">
+                <div className="flex w-full flex-col items-center gap-[31px] lg:items-start lg:gap-[50px]">
+                  <div className="flex flex-col items-center gap-[11px] text-center lg:items-start lg:gap-[17px] lg:text-left">
+                    <p className="font-ligema text-[16.6px] uppercase text-cocoa lg:text-[26.6px]">
+                      Sourdough Bread
                     </p>
+                    <div className="flex items-center gap-[10px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
+                      <p className="text-[23px] text-cocoa lg:text-[36px]">$21.13</p>
+                      <p className="text-[20px] text-[#d8cbbe] line-through decoration-solid lg:text-[32px]">
+                        $21.13
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-[13px] lg:items-start lg:gap-[20px]">
+                    <p className="max-w-[370px] text-center font-parkinsans text-[13px] text-[#9e8e7f] lg:max-w-none lg:text-left lg:text-[20px]">
+                      Slow-fermented and hand-shaped for a crisp crust, airy
+                      crumb, and rich, tangy flavor.
+                    </p>
+                    <div className="flex items-center gap-[10px] lg:gap-[16px]">
+                      {PACK_OPTIONS.map((label, i) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => setSelectedPack(i)}
+                          className={`cursor-pointer whitespace-nowrap rounded-[10px] border px-[10px] py-[5px] font-parkinsans text-[13px] lg:rounded-[15px] lg:border-2 lg:px-[16px] lg:py-[8px] lg:text-[16px] ${
+                            selectedPack === i
+                              ? "border-taupe bg-taupe text-white"
+                              : "border-latte bg-transparent text-latte"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-center gap-[13px] lg:items-start lg:gap-[20px]">
-                  <p className="max-w-[370px] text-center font-parkinsans text-[13px] text-[#9e8e7f] lg:max-w-none lg:text-left lg:text-[20px]">
-                    Slow-fermented and hand-shaped for a crisp crust, airy
-                    crumb, and rich, tangy flavor.
-                  </p>
-                  <div className="flex items-center gap-[10px] lg:gap-[16px]">
-                    {PACK_OPTIONS.map((label, i) => (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => setSelectedPack(i)}
-                        className={`cursor-pointer whitespace-nowrap rounded-[10px] border px-[10px] py-[5px] font-parkinsans text-[13px] lg:rounded-[15px] lg:border-2 lg:px-[16px] lg:py-[8px] lg:text-[16px] ${
-                          selectedPack === i
-                            ? "border-taupe bg-taupe text-white"
-                            : "border-latte bg-transparent text-latte"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex w-full items-start gap-[10px] lg:gap-[16px]">
-                <button
-                  type="button"
-                  className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
-                >
-                  Add to Cart
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 cursor-pointer whitespace-nowrap rounded-full border border-cocoa px-[30px] py-[6px] font-parkinsans text-[13px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
-                >
-                  Buy Now
-                </button>
+                <div className="flex w-full items-start gap-[10px] lg:gap-[16px]">
+                  <button
+                    type="button"
+                    className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
+                  >
+                    Add to Cart
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 cursor-pointer whitespace-nowrap rounded-full border border-cocoa px-[30px] py-[6px] font-parkinsans text-[13px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
+                  >
+                    Buy Now
+                  </button>
+                </div>
               </div>
 
               <div className="flex w-full flex-col items-start border-t border-[#d8cbbe]">
@@ -183,7 +185,7 @@ export default function Product() {
                       <button
                         type="button"
                         onClick={() => toggleAccordion(item.key)}
-                        className="flex w-full cursor-pointer items-center justify-between py-[12px] lg:py-[19px]"
+                        className="flex w-full cursor-pointer items-center justify-between py-[12px]"
                       >
                         <span className="font-parkinsans text-[13px] text-cocoa lg:text-[20px]">
                           {item.label}
@@ -197,7 +199,7 @@ export default function Product() {
                         />
                       </button>
                       {isOpen && (
-                        <p className="pb-[12px] font-parkinsans text-[13px] text-[#9e8e7f] lg:pb-[19px] lg:text-[16px]">
+                        <p className="pb-[12px] font-parkinsans text-[13px] text-[#9e8e7f] lg:text-[16px]">
                           {item.content}
                         </p>
                       )}

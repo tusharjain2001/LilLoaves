@@ -50,10 +50,10 @@ export default function Footer() {
 
         <div className="mt-[40px] flex gap-[69px] lg:mt-[75px] lg:gap-[58px]">
           <div className="flex flex-col gap-[16px] text-white">
-            <p className="font-dm text-[16px] font-bold lg:text-[20px]">
+            <p className="font-dm text-[16px] font-bold leading-[21px] lg:text-[20px] lg:leading-[26px]">
               Bakery
             </p>
-            <ul className="flex flex-col gap-[8px] font-dm text-[14px] lg:text-[18px]">
+            <ul className="flex flex-col gap-[8px] font-dm text-[14px] leading-[18px] lg:text-[18px] lg:leading-[23px]">
               {BAKERY_LINKS.map(({ label, to }) => (
                 <li key={label}>
                   <Link to={to} className="hover:underline">
@@ -64,10 +64,10 @@ export default function Footer() {
             </ul>
           </div>
           <div className="flex flex-col gap-[16px] text-white">
-            <p className="font-dm text-[16px] font-bold lg:text-[20px]">
+            <p className="font-dm text-[16px] font-bold leading-[21px] lg:text-[20px] lg:leading-[26px]">
               Quick Links
             </p>
-            <ul className="flex flex-col gap-[8px] font-dm text-[14px] lg:text-[18px]">
+            <ul className="flex flex-col gap-[8px] font-dm text-[14px] leading-[18px] lg:text-[18px] lg:leading-[23px]">
               {QUICK_LINKS.map(({ label, to }) =>
                 to ? (
                   <li key={label}>
@@ -88,7 +88,7 @@ export default function Footer() {
 
       <div className="mx-auto mt-[40px] w-full max-w-[1440px] lg:mt-0">
         <div className="mx-auto h-px w-[calc(100%-75px)] max-w-[1365px] bg-white" />
-        <div className="flex flex-col items-center gap-[22px] px-[16px] py-[28px] lg:flex-row lg:justify-between lg:px-[64px] lg:py-[32px]">
+        <div className="flex flex-col items-center gap-[22px] px-[16px] py-[28px] lg:flex-row lg:justify-between lg:px-[64px] lg:py-[27.5px]">
           <div className="flex items-center gap-[12px]">
             <a href="https://www.facebook.com" aria-label="Facebook">
               <img
