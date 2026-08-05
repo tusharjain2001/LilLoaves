@@ -48,16 +48,16 @@ const SAMPLE_ORDERS = [
   },
 ];
 
-const LABEL_CLASSES = "font-parkinsans text-[14px] text-latte lg:text-[20px]";
+const LABEL_CLASSES = "font-parkinsans text-[14px] text-latte lg:text-[20px] lg:leading-[28px]";
 
 const FIELD_CLASSES =
   "w-full rounded-[7px] border border-[#e9dccf] bg-[#fdfcf8] px-[14px] font-parkinsans text-[13px] text-latte outline-none focus:border-[#d8cbbe] lg:rounded-[10px] lg:px-[18px] lg:text-[16px]";
 
 const PILL_TAG_CLASSES =
-  "shrink-0 cursor-pointer whitespace-nowrap rounded-[7px] bg-[#f7ece2] px-[7px] py-[1px] font-parkinsans text-[10px] text-cocoa lg:rounded-[10px] lg:px-[10px] lg:py-[2px] lg:text-[14px]";
+  "shrink-0 cursor-pointer whitespace-nowrap rounded-[7px] bg-[#f7ece2] px-[7px] py-[1px] font-parkinsans text-[10px] text-cocoa lg:rounded-[10px] lg:px-[10px] lg:py-[2px] lg:text-[14px] lg:leading-[20px]";
 
 const SECTION_HEADING_CLASSES =
-  "w-full font-ligema text-[28px] uppercase tracking-[1.4px] text-cocoa lg:text-[40px] lg:tracking-[2px]";
+  "w-full font-ligema text-[14.3px] uppercase tracking-[0.7px] text-cocoa lg:text-[20.3px] lg:tracking-[0.95px] lg:leading-[44px]";
 
 function Asterisk() {
   return <span className="text-[#c80000]">*</span>;
@@ -83,27 +83,27 @@ function OrderCard({ order }) {
       <div className="flex w-full flex-col gap-[17px] lg:flex-row lg:items-start lg:justify-center">
         <div className="flex flex-1 flex-col gap-[17px] lg:gap-[21px]">
           <div className="flex items-center gap-[11px] lg:gap-[14px]">
-            <span className="flex w-[37px] shrink-0 items-center justify-center rounded-[7px] bg-[#e5c5bc] px-[8px] py-[4px] font-parkinsans text-[19px] font-medium text-cocoa lg:w-[46px] lg:rounded-[8px] lg:text-[24px]">
+            <span className="flex w-[37px] shrink-0 items-center justify-center rounded-[7px] bg-[#e5c5bc] px-[8px] py-[4px] font-parkinsans text-[19px] font-medium text-cocoa lg:w-[46px] lg:rounded-[8px] lg:text-[24px] lg:leading-[26px]">
               {order.qty}
             </span>
-            <span className="font-parkinsans text-[16px] font-medium text-cocoa lg:text-[20px]">
+            <span className="font-parkinsans text-[16px] font-medium text-cocoa lg:text-[20px] lg:leading-[28px]">
               {order.item}
             </span>
           </div>
           <div className="flex items-center gap-[9px] lg:gap-[11px]">
-            <span className="font-parkinsans text-[16px] text-cocoa lg:text-[20px]">
+            <span className="font-parkinsans text-[16px] text-cocoa lg:text-[20px] lg:leading-[28px]">
               {order.status}
             </span>
             <img src={orderDeliveredCheck} alt="" className="size-[15px] lg:size-[18px]" />
           </div>
         </div>
         <div className="flex flex-col items-start gap-[17px] lg:w-[397px] lg:items-end lg:gap-[21px]">
-          <p className="font-parkinsans text-[16px] text-latte lg:text-[20px]">
+          <p className="font-parkinsans text-[16px] text-latte lg:text-[20px] lg:leading-[28px]">
             {order.orderedOn} &bull; Bill Total: <span className="text-taupe">{order.total}</span>
           </p>
           <button
             type="button"
-            className="whitespace-nowrap rounded-full border border-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-taupe lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
+            className="whitespace-nowrap rounded-full border border-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-taupe lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px] lg:leading-[18px]"
           >
             Reorder
           </button>
@@ -139,7 +139,7 @@ function EmptyOrders() {
           className="absolute left-0 top-[52px] h-[300px] w-[377px] rounded-[16px] object-cover"
         />
         <img src={emptyOrdersBubble} alt="" className="absolute left-[384px] top-0 h-[140px] w-[238px]" />
-        <p className="absolute left-[432px] top-[42px] w-[142px] text-center font-parkinsans text-[20px] text-cocoa">
+        <p className="absolute left-[432px] top-[42px] w-[142px] text-center font-parkinsans text-[20px] leading-[28px] text-cocoa">
           Wanna order something?
         </p>
         <img src={emptyOrdersDotLg} alt="" className="absolute left-[380px] top-[95px] size-[18px]" />
@@ -147,12 +147,12 @@ function EmptyOrders() {
         <img src={emptyOrdersDotSm} alt="" className="absolute left-[363px] top-[128px] size-[6px]" />
       </div>
 
-      <p className="text-center font-parkinsans text-[18px] text-black lg:text-[24px]">
+      <p className="text-center font-parkinsans text-[18px] text-black lg:text-[24px] lg:leading-[34px]">
         No recent orders found in records.
       </p>
       <button
         type="button"
-        className="rounded-full bg-taupe px-[42px] py-[9px] font-parkinsans text-[16px] text-white lg:px-[48px] lg:py-[10px]"
+        className="rounded-full bg-taupe px-[42px] py-[9px] font-parkinsans text-[16px] text-white lg:px-[48px] lg:py-[10px] lg:leading-[22px]"
       >
         Order Now
       </button>
@@ -229,8 +229,9 @@ function ProfileInfoSection({ form, onFieldChange }) {
             </div>
           </div>
 
-          {/* Marketing preferences */}
-          <div className="flex w-full flex-col gap-[6px] lg:gap-[9px]">
+          {/* Marketing preferences - Figma has zero gap here (unlike the 9px
+              gap after the other two headings), so the desktop gap is overridden */}
+          <div className="flex w-full flex-col gap-[6px] lg:gap-0">
             <h2 className={SECTION_HEADING_CLASSES}>Marketing Preferences</h2>
             <div className="flex h-[42px] w-full items-center justify-between rounded-[7px] border border-[#e9dccf] bg-[#fdfcf8] px-[14px] lg:h-[60px] lg:rounded-[10px] lg:px-[20px]">
               <span className="font-parkinsans text-[12px] text-latte lg:text-[16px]">
@@ -245,13 +246,13 @@ function ProfileInfoSection({ form, onFieldChange }) {
         <div className="flex items-center gap-[25px] lg:gap-[36px]">
           <button
             type="button"
-            className="whitespace-nowrap rounded-full border border-[#e57155] px-[22px] py-[6px] font-parkinsans text-[14px] text-[#e57155] lg:border-2 lg:px-[32px] lg:py-[8px] lg:text-[16px]"
+            className="whitespace-nowrap rounded-full border border-[#e57155] px-[22px] py-[6px] font-parkinsans text-[14px] text-[#e57155] lg:border-2 lg:px-[32px] lg:py-[8px] lg:text-[16px] lg:leading-[18px]"
           >
             Sign Out
           </button>
           <button
             type="button"
-            className="whitespace-nowrap font-parkinsans text-[14px] text-[#e57155] underline lg:text-[16px]"
+            className="whitespace-nowrap font-parkinsans text-[14px] text-[#e57155] underline lg:text-[16px] lg:leading-[22px]"
           >
             Sign out of all Devices
           </button>
@@ -265,30 +266,35 @@ function OrdersSection({ hasOrders, onToggleDemo }) {
   return (
     <section className="mx-auto w-full max-w-[1440px] px-[16px] py-[60px] lg:px-[181px]">
       <div className="flex w-full flex-col gap-[24px] lg:gap-[46px]">
-        <div className="flex w-full flex-col gap-[16px] lg:flex-row lg:items-center lg:justify-between lg:gap-0">
-          <h2 className="font-parkinsans text-[20px] text-cocoa lg:flex-1 lg:text-[32px]">
-            Recent Orders
-          </h2>
-          <div className="flex items-center gap-[16px]">
-            <button
-              type="button"
-              className="flex items-center gap-[10px] whitespace-nowrap rounded-full border-2 border-cocoa px-[32px] py-[8px] font-parkinsans text-[16px] text-cocoa"
-            >
-              Sort By
-              <img src={sortChevron} alt="" className="h-[6px] w-[12px]" />
-            </button>
-            {/* Demo-only control: Figma has no in-app way to reach both the
-                populated and empty Orders designs without a backend, so this
-                unobtrusive toggle exposes both (see report for details). */}
-            <button
-              type="button"
-              onClick={onToggleDemo}
-              className="whitespace-nowrap font-parkinsans text-[11px] text-latte underline"
-            >
-              {hasOrders ? "Preview empty state" : "Preview sample orders"}
-            </button>
+        {/* Figma's empty-orders design has no "Recent Orders" / "Sort By" row at
+            all - only the illustration - so it's omitted here to match, rather
+            than just hiding the order list. */}
+        {hasOrders && (
+          <div className="flex w-full flex-col gap-[16px] lg:flex-row lg:items-center lg:justify-between lg:gap-0">
+            <h2 className="font-parkinsans text-[20px] text-cocoa lg:flex-1 lg:text-[32px] lg:leading-[45px]">
+              Recent Orders
+            </h2>
+            <div className="flex items-center gap-[16px]">
+              <button
+                type="button"
+                className="flex items-center gap-[10px] whitespace-nowrap rounded-full border-2 border-cocoa px-[32px] py-[8px] font-parkinsans text-[16px] text-cocoa lg:leading-[18px]"
+              >
+                Sort By
+                <img src={sortChevron} alt="" className="h-[6px] w-[12px]" />
+              </button>
+              {/* Demo-only control: Figma has no in-app way to reach both the
+                  populated and empty Orders designs without a backend, so this
+                  unobtrusive toggle exposes both (see report for details). */}
+              <button
+                type="button"
+                onClick={onToggleDemo}
+                className="whitespace-nowrap font-parkinsans text-[11px] text-latte underline"
+              >
+                Preview empty state
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {hasOrders ? (
           <ul className="flex w-full list-none flex-col gap-[24px]">
@@ -300,6 +306,22 @@ function OrdersSection({ hasOrders, onToggleDemo }) {
           <EmptyOrders />
         )}
       </div>
+
+      {/* Demo-only control (empty state): the header row above - and its
+          toggle - doesn't render in the empty state to match Figma, so this
+          keeps the populated state reachable again. Sits outside the
+          Figma-matched flow so it doesn't affect the section's height. */}
+      {!hasOrders && (
+        <div className="mt-[16px] flex justify-center lg:mt-[20px] lg:justify-end">
+          <button
+            type="button"
+            onClick={onToggleDemo}
+            className="whitespace-nowrap font-parkinsans text-[11px] text-latte underline"
+          >
+            Preview sample orders
+          </button>
+        </div>
+      )}
     </section>
   );
 }
@@ -323,18 +345,19 @@ export default function Profile() {
 
   return (
     <main className="w-full bg-cream">
-      {/* HERO - bespoke layout, see report re: PageHero mismatch */}
+      {/* Hero band is 405px in Figma with the navbar drawn inside it; the navbar
+          renders above this in normal flow, so the band here is 405-120=285. */}
       <section className={`relative w-full overflow-hidden ${HERO_STRIPES}`}>
-        <div className="relative mx-auto h-[477px] w-full max-w-[1440px] lg:h-[405px]">
+        <div className="relative mx-auto h-[477px] w-full max-w-[1440px] lg:h-[285px]">
           {/* flowers - mobile */}
           <img src={flowerYellow} alt="" className="absolute left-[-17px] top-[82px] h-[72px] w-[79px] lg:hidden" />
           <img src={flowerYellow} alt="" className="absolute right-[-23px] top-[271px] h-[72px] w-[79px] lg:hidden" />
           <img src={flowerYellow} alt="" className="absolute left-[110px] top-[430px] h-[72px] w-[79px] lg:hidden" />
           {/* flowers - desktop */}
-          <img src={flowerYellow} alt="" className="absolute left-[110px] top-[171px] hidden h-[72px] w-[79px] lg:block" />
-          <img src={flowerYellow} alt="" className="absolute right-[13px] top-[171px] hidden h-[72px] w-[79px] lg:block" />
-          <img src={flowerYellow} alt="" className="absolute left-[321px] top-[275px] hidden h-[72px] w-[79px] lg:block" />
-          <img src={flowerYellow} alt="" className="absolute right-[242px] top-[275px] hidden h-[72px] w-[79px] lg:block" />
+          <img src={flowerYellow} alt="" className="absolute left-[110px] top-[51px] hidden h-[72px] w-[79px] lg:block" />
+          <img src={flowerYellow} alt="" className="absolute right-[13px] top-[51px] hidden h-[72px] w-[79px] lg:block" />
+          <img src={flowerYellow} alt="" className="absolute left-[321px] top-[155px] hidden h-[72px] w-[79px] lg:block" />
+          <img src={flowerYellow} alt="" className="absolute right-[242px] top-[155px] hidden h-[72px] w-[79px] lg:block" />
 
           <div className="relative flex h-full flex-col items-center justify-center gap-[47px] px-[16px] lg:flex-row lg:items-center lg:justify-between lg:gap-0 lg:px-[74px]">
             {/* Avatar */}
@@ -347,7 +370,7 @@ export default function Profile() {
 
             {/* Heading + tab switcher */}
             <div className="flex flex-col items-center gap-[17px] lg:order-1 lg:w-[559px] lg:items-start">
-              <h1 className="text-center font-parkinsans text-[24px] text-black lg:text-left lg:text-[44px]">
+              <h1 className="text-center font-parkinsans text-[24px] text-black lg:text-left lg:text-[44px] lg:leading-[69px]">
                 Welcome back, Moona
               </h1>
               <div
