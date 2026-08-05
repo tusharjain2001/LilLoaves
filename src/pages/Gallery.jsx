@@ -80,7 +80,7 @@ function GridCell({ cell }) {
   if (cell.kind === "heart") {
     return (
       <div className="flex aspect-square items-center justify-center">
-        <img src={heartIcon} alt="" className="h-[70px] w-auto lg:h-[110px]" />
+        <img src={heartIcon} alt="" className="h-[70px] w-auto lg:h-[135px]" />
       </div>
     );
   }
@@ -88,16 +88,16 @@ function GridCell({ cell }) {
   if (cell.kind === "text") {
     return (
       <div className="col-span-1 flex flex-col justify-center lg:col-span-2">
-        <p className="font-script text-[37.8px] leading-[0.82] text-cocoa lg:text-[84px]">
+        <p className="font-script text-[37.8px] leading-[0.82] text-cocoa lg:text-[86.8px]">
           Lil
         </p>
         <div className="relative w-fit">
           <img
             src={memoriesBlob}
             alt=""
-            className="pointer-events-none absolute -right-[14px] top-1/2 h-[64px] w-auto -translate-y-1/2 rotate-[-90deg] lg:-right-[22px] lg:h-[132px]"
+            className="pointer-events-none absolute -right-[14px] top-1/2 h-[64px] w-auto -translate-y-1/2 rotate-[-90deg] lg:-right-[36px] lg:h-[216px]"
           />
-          <p className="relative font-script text-[37.8px] leading-[0.82] text-cocoa lg:text-[84px]">
+          <p className="relative font-script text-[37.8px] leading-[0.82] text-cocoa lg:text-[86.8px]">
             Memories
           </p>
         </div>
@@ -148,7 +148,7 @@ export default function Gallery() {
       </section>
 
       {/* Photo mosaic + Lil' Memories */}
-      <section className="w-full bg-cream pb-[60px] pt-[56px] lg:pb-[130px] lg:pt-[110px]">
+      <section className="w-full bg-cream pb-[60px] pt-[56px] lg:pb-[130px] lg:pt-[186px]">
         <div className="mx-auto w-full max-w-[1440px] px-[16px] lg:px-[181px]">
           <div className="grid grid-cols-2 gap-[16px] lg:hidden">
             {MOBILE_GRID.map((cell, i) => (
@@ -165,15 +165,15 @@ export default function Gallery() {
       </section>
 
       {/* Hear it from our customers */}
-      <section className="w-full bg-cream px-[16px] py-[60px] lg:px-[72px] lg:py-[100px]">
-        <div className="mx-auto flex w-full max-w-[1296px] flex-col gap-[40px] lg:flex-row lg:items-center lg:justify-between lg:gap-[38px]">
+      <section className="w-full bg-cream px-[16px] py-[60px] lg:px-0 lg:py-[79px]">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-[40px] lg:flex-row lg:items-center lg:justify-center lg:gap-[38px]">
           {/* Text column */}
           <div className="relative flex flex-col gap-[25px] lg:w-[602px] lg:shrink-0">
             <img
               src={iconQuote}
               alt=""
               aria-hidden="true"
-              className="absolute -left-[6px] -top-[36px] hidden h-[61px] w-[61px] lg:block"
+              className="absolute -left-[6px] -top-[36px] hidden h-[61px] w-[61px] lg:-left-[26px] lg:top-[59px] lg:block"
             />
 
             <div className="flex flex-col gap-[20px] lg:gap-[34px]">
@@ -203,43 +203,47 @@ export default function Gallery() {
             />
           </div>
 
-          {/* Image column */}
-          <div className="relative lg:w-[526px] lg:shrink-0">
-            <img
-              src={testimonialPhotoMobile}
-              alt="Freshly baked sourdough loaf being sliced on a plaid cloth"
-              className="h-[300px] w-full rounded-[8px] object-cover lg:hidden"
-            />
-            <img
-              src={testimonialPhoto}
-              alt="Freshly baked sourdough loaf being sliced on a plaid cloth"
-              className="hidden h-[403px] w-full rounded-[8px] object-cover lg:block"
-            />
-
-            <img
-              src={tapeIcon}
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute -bottom-[22px] -left-[18px] h-[120px] w-[38px] rotate-[128deg] scale-y-[-1] lg:-bottom-[28px] lg:-left-[22px] lg:h-[164px] lg:w-[49px]"
-            />
-
-            <div className="absolute -right-[10px] -top-[18px] h-[100px] w-[136px] lg:-right-[20px] lg:-top-[14px] lg:h-[136px] lg:w-[183px]">
+          {/* Image column - lg width includes the washi tape's left overhang,
+              so the photo itself (below) sits flush against the right side,
+              matching how the design groups the photo + tape together. */}
+          <div className="lg:w-[572px] lg:shrink-0">
+            <div className="relative lg:ml-auto lg:w-[526px]">
               <img
-                src={ribbonIcon}
+                src={testimonialPhotoMobile}
+                alt="Freshly baked sourdough loaf being sliced on a plaid cloth"
+                className="h-[300px] w-full rounded-[8px] object-cover lg:hidden"
+              />
+              <img
+                src={testimonialPhoto}
+                alt="Freshly baked sourdough loaf being sliced on a plaid cloth"
+                className="hidden h-[403px] w-full rounded-[8px] object-cover lg:block"
+              />
+
+              <img
+                src={tapeIcon}
                 alt=""
                 aria-hidden="true"
-                className="absolute left-1/2 top-1/2 h-[136px] w-[100px] -translate-x-1/2 -translate-y-1/2 rotate-[106deg] lg:h-[183px] lg:w-[136px]"
+                className="pointer-events-none absolute -bottom-[22px] -left-[18px] h-[120px] w-[38px] rotate-[128deg] scale-y-[-1] lg:-bottom-[12px] lg:left-[39px] lg:h-[164px] lg:w-[49px]"
               />
-              <div className="absolute inset-0 flex rotate-[16deg] flex-col items-center justify-center leading-[1.05]">
-                <span className="font-ligema text-[7.1px] uppercase text-white lg:text-[10px]">
-                  Good Food
-                </span>
-                <span className="font-ligema text-[7.1px] uppercase text-[#c75e02] lg:text-[10px]">
-                  &amp;
-                </span>
-                <span className="font-ligema text-[7.1px] uppercase text-white lg:text-[10px]">
-                  Good Mood
-                </span>
+
+              <div className="absolute -right-[10px] -top-[18px] h-[100px] w-[136px] lg:-right-[73px] lg:-top-[62px] lg:h-[136px] lg:w-[183px]">
+                <img
+                  src={ribbonIcon}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute left-1/2 top-1/2 h-[136px] w-[100px] -translate-x-1/2 -translate-y-1/2 rotate-[106deg] lg:h-[183px] lg:w-[136px]"
+                />
+                <div className="absolute inset-0 flex rotate-[16deg] flex-col items-center justify-center leading-[1.05]">
+                  <span className="font-ligema text-[7.1px] uppercase text-white lg:text-[18.6px]">
+                    Good Food
+                  </span>
+                  <span className="font-ligema text-[7.1px] uppercase text-[#c75e02] lg:text-[18.6px]">
+                    &amp;
+                  </span>
+                  <span className="font-ligema text-[7.1px] uppercase text-white lg:text-[18.6px]">
+                    Good Mood
+                  </span>
+                </div>
               </div>
             </div>
           </div>

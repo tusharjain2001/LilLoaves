@@ -9,14 +9,20 @@ import patternCroissant from "../assets/about/pattern-croissant.svg";
 import tributeCorgi from "../assets/about/tribute-corgi.png";
 import tributeRibbon from "../assets/about/tribute-ribbon.svg";
 
+/* Desktop tops are Figma's absolute values minus 120px: the shared Navbar
+   renders as a normal-flow 120px-tall header (44px pt + 76px pill) above
+   this page, while Figma's mockup shows the navbar overlapping the hero's
+   own y=0. Shifting these (and the hero content's own pt below) up by 120px
+   keeps every flower - and everything after it on the page - aligned to the
+   Figma layout instead of drifting 120px too low. */
 const HERO_FLOWERS_DESKTOP = [
-  { left: 1358, top: 92 },
-  { left: 628, top: 659 },
-  { left: 649, top: 120 },
-  { left: 134, top: 195 },
-  { left: 42, top: 565 },
-  { left: 1345, top: 623 },
-  { left: 1005, top: 378 },
+  { left: 1358, top: -28 },
+  { left: 628, top: 539 },
+  { left: 649, top: 0 },
+  { left: 134, top: 75 },
+  { left: 42, top: 445 },
+  { left: 1345, top: 503 },
+  { left: 1005, top: 258 },
 ];
 
 const HERO_FLOWERS_MOBILE = [
@@ -97,7 +103,7 @@ export default function About() {
             ))}
           </div>
 
-          <div className="relative flex flex-col items-center gap-[17px] px-[16px] pt-[124px] lg:flex-row lg:items-start lg:px-[72px] lg:pt-[207px]">
+          <div className="relative flex flex-col items-center gap-[17px] px-[16px] pt-[124px] lg:flex-row lg:items-start lg:px-[72px] lg:pt-[87px]">
             {/* welcome card */}
             <div className="relative h-[244.69px] w-[370px] shrink-0 lg:h-[450px] lg:w-[681px]">
               <img
@@ -143,11 +149,11 @@ export default function About() {
         <div className="pointer-events-none absolute inset-0" style={MEET_PLAID_BG} />
         <div className="relative mx-auto flex w-full max-w-[1079px] flex-col items-center gap-[24px] px-[16px] py-[86px] lg:py-[57px]">
           <div className="flex items-center justify-center gap-[8px] text-center font-ligema uppercase text-cocoa lg:gap-[5px]">
-            <p className="text-[40px] leading-none lg:text-[64px]">Meet Our Doc</p>
-            <span className="text-[40px] leading-none text-transparent [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1px_#57423d] lg:text-[64px] lg:[-webkit-text-stroke:1.5px_#57423d]">
+            <p className="text-[40px] leading-none lg:text-[30.4px]">Meet Our Doc</p>
+            <span className="text-[40px] leading-none text-transparent [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1px_#57423d] lg:text-[30.4px] lg:[-webkit-text-stroke:1.5px_#57423d]">
               &amp;
             </span>
-            <p className="text-[40px] leading-none lg:text-[64px]">Chief</p>
+            <p className="text-[40px] leading-none lg:text-[30.4px]">Chief</p>
           </div>
 
           <div className="relative h-[169px] w-full overflow-hidden rounded-[6px] lg:h-[494px] lg:rounded-[16px]">
