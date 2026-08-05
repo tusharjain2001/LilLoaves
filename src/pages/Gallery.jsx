@@ -112,6 +112,14 @@ function GridCell({ cell }) {
   );
 }
 
+/* Faint gingham wash behind the mosaic, matching the design's #f7f5f1 base with
+   35px bands every 88px (same CSS-pattern technique as Home/About). */
+const MOSAIC_PLAID = {
+  backgroundColor: "#f7f5f1",
+  backgroundImage:
+    "repeating-linear-gradient(90deg, rgba(196,150,110,0.035) 0px, rgba(196,150,110,0.035) 35px, transparent 35px, transparent 88px), repeating-linear-gradient(0deg, rgba(196,150,110,0.035) 0px, rgba(196,150,110,0.035) 35px, transparent 35px, transparent 88px)",
+};
+
 export default function Gallery() {
   return (
     <main className="w-full bg-cream">
@@ -148,7 +156,10 @@ export default function Gallery() {
       </section>
 
       {/* Photo mosaic + Lil' Memories */}
-      <section className="w-full bg-cream pb-[60px] pt-[56px] lg:pb-[130px] lg:pt-[186px]">
+      <section
+        className="w-full pb-[60px] pt-[56px] lg:pb-[130px] lg:pt-[186px]"
+        style={MOSAIC_PLAID}
+      >
         <div className="mx-auto w-full max-w-[1440px] px-[16px] lg:px-[181px]">
           <div className="grid grid-cols-2 gap-[16px] lg:hidden">
             {MOBILE_GRID.map((cell, i) => (
