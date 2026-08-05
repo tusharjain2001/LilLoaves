@@ -3,7 +3,7 @@ import logoWhite from "../assets/shared/logo-latte-white.svg";
 import iconEmail from "../assets/shared/icon-email.svg";
 import iconFacebook from "../assets/shared/icon-facebook.svg";
 import iconInstagram from "../assets/shared/icon-instagram.svg";
-import mapFooter from "../assets/shared/map-footer.png";
+import mapFooter from "../assets/shared/map-footer.jpg";
 
 const BAKERY_LINKS = [
   { label: "Home", to: "/" },

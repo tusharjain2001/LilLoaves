@@ -1,14 +1,14 @@
 import { useState } from "react";
 import iconBack from "../assets/shared/icon-back.svg";
 import productMain from "../assets/product/product-main.png";
-import productThumb1 from "../assets/product/product-thumb-1.png";
-import productThumb2 from "../assets/product/product-thumb-2.png";
+import productThumb1 from "../assets/product/product-thumb-1.jpg";
+import productThumb2 from "../assets/product/product-thumb-2.jpg";
 import iconChevronDown from "../assets/product/icon-chevron-down.svg";
 import iconHotspring from "../assets/product/icon-hotspring.svg";
 import iconChefhat from "../assets/product/icon-chefhat.svg";
-import cardMilkBread from "../assets/product/card-milk-bread.png";
-import cardDinnerRolls from "../assets/product/card-dinner-rolls.png";
-import cardBlueberryMuffins from "../assets/product/card-blueberry-muffins.png";
+import cardMilkBread from "../assets/product/card-milk-bread.jpg";
+import cardDinnerRolls from "../assets/product/card-dinner-rolls.jpg";
+import cardBlueberryMuffins from "../assets/product/card-blueberry-muffins.jpg";
 
 const GALLERY_IMAGES = [productMain, productThumb1, productThumb2];
 

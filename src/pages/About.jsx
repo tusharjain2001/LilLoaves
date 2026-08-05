@@ -6,7 +6,7 @@ import meetCorgis from "../assets/about/meet-corgis.png";
 import quoteMark from "../assets/about/quote-mark.svg";
 import patternLoaf from "../assets/about/pattern-loaf.svg";
 import patternCroissant from "../assets/about/pattern-croissant.svg";
-import tributeCorgi from "../assets/about/tribute-corgi.png";
+import tributeCorgi from "../assets/about/tribute-corgi.jpg";
 import tributeRibbon from "../assets/about/tribute-ribbon.svg";
 
 /* Desktop tops are Figma's absolute values minus 120px: the shared Navbar
