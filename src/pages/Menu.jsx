@@ -1,17 +1,17 @@
 import { Fragment, useState } from "react";
 import CategoryStrip from "../components/CategoryStrip.jsx";
+import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
+import FaqSection from "../components/FaqSection.jsx";
 import flowerYellow from "../assets/shared/flower-yellow.svg";
 import blobButton from "../assets/menu/blob-button.svg";
 import blobSpecials from "../assets/menu/blob-specials.svg";
-import cardScallop from "../assets/menu/card-scallop.svg";
-import priceTab from "../assets/menu/price-tab.svg";
 import specialDanish from "../assets/menu/special-danish.jpg";
 import specialCroissants from "../assets/menu/special-croissants.jpg";
 import specialBagels from "../assets/menu/special-bagels.jpg";
 import specialDonuts from "../assets/menu/special-donuts.jpg";
-import breadSourdough from "../assets/menu/bread-sourdough.jpg";
-import breadJapaneseMilk from "../assets/menu/bread-japanese-milk.jpg";
-import breadDinnerRolls from "../assets/menu/bread-dinner-rolls.jpg";
+import breadSourdough from "../assets/menu/bread-sourdough.png";
+import breadJapaneseMilk from "../assets/menu/bread-japanese-milk.png";
+import breadDinnerRolls from "../assets/menu/bread-dinner-rolls.png";
 import lunchboxIconsSprite from "../assets/menu/lunchbox-icons-sprite.png";
 import lunchboxSourdough from "../assets/menu/lunchbox-sourdough.jpg";
 import lunchboxJapaneseMilk from "../assets/menu/lunchbox-japanese-milk.jpg";
@@ -24,27 +24,60 @@ import lunchboxArrowRight from "../assets/menu/lunchbox-arrow-right.svg";
 import iconRoundPlus from "../assets/menu/icon-round-plus.svg";
 import radioSelected from "../assets/menu/radio-selected.svg";
 import radioUnselected from "../assets/menu/radio-unselected.svg";
-import iconCross from "../assets/menu/icon-cross.svg";
-import iconPlus from "../assets/menu/icon-plus.svg";
 
-/* Same seamless stripe pattern as Navbar/PageHero - the hero stacks flush
-   under the navbar. */
-const HERO_STRIPES =
-  "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_111px,#faf3e0_111px,#faf3e0_222px)]";
+/* Desktop geometry is taken verbatim from the Figma Menu page (node 247:13050,
+   a 1440-wide canvas). The navbar overlays the hero there, so the hero runs from
+   y=0 and these are Figma's own absolute values. */
+const CANVAS_ORIGIN = "calc(50% - 720px)";
+
+/* Hero bands: 110.77px of #efd895 every 221.54px from x=0, the group sitting at
+   0.12 opacity - the same wash as the About hero. */
+const HERO_STRIPES = {
+  backgroundImage:
+    "repeating-linear-gradient(90deg, rgba(239,216,149,0.12) 0 110.77px, transparent 110.77px 221.54px)",
+  backgroundPosition: `${CANVAS_ORIGIN} 0`,
+};
+
+const HERO_FLOWERS_DESKTOP = [
+  { left: 110, top: 171 },
+  { left: 1269, top: 171 },
+  { left: 321, top: 275 },
+  { left: 1040, top: 275 },
+];
 
 const HERO_FLOWERS_MOBILE = [
   { left: -17, top: 82 },
   { left: 346, top: 271 },
 ];
 
-/* Figma's 405px hero band contains the navbar; here the navbar is a separate
-   in-flow element (120px), so the band and everything inside it shifts up by that. */
-const HERO_FLOWERS_DESKTOP = [
-  { left: 110, top: 51 },
-  { left: 1348.41, top: 51 },
-  { left: 321, top: 155 },
-  { left: 1119.41, top: 155 },
-];
+/* 30px checkerboard band between "Our Menu" and the Lunch Box section - same
+   phase as the strip on the Seasonal Specials section. */
+const CHECKERBOARD_BG = {
+  backgroundImage: "repeating-conic-gradient(#e5c5bc 0 25%, transparent 0 50%)",
+  backgroundSize: "60px 60px",
+  backgroundPosition: "calc(50% - 690px) 0",
+};
+
+/* Scalloped seam under the Lunch Box section: 17 circles of r=57.73 spaced 86.6
+   apart, filled with the section's own #f4e7e3 so the pink edge reads as bumps.
+   They overlap, so they are split across two gradient layers that each tile at
+   double the pitch. */
+const SCALLOP_DESKTOP = {
+  backgroundImage: [
+    "radial-gradient(circle at 27.73px 57.73px, #f4e7e3 57.73px, transparent 57.74px)",
+    "radial-gradient(circle at 114.33px 57.73px, #f4e7e3 57.73px, transparent 57.74px)",
+  ].join(","),
+  backgroundSize: "173.2px 115.46px",
+  backgroundRepeat: "repeat-x",
+  backgroundPosition: `${CANVAS_ORIGIN} 0`,
+};
+
+const SCALLOP_MOBILE = {
+  backgroundImage:
+    "radial-gradient(circle at 50% 0%, #f4e7e3 37.6px, transparent 37.7px)",
+  backgroundSize: "56.23px 38px",
+  backgroundRepeat: "repeat-x",
+};
 
 const SPECIALS = [
   { name: "Danish Pastries", price: "$23", img: specialDanish },
@@ -53,8 +86,17 @@ const SPECIALS = [
   { name: "Donuts", price: "$23", img: specialDonuts },
 ];
 
-const CATEGORIES = ["Breads", "Muffins", "Cookies", "Crackers"];
+/* Figma sizes each pill to its own label; our Parkinsans renders narrower than
+   the one in the file, so the widths are pinned rather than derived. */
+const CATEGORIES = [
+  { name: "Breads", w: 148 },
+  { name: "Muffins", w: 150 },
+  { name: "Cookies", w: 160 },
+  { name: "Crackers", w: 172 },
+];
 
+/* Photos are exported from Figma already cropped to the card frame, so they
+   need no object-position of their own. */
 const BREADS_ITEMS = [
   {
     name: "Sour Dough",
@@ -95,11 +137,13 @@ const LUNCHBOX_INSIDE = [
   {
     label: "Bread",
     desc: "Choice of Sourdough or Japanese Bread",
+    gap: 27.76,
     crop: { height: "238.96%", width: "265.38%", left: "0%", top: "-61.04%" },
   },
   {
     label: "CRAckers",
     desc: "Choice of 5oz bag of Chief’s or Doc’s crackers",
+    gap: 24.79,
     crop: {
       height: "242.11%",
       width: "317.24%",
@@ -110,6 +154,7 @@ const LUNCHBOX_INSIDE = [
   {
     label: "DESsert",
     desc: "Choice of Cookies (6) or Muffins (4)",
+    gap: 30.74,
     crop: {
       height: "238.96%",
       width: "324.71%",
@@ -119,132 +164,73 @@ const LUNCHBOX_INSIDE = [
   },
 ];
 
+/* nameW is Figma's own text-box width for each label, which is what makes all
+   but "Soudough" break over two lines. */
 const BREAD_OPTIONS = [
-  { name: "Soudough", img: lunchboxSourdough },
-  { name: "Japanese Milk Bread", img: lunchboxJapaneseMilk },
+  { name: "Soudough", img: lunchboxSourdough, nameW: 169.56 },
+  { name: "Japanese Milk Bread", img: lunchboxJapaneseMilk, nameW: 140 },
 ];
 
 const CRACKER_OPTIONS = [
-  { name: "Chief’s Crackers (5oz)", img: lunchboxChiefsCrackers },
-  { name: "Doc’s Crackers (5oz)", img: lunchboxDocsCrackers },
+  { name: "Chief’s Crackers (5oz)", img: lunchboxChiefsCrackers, nameW: 160 },
+  { name: "Doc’s Crackers (5oz)", img: lunchboxDocsCrackers, nameW: 147 },
 ];
 
 const DESSERT_OPTIONS = [
-  { name: "Cookies (Pack of 6)", img: lunchboxCookies },
-  { name: "Muffins (Pack of 4)", img: lunchboxMuffins },
+  { name: "Cookies (Pack of 6)", img: lunchboxCookies, nameW: 109 },
+  { name: "Muffins (Pack of 4)", img: lunchboxMuffins, nameW: 108 },
 ];
-
-const FAQS = [
-  {
-    q: "Do you bake everything fresh?",
-    a: "Yes! Every loaf and baked good is handcrafted in small batches using quality ingredients and traditional baking methods.",
-  },
-  { q: "Do you offer seasonal specials?" },
-  { q: "How do I place an order?" },
-  { q: "Can I customize my Lunch Box Special?" },
-  { q: "Do you use preservatives?" },
-  { q: "How can I stay updated on new products?" },
-];
-
-/* Bakery checkerboard divider strip, same CSS-pattern technique used on the
-   Home page (Group105/Group164 in Figma - dozens of individual rectangles
-   there, reproduced as one repeating background here). */
-const CHECKERBOARD_BG = {
-  backgroundImage:
-    "repeating-conic-gradient(#f0dcd7 0% 25%, transparent 0% 50%)",
-  backgroundSize: "20px 20px",
-};
-
-/* Scalloped seam between the Lunch Box (rose) section and the FAQ (cream)
-   section - Figma draws this as ~17 overlapping circles (Group153); a
-   repeating radial-gradient reproduces the same silhouette. */
-const SCALLOP_MOBILE = {
-  backgroundImage:
-    "radial-gradient(circle at 50% 0%, #f4e7e3 37.6px, transparent 37.7px)",
-  backgroundSize: "56.23px 38px",
-  backgroundRepeat: "repeat-x",
-};
-
-const SCALLOP_DESKTOP = {
-  backgroundImage:
-    "radial-gradient(circle at 50% 0%, #f4e7e3 57.7px, transparent 57.8px)",
-  backgroundSize: "86.6px 58px",
-  backgroundRepeat: "repeat-x",
-};
-
-function CheckerDivider() {
-  return <div className="h-[20px] w-full" style={CHECKERBOARD_BG} />;
-}
-
-function SpecialCard({ name, price, img }) {
-  return (
-    <div className="relative h-[258px] w-[179px] lg:h-[372px] lg:w-[259px]">
-      <img
-        src={cardScallop}
-        alt=""
-        className="absolute inset-0 h-full w-full -scale-y-100"
-      />
-      <img
-        src={img}
-        alt={name}
-        className="absolute left-[6px] top-[6px] h-[197px] w-[167px] rounded-[4px] object-cover lg:left-[8px] lg:top-[8px] lg:h-[284px] lg:w-[240px] lg:rounded-[6px]"
-      />
-      <div className="absolute left-1/2 top-[230px] flex h-[25px] w-[99px] -translate-x-1/2 items-center justify-center lg:top-[331px] lg:h-[36px] lg:w-[142px]">
-        <img src={priceTab} alt="" className="absolute inset-0 h-full w-full" />
-        <p className="relative pt-[2px] font-parkinsans text-[14px] font-medium text-cocoa lg:text-[20px]">
-          {price}
-        </p>
-      </div>
-      <p className="absolute left-1/2 top-[208px] -translate-x-1/2 whitespace-nowrap font-parkinsans text-[12px] text-cocoa lg:top-[299px] lg:text-[17px]">
-        {name}
-      </p>
-    </div>
-  );
-}
 
 function BreadCard({ item, qty, onAdd, onInc, onDec }) {
   return (
-    <div className="w-full max-w-[370px] rounded-[13px] border-[0.8px] border-[#d8cbbe] p-[6px] pb-[13px] lg:w-[348px]">
-      <div className="relative h-[220px] w-full overflow-hidden rounded-[12px] lg:h-[274px]">
-        <img
-          src={item.img}
-          alt={item.name}
-          className="h-full w-full object-cover"
-        />
-        <div className="absolute inset-x-0 bottom-0 h-[70px] bg-gradient-to-t from-[#57423d] to-transparent lg:h-[100px]" />
-      </div>
-      <div className="flex flex-col gap-[20px] px-[13px] pt-[13px] lg:gap-[29px]">
-        <div className="flex flex-col gap-[3px]">
-          <p className="font-parkinsans text-[18px] font-semibold text-cocoa lg:text-[20px]">
-            {item.name}
-          </p>
-          <p className="font-parkinsans text-[14px] text-clay lg:text-[16px]">
-            {item.desc}
-          </p>
+    <div className="w-full max-w-[370px] rounded-[13px] border-[0.8px] border-shell p-[6px] pb-[13px] lg:w-[348px] lg:rounded-[13.22px] lg:p-[6.37px] lg:pb-[12.74px]">
+      <div className="flex flex-col gap-[13px] lg:gap-[11.94px]">
+        <div className="relative h-[220px] w-full overflow-hidden rounded-[12px] lg:h-[273.87px] lg:rounded-[12.1px]">
+          <img
+            src={item.img}
+            alt={item.name}
+            className="h-full w-full object-cover"
+          />
+          {/* Figma's gradient runs solid at the image's top edge and fades out
+              46% of the way down. */}
+          <div className="absolute inset-x-0 top-0 h-[70px] bg-gradient-to-b from-[#57423d] to-transparent lg:h-[126.58px]" />
         </div>
-        <div className="flex items-center justify-between gap-[16px]">
-          <p className="font-parkinsans text-[19px] text-cocoa lg:text-[22px]">
-            {item.price}
-          </p>
-          {qty > 0 ? (
-            <div className="flex w-[141px] shrink-0 items-center justify-between rounded-full border-[1.65px] border-taupe px-[13px] py-[6px] font-parkinsans text-[13px] font-semibold text-taupe">
-              <button type="button" onClick={onDec} className="cursor-pointer px-[4px]">
-                -
+        <div className="flex flex-col gap-[20px] px-[13px] lg:gap-[28.66px] lg:px-[12.74px]">
+          <div className="flex flex-col gap-[3px] lg:gap-[3.18px]">
+            <p className="font-parkinsans text-[18px] font-semibold text-cocoa lg:text-[20px] lg:leading-[28px]">
+              {item.name}
+            </p>
+            {/* Figma gives every card a 66px (three-line) description box; our
+                Parkinsans is narrower so some would otherwise fall to two lines
+                and lift that card's price row. */}
+            <p className="font-parkinsans text-[14px] text-clay lg:h-[66px] lg:text-[16px] lg:leading-[22px]">
+              {item.desc}
+            </p>
+          </div>
+          <div className="flex items-center gap-[16px] lg:gap-[28.66px]">
+            <p className="font-parkinsans text-[19px] text-cocoa lg:w-[140.52px] lg:text-[22.29px] lg:leading-[31px]">
+              {item.price}
+            </p>
+            {qty > 0 ? (
+              <div className="flex w-[141px] shrink-0 items-center justify-between rounded-full border-[1.65px] border-taupe px-[13px] py-[6px] font-parkinsans text-[13px] font-semibold text-taupe lg:w-[140.52px] lg:rounded-[79.61px] lg:px-[12.74px] lg:py-[6.37px] lg:text-[12.74px]">
+                <button type="button" onClick={onDec} className="cursor-pointer px-[4px]">
+                  -
+                </button>
+                <span>{qty}</span>
+                <button type="button" onClick={onInc} className="cursor-pointer px-[4px]">
+                  +
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onAdd}
+                className="shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[16px] py-[6px] font-parkinsans text-[15px] text-white lg:grid lg:h-[30.74px] lg:w-[140.52px] lg:place-items-center lg:rounded-[79.61px] lg:px-0 lg:py-0 lg:text-[16px]"
+              >
+                Add to Cart
               </button>
-              <span>{qty}</span>
-              <button type="button" onClick={onInc} className="cursor-pointer px-[4px]">
-                +
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={onAdd}
-              className="shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[16px] py-[6px] font-parkinsans text-[15px] text-white lg:text-[16px]"
-            >
-              Add to Cart
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -253,17 +239,17 @@ function BreadCard({ item, qty, onAdd, onInc, onDec }) {
 
 function LunchboxGroup({ step, title, options, selected, onSelect }) {
   return (
-    <div className="w-full rounded-[16px] border border-[#d8cbbe] bg-cream p-[16px] lg:w-[394px]">
-      <div className="flex flex-col items-center gap-[16px] lg:gap-[24px]">
-        <div className="flex items-center justify-center gap-[12px] lg:gap-[20px]">
-          <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-cocoa font-parkinsans text-[13px] text-white lg:size-[30px] lg:text-[20px]">
+    <div className="box-border w-full rounded-[16px] border border-shell bg-cream p-[16px] lg:h-[344.88px] lg:w-[393.65px] lg:rounded-[15.87px] lg:border-[0.99px] lg:p-[15.87px]">
+      <div className="flex flex-col items-center gap-[16px] lg:gap-[23.8px]">
+        <div className="flex items-center justify-center gap-[12px] lg:h-[39px] lg:gap-[9.92px]">
+          <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-cocoa font-parkinsans text-[13px] text-white lg:size-[29.75px] lg:text-[19.83px] lg:leading-[19.83px]">
             {step}
           </span>
-          <p className="whitespace-nowrap font-ligema text-[8.5px] uppercase text-cocoa lg:text-[17.1px]">
+          <p className="whitespace-nowrap font-display text-[8.5px] uppercase text-cocoa lg:text-[35.7px] lg:leading-[39px]">
             {title}
           </p>
         </div>
-        <div className="flex w-full items-start justify-center gap-[12px] lg:gap-[23px]">
+        <div className="flex w-full items-start justify-center gap-[12px] lg:gap-[23.8px]">
           {options.map((opt) => {
             const isSelected = selected === opt.name;
             return (
@@ -271,56 +257,31 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
                 key={opt.name}
                 type="button"
                 onClick={() => onSelect(opt.name)}
-                className="flex flex-1 cursor-pointer flex-col items-center gap-[12px] lg:gap-[29px]"
+                className="flex flex-1 cursor-pointer flex-col items-center gap-[12px] lg:gap-[23.8px]"
               >
                 <div className="flex w-full flex-col items-center gap-[8px] lg:gap-[14px]">
                   <img
                     src={opt.img}
                     alt={opt.name}
-                    className="h-[100px] w-full rounded-[10px] object-cover lg:h-[134px] lg:rounded-[16px]"
+                    className="h-[100px] w-full rounded-[10px] object-cover lg:h-[134px] lg:rounded-[15.87px]"
                   />
-                  <p className="text-center font-parkinsans text-[13px] text-cocoa lg:text-[20px]">
+                  <p
+                    style={{ "--name-w": `${opt.nameW}px` }}
+                    className="text-center font-parkinsans text-[13px] text-cocoa lg:w-[var(--name-w)] lg:text-[19.83px] lg:leading-[28px]"
+                  >
                     {opt.name}
                   </p>
                 </div>
                 <img
                   src={isSelected ? radioSelected : radioUnselected}
                   alt={isSelected ? "Selected" : "Not selected"}
-                  className="size-[10px] lg:size-[18px]"
+                  className="size-[10px] lg:size-[17.85px]"
                 />
               </button>
             );
           })}
         </div>
       </div>
-    </div>
-  );
-}
-
-function FaqRow({ item, isOpen, onToggle }) {
-  return (
-    <div className="w-full border-b border-clay">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-start justify-between gap-[8px] py-[17px] text-left lg:gap-[12px] lg:py-[24px]"
-      >
-        <div className="flex flex-1 flex-col gap-[8px] lg:gap-[12px]">
-          <p className="capitalize font-dm text-[17px] tracking-[-0.17px] text-cocoa lg:text-[20px] lg:tracking-[-0.2px]">
-            {item.q}
-          </p>
-          {isOpen && item.a && (
-            <p className="font-dm text-[14px] text-cocoa lg:text-[16px]">
-              {item.a}
-            </p>
-          )}
-        </div>
-        <img
-          src={isOpen ? iconCross : iconPlus}
-          alt=""
-          className="size-[49px] shrink-0 lg:size-[71px]"
-        />
-      </button>
     </div>
   );
 }
@@ -334,11 +295,8 @@ export default function Menu() {
   const [selectedCracker, setSelectedCracker] = useState(
     "Chief’s Crackers (5oz)",
   );
-  const [selectedDessert, setSelectedDessert] = useState(
-    "Muffins (Pack of 4)",
-  );
+  const [selectedDessert, setSelectedDessert] = useState("Muffins (Pack of 4)");
   const [lunchboxQty, setLunchboxQty] = useState(1);
-  const [openFaq, setOpenFaq] = useState(0);
 
   const setQty = (name, next) =>
     setQuantities((prev) => ({ ...prev, [name]: Math.max(0, next) }));
@@ -347,41 +305,43 @@ export default function Menu() {
 
   return (
     <main className="w-full overflow-x-hidden bg-cream">
-      {/* HERO */}
-      <section className={`relative w-full overflow-hidden ${HERO_STRIPES}`}>
-        <div className="relative mx-auto h-[360px] w-full max-w-[1440px] lg:h-[285px]">
-          <div className="lg:hidden">
-            {HERO_FLOWERS_MOBILE.map((f, i) => (
-              <img
-                key={i}
-                src={flowerYellow}
-                alt=""
-                className="absolute h-[72px] w-[79px]"
-                style={{ left: f.left, top: f.top }}
-              />
-            ))}
-          </div>
-          <div className="hidden lg:block">
-            {HERO_FLOWERS_DESKTOP.map((f, i) => (
-              <img
-                key={i}
-                src={flowerYellow}
-                alt=""
-                className="absolute h-[72px] w-[79px]"
-                style={{ left: f.left, top: f.top }}
-              />
-            ))}
-          </div>
+      {/* HERO - 405px tall, navbar floats over it */}
+      <section className="relative w-full overflow-hidden bg-vanilla">
+        <div className="pointer-events-none absolute inset-0" style={HERO_STRIPES} />
 
-          <div className="absolute left-1/2 top-[154px] h-[86px] w-[310px] -translate-x-1/2 lg:top-[91px] lg:h-[114px] lg:w-[410px]">
-            {/* Blob art is drawn vertically in Figma; rotate it a quarter turn and
-                pin it to the button's centre so it sits behind the label. */}
+        <div className="pointer-events-none absolute inset-0 lg:hidden">
+          {HERO_FLOWERS_MOBILE.map((f, i) => (
+            <img
+              key={i}
+              src={flowerYellow}
+              alt=""
+              className="absolute h-[71.88px] w-[79.41px] opacity-[0.36]"
+              style={{ left: f.left, top: f.top }}
+            />
+          ))}
+        </div>
+        <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-[1440px] -translate-x-1/2 lg:block">
+          {HERO_FLOWERS_DESKTOP.map((f, i) => (
+            <img
+              key={i}
+              src={flowerYellow}
+              alt=""
+              className="absolute h-[71.88px] w-[79.41px] opacity-[0.36]"
+              style={{ left: f.left, top: f.top }}
+            />
+          ))}
+        </div>
+
+        <div className="relative mx-auto h-[360px] w-full max-w-[1440px] lg:h-[405px]">
+          {/* Blob art is drawn vertically in Figma; rotate it a quarter turn and
+              pin it to the button's centre so it sits behind the label. */}
+          <div className="absolute left-1/2 top-[154px] h-[86px] w-[310px] -translate-x-1/2 lg:left-[521px] lg:top-[211px] lg:h-[113.86px] lg:w-[410px] lg:translate-x-0">
             <img
               src={blobButton}
               alt=""
-              className="absolute left-1/2 top-1/2 h-[310px] w-[86px] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 lg:h-[410px] lg:w-[114px]"
+              className="absolute left-1/2 top-1/2 h-[310px] w-[86px] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 lg:h-[409.93px] lg:w-[113.86px]"
             />
-            <p className="relative grid h-full place-items-center px-[16px] text-center font-ligema text-[15.2px] uppercase text-white lg:text-[22.8px]">
+            <p className="relative grid h-full place-items-center px-[16px] text-center font-display text-[15.2px] uppercase text-white lg:px-0 lg:text-[48px] lg:leading-[53px]">
               VIEW OUR Products
             </p>
           </div>
@@ -390,71 +350,46 @@ export default function Menu() {
 
       <CategoryStrip />
 
-      {/* SEASONAL SPECIALS (identical to the Home-page section, own asset copies) */}
-      <section className="relative w-full overflow-hidden bg-cream px-[16px] py-[60px] lg:py-[75px]">
-        <div className="relative mx-auto flex w-full max-w-[1024px] flex-col items-center gap-[47px] lg:gap-[80px]">
-          <div className="flex flex-col items-center gap-[33px] lg:gap-[56px]">
-            <div className="relative inline-flex items-center justify-center">
-              <img
-                src={blobSpecials}
-                alt=""
-                className="absolute left-[100px] h-[97px] w-[61px] -rotate-90 lg:left-[148px] lg:h-[125px] lg:w-[79px]"
-              />
-              <p className="relative font-ligema text-[18.1px] text-cocoa lg:text-[22.8px]">
-                SEASONAL <span className="font-script">Specials</span>
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-[12px] gap-y-[12px] lg:flex lg:gap-x-[17px]">
-              {SPECIALS.map((s) => (
-                <SpecialCard key={s.name} {...s} />
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[28px] py-[6px] font-parkinsans text-[12px] text-white lg:px-[48px] lg:py-[10px] lg:text-[16px]"
-          >
-            View Specials
-          </button>
-        </div>
-      </section>
-
-      <CheckerDivider />
+      {/* Figma runs the specials backdrop up under the last 7px of the
+          category strip. */}
+      <SeasonalSpecials specials={SPECIALS} className="lg:-mt-[7px]" />
 
       {/* OUR MENU */}
-      <section className="w-full bg-cream px-[16px] py-[60px] lg:py-[80px]">
+      <section className="w-full bg-cream px-[16px] py-[60px] lg:h-[1049px] lg:px-0 lg:py-0 lg:pt-[124.24px]">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[40px] lg:gap-[64px]">
-          <div className="flex flex-col items-center gap-[12px] text-center text-cocoa lg:gap-[19px]">
-            <p className="font-ligema text-[19px] lg:text-[22.8px]">
-              <span className="font-script">Our</span> MENU
+          <div className="flex flex-col items-center gap-[12px] text-center text-cocoa lg:w-[758px] lg:gap-[19px]">
+            <p className="font-display text-[19px] lg:text-[48px] lg:leading-[53px]">
+              Our MENU
             </p>
-            <p className="max-w-[758px] font-parkinsans text-[15px] lg:text-[20px]">
-              We offer a variety of delicacies from 4 types of baked items,
-              you can click on add to cart any time you desire to place an
-              order offline or online.
+            {/* Figma flows this in a 758px box over three lines; our Parkinsans
+                is narrower, so the box is tightened to the widest value that
+                keeps the same three-line shape. */}
+            <p className="max-w-[758px] font-parkinsans text-[15px] lg:w-[580px] lg:text-[20px] lg:leading-[28.33px]">
+              We offer a variety of delicacies from 4 types of baked items, you
+              can click on add to cart any time you desire to place an order
+              offline or online.
             </p>
           </div>
 
           <div className="mx-auto grid w-full max-w-[500px] grid-cols-2 gap-x-[20px] gap-y-[16px] lg:flex lg:w-auto lg:max-w-none lg:gap-[38px]">
-            {CATEGORIES.map((cat) => (
+            {CATEGORIES.map(({ name, w }) => (
               <button
-                key={cat}
+                key={name}
                 type="button"
-                onClick={() => setActiveCategory(cat)}
-                className={`cursor-pointer whitespace-nowrap rounded-full bg-[#eaebe7] px-[20px] py-[8px] font-parkinsans text-[18px] text-cocoa lg:px-[32px] lg:text-[24px] ${
-                  activeCategory === cat
+                onClick={() => setActiveCategory(name)}
+                style={{ "--pill-w": `${w}px` }}
+                className={`box-border cursor-pointer whitespace-nowrap rounded-full bg-[#eaebe7] px-[20px] py-[8px] font-parkinsans text-[18px] text-cocoa lg:h-[50px] lg:w-[var(--pill-w)] lg:rounded-[100px] lg:px-0 lg:py-0 lg:text-[24px] lg:leading-[34px] ${
+                  activeCategory === name
                     ? "border-2 border-[#969985]"
                     : "border-2 border-transparent"
                 }`}
               >
-                {cat}
+                {name}
               </button>
             ))}
           </div>
 
-          <div className="flex w-full flex-col items-center gap-[20px] lg:flex-row lg:items-start lg:justify-center lg:gap-[16px]">
+          <div className="flex w-full flex-col items-center gap-[20px] lg:flex-row lg:items-center lg:justify-center lg:gap-[16px]">
             {activeItems.length === 0 ? (
               <p className="py-[40px] text-center font-parkinsans text-[16px] text-clay">
                 More treats coming soon!
@@ -475,132 +410,140 @@ export default function Menu() {
         </div>
       </section>
 
-      <CheckerDivider />
+      {/* checkerboard band bridging Our Menu and the Lunch Box section */}
+      <div
+        className="h-[20px] w-full lg:-mt-[3px] lg:h-[60px]"
+        style={CHECKERBOARD_BG}
+      />
 
       {/* LUNCH BOX SPECIALS */}
-      <section className="relative w-full bg-[#f4e7e3] px-[16px] py-[60px] lg:py-[136px]">
+      <section className="relative w-full bg-[#f4e7e3] px-[16px] py-[60px] lg:h-[1636.66px] lg:px-0 lg:py-0 lg:pt-[136px]">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[48px] lg:gap-[127px]">
-          <div className="flex w-full items-center justify-center gap-[16px] lg:gap-[64px]">
+          <div className="flex w-full items-center justify-center gap-[16px] lg:h-[157px] lg:gap-[64px]">
             <button type="button" aria-label="Previous lunch box" className="shrink-0 cursor-pointer">
               <img
                 src={lunchboxArrowLeft}
                 alt=""
-                className="h-[14px] w-[12px] rotate-180 lg:h-[24px] lg:w-[20px]"
+                className="h-[14px] w-[12px] rotate-180 lg:h-[23.85px] lg:w-[20.36px] lg:rotate-0"
               />
             </button>
-            <div className="flex flex-col items-center gap-[12px] lg:gap-[19px]">
+            <div className="flex flex-col items-center gap-[12px] lg:w-[890px] lg:gap-[19px]">
               <div className="relative inline-flex items-center justify-center">
                 <img
                   src={blobSpecials}
                   alt=""
                   className="absolute right-[-6px] h-[61px] w-[91px] lg:right-[-10px] lg:h-[104px] lg:w-[165px]"
                 />
-                <p className="relative text-center font-ligema text-[15.2px] text-cocoa lg:text-[30.4px]">
-                  LUNCH BOX <span className="font-script">Specials</span>
+                <p className="relative text-center font-display text-[15.2px] text-cocoa lg:text-[64px] lg:leading-[70px]">
+                  LUNCH BOX Specials
                 </p>
               </div>
-              <p className="max-w-[828px] text-center font-parkinsans text-[15px] text-cocoa lg:text-[20px]">
-                A thoughtfully curated meal featuring fresh bread,
-                handcrafted crackers, and a sweet treat; perfect for lunch,
-                gifting, or sharing.
+              <p className="max-w-[828px] text-center font-parkinsans text-[15px] text-cocoa lg:w-[828px] lg:text-[20px] lg:leading-[34px]">
+                A thoughtfully curated meal featuring fresh bread, handcrafted
+                crackers, and a sweet treat; perfect for lunch, gifting, or
+                sharing.
               </p>
             </div>
             <button type="button" aria-label="Next lunch box" className="shrink-0 cursor-pointer">
               <img
                 src={lunchboxArrowRight}
                 alt=""
-                className="h-[14px] w-[12px] lg:h-[24px] lg:w-[20px]"
+                className="h-[14px] w-[12px] lg:h-[23.85px] lg:w-[20.36px]"
               />
             </button>
           </div>
 
-          {/* What's inside */}
-          <div className="flex w-full max-w-[1294px] flex-col items-center gap-[16px] lg:gap-[24px]">
-            <p className="font-ligema text-[11.4px] uppercase text-cocoa lg:text-[19px]">
-              WHAT&rsquo;S INSIDE
-            </p>
-            <div className="flex w-full flex-col gap-[20px] rounded-[16px] bg-[rgba(251,251,248,0.57)] p-[16px] lg:flex-row lg:items-center lg:justify-center lg:gap-[21px]">
-              {LUNCHBOX_INSIDE.map((item, i) => (
-                <Fragment key={item.label}>
-                  <div className="flex items-center gap-[16px] lg:gap-[28px]">
-                    <div className="relative grid size-[54px] shrink-0 place-items-center overflow-hidden rounded-full bg-[#d8cbbe] lg:size-[96px]">
+          <div className="flex w-full flex-col items-center gap-[48px] lg:w-[1294px] lg:gap-[92.22px]">
+            {/* What's inside */}
+            <div className="flex w-full flex-col items-center gap-[16px] lg:gap-[15.87px]">
+              <p className="font-display text-[11.4px] uppercase text-cocoa lg:text-[39.66px] lg:leading-[44px]">
+                WHAT&rsquo;S INSIDE
+              </p>
+              <div className="flex w-full flex-col gap-[20px] rounded-[16px] bg-[rgba(251,251,248,0.57)] p-[16px] lg:flex-row lg:items-center lg:justify-center lg:gap-[20.82px] lg:rounded-[15.87px] lg:p-[15.87px]">
+                {LUNCHBOX_INSIDE.map((item, i) => (
+                  <Fragment key={item.label}>
+                    {/* Figma gives each of the three a slightly different
+                        icon-to-text gap. */}
+                    <div className="flex items-center gap-[16px] lg:gap-[var(--icon-gap)]" style={{ "--icon-gap": `${item.gap}px` }}>
+                      <div className="relative grid size-[54px] shrink-0 place-items-center overflow-hidden rounded-full bg-shell lg:size-[96.19px]">
+                        <img
+                          src={lunchboxIconsSprite}
+                          alt=""
+                          className="absolute max-w-none"
+                          style={item.crop}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-[4px] text-cocoa">
+                        <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[38.67px]">
+                          {item.label}
+                        </p>
+                        <p className="font-parkinsans text-[13px] lg:text-[19.83px] lg:leading-[28px]">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </div>
+                    {i < LUNCHBOX_INSIDE.length - 1 && (
                       <img
-                        src={lunchboxIconsSprite}
+                        src={iconRoundPlus}
                         alt=""
-                        className="absolute max-w-none"
-                        style={item.crop}
+                        className="size-[20px] shrink-0 self-center lg:size-[31.73px]"
                       />
-                    </div>
-                    <div className="flex flex-col gap-[4px] text-cocoa">
-                      <p className="font-ligema text-[10.4px] uppercase lg:text-[19px]">
-                        {item.label}
-                      </p>
-                      <p className="font-parkinsans text-[13px] lg:text-[20px]">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                  {i < LUNCHBOX_INSIDE.length - 1 && (
-                    <img
-                      src={iconRoundPlus}
-                      alt=""
-                      className="size-[20px] shrink-0 self-center lg:size-[32px]"
-                    />
-                  )}
-                </Fragment>
-              ))}
+                    )}
+                  </Fragment>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Build your lunch box */}
-          <div className="flex w-full max-w-[1294px] flex-col items-center gap-[24px] lg:gap-[35px]">
-            <div className="flex flex-col items-center gap-[4px] text-center text-cocoa">
-              <p className="font-ligema text-[10.4px] uppercase lg:text-[19px]">
-                BUILD YOUR LUNCH BOX
-              </p>
-              <p className="font-parkinsans text-[14px] lg:text-[20px]">
-                Select one option from each category
-              </p>
-            </div>
-            <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:justify-center lg:gap-[48px]">
-              <LunchboxGroup
-                step={1}
-                title="CHoose your Bread"
-                options={BREAD_OPTIONS}
-                selected={selectedBread}
-                onSelect={setSelectedBread}
-              />
-              <LunchboxGroup
-                step={2}
-                title="CHoose your Crackers"
-                options={CRACKER_OPTIONS}
-                selected={selectedCracker}
-                onSelect={setSelectedCracker}
-              />
-              <LunchboxGroup
-                step={3}
-                title="CHoose your Dessert"
-                options={DESSERT_OPTIONS}
-                selected={selectedDessert}
-                onSelect={setSelectedDessert}
-              />
+            {/* Build your lunch box */}
+            <div className="flex w-full flex-col items-center gap-[24px] lg:gap-[34.7px]">
+              <div className="flex flex-col items-center text-center text-cocoa">
+                <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[43.63px]">
+                  BUILD YOUR LUNCH BOX
+                </p>
+                <p className="font-parkinsans text-[14px] lg:text-[20px] lg:leading-[28px]">
+                  Select one option from each category
+                </p>
+              </div>
+              <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:items-center lg:justify-center lg:gap-[47.6px]">
+                <LunchboxGroup
+                  step={1}
+                  title="CHoose your Bread"
+                  options={BREAD_OPTIONS}
+                  selected={selectedBread}
+                  onSelect={setSelectedBread}
+                />
+                <LunchboxGroup
+                  step={2}
+                  title="CHoose your Crackers"
+                  options={CRACKER_OPTIONS}
+                  selected={selectedCracker}
+                  onSelect={setSelectedCracker}
+                />
+                <LunchboxGroup
+                  step={3}
+                  title="CHoose your Dessert"
+                  options={DESSERT_OPTIONS}
+                  selected={selectedDessert}
+                  onSelect={setSelectedDessert}
+                />
+              </div>
             </div>
           </div>
 
           {/* Price / cart bar */}
-          <div className="flex w-full max-w-[1286px] flex-col items-start gap-[16px] lg:flex-row lg:items-center lg:gap-[33px]">
-            <div className="rounded-[16px] bg-[#cc8a7a] px-[16px] py-[8px]">
-              <p className="font-parkinsans text-[22px] text-white lg:text-[28px]">
+          <div className="flex w-full flex-col items-start gap-[16px] lg:h-[56px] lg:w-[1286px] lg:flex-row lg:items-center lg:gap-[33px]">
+            <div className="grid place-items-center rounded-[16px] bg-[#cc8a7a] px-[16px] py-[8px] lg:h-[55px] lg:w-[123px] lg:px-0 lg:py-0">
+              <p className="font-parkinsans text-[22px] text-white lg:text-[28px] lg:leading-[39px]">
                 $33.50
               </p>
             </div>
-            <p className="font-parkinsans text-[16px] text-cocoa lg:flex-1 lg:text-[20px]">
+            <p className="font-parkinsans text-[16px] text-cocoa lg:w-[723.47px] lg:text-[20px] lg:leading-[28px]">
               One complete lunch box
               <br />
               with your selections
             </p>
-            <div className="flex items-center gap-[16px]">
-              <div className="flex items-center gap-[24px] rounded-full border-2 border-taupe px-[15px] py-[8px] font-parkinsans text-[16px] font-semibold text-taupe lg:gap-[44px]">
+            <div className="flex items-center gap-[16px] lg:gap-[33px]">
+              <div className="flex items-center gap-[24px] rounded-full border-2 border-taupe px-[15px] py-[8px] font-parkinsans text-[16px] font-semibold text-taupe lg:h-[56px] lg:w-[170px] lg:justify-between lg:rounded-[96.34px] lg:px-[15.41px] lg:py-0">
                 <button
                   type="button"
                   onClick={() => setLunchboxQty((q) => Math.max(1, q - 1))}
@@ -619,7 +562,7 @@ export default function Menu() {
               </div>
               <button
                 type="button"
-                className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[24px] py-[16px] font-parkinsans text-[16px] text-white"
+                className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[24px] py-[16px] font-parkinsans text-[16px] text-white lg:grid lg:h-[54px] lg:w-[170.53px] lg:place-items-center lg:rounded-[96.35px] lg:px-0 lg:py-0"
               >
                 Add to Cart
               </button>
@@ -628,29 +571,21 @@ export default function Menu() {
         </div>
       </section>
 
-      {/* Scalloped seam between the pink Lunch Box section and the cream FAQ
-          section below (Group153 in Figma - a row of overlapping circles). */}
-      <div className="h-[38px] w-full lg:hidden" style={SCALLOP_MOBILE} />
-      <div className="hidden h-[58px] w-full lg:block" style={SCALLOP_DESKTOP} />
+      {/* Cream gap between the pink section and the FAQ, which the scallop
+          bumps hang down into. */}
+      <div className="hidden lg:block lg:h-[42.34px]" />
 
-      {/* FAQ */}
-      <section className="w-full bg-[#f7f5f1] px-[16px] py-[60px] lg:px-[70px] lg:py-[80px]">
-        <div className="mx-auto flex w-full max-w-[1302px] flex-col items-start gap-[22px] lg:gap-[31px]">
-          <p className="font-parkinsans text-[19px] text-cocoa lg:text-[28px]">
-            Frequently asked questions
-          </p>
-          <div className="flex w-full flex-col gap-[16px]">
-            {FAQS.map((item, i) => (
-              <FaqRow
-                key={item.q}
-                item={item}
-                isOpen={openFaq === i}
-                onToggle={() => setOpenFaq((cur) => (cur === i ? null : i))}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Scalloped seam: mobile keeps it in flow, desktop hangs it off the FAQ
+          so the pink bumps overlap both the gap and the FAQ's top edge. */}
+      <div className="h-[38px] w-full lg:hidden" style={SCALLOP_MOBILE} />
+
+      <div className="relative">
+        <div
+          className="pointer-events-none absolute inset-x-0 z-10 hidden h-[115.46px] lg:block"
+          style={{ ...SCALLOP_DESKTOP, top: -90 }}
+        />
+        <FaqSection />
+      </div>
     </main>
   );
 }

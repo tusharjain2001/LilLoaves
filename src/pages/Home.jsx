@@ -1,4 +1,5 @@
-import { useState } from "react";
+import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
+import FaqSection from "../components/FaqSection.jsx";
 import logoPink from "../assets/home/logo-pink.svg";
 import heart from "../assets/home/heart.svg";
 import flowerA from "../assets/home/flower-hero-a.svg";
@@ -14,17 +15,12 @@ import productCrackers from "../assets/home/product-crackers.png";
 import photoCorgis from "../assets/home/photo-corgis.jpg";
 import stickerSmiley from "../assets/home/sticker-smiley.svg";
 import ribbonTape from "../assets/home/ribbon-tape.svg";
-import cardScallop from "../assets/home/card-scallop.svg";
-import blobSpecials from "../assets/home/blob-specials.svg";
-import priceTab from "../assets/home/price-tab.svg";
 import specialDanish from "../assets/home/special-danish.jpg";
 import specialCroissants from "../assets/home/special-croissants.jpg";
 import specialBagels from "../assets/home/special-bagels.jpg";
 import specialDonuts from "../assets/home/special-donuts.jpg";
 import iconQuotes from "../assets/home/icon-quotes.svg";
 import photoTestimonial from "../assets/home/photo-testimonial.jpg";
-import iconCross from "../assets/home/icon-cross.svg";
-import iconPlus from "../assets/home/icon-plus.svg";
 
 /* Desktop geometry below is taken verbatim from the Figma home page (node
    247:9590, a 1440-wide canvas). Full-bleed background patterns are phase-locked
@@ -72,18 +68,6 @@ const SPECIALS = [
 
 const TESTIMONIAL_DOTS = [0, 1, 2, 3, 4];
 
-const FAQS = [
-  {
-    q: "Do you bake everything fresh?",
-    a: "Yes! Every loaf and baked good is handcrafted in small batches using quality ingredients and traditional baking methods.",
-  },
-  { q: "Do you offer seasonal specials?" },
-  { q: "How do I place an order?" },
-  { q: "Can I customize my Lunch Box Special?" },
-  { q: "Do you use preservatives?" },
-  { q: "How can I stay updated on new products?" },
-];
-
 /* Hero bands: 110.08px of #cc8a7a every 220.15px starting at x=4. Figma stacks a
    0.6-alpha paint inside a 0.07-opacity group, so the band lands at 0.042. */
 const HERO_STRIPES = {
@@ -92,69 +76,7 @@ const HERO_STRIPES = {
   backgroundPosition: `${CANVAS_ORIGIN} 0`,
 };
 
-/* Gingham behind Seasonal Specials: 35px bands on an 88px pitch, horizontals from
-   y=0 and verticals from x=42, in #e5c5bc at 0.07. Figma stacks two copies of the
-   group, but the upper copy opens with its own opaque #fbfbf8 backing rectangle,
-   which hides the lower copy entirely - so only one set of bands is ever visible.
-   Two CSS layers at 0.07 then give the same 0.135 at the crossings. */
-const GINGHAM_BG = {
-  backgroundImage: [
-    "repeating-linear-gradient(180deg, rgba(229,197,188,0.07) 0 35px, transparent 35px 88px)",
-    "repeating-linear-gradient(90deg, transparent 0 42px, rgba(229,197,188,0.07) 42px 77px, transparent 77px 88px)",
-  ].join(","),
-  backgroundPosition: `${CANVAS_ORIGIN} 0`,
-};
-
-/* 30px checkerboard, two rows tall, sitting on the section's bottom edge. Figma
-   fills x=30,90,... on the upper row and x=0,60,... on the lower one, which is
-   the opposite phase to what the conic gradient starts on - hence the extra 30px
-   of x offset from the canvas origin. */
-const CHECKERBOARD_BG = {
-  backgroundImage:
-    "repeating-conic-gradient(#e5c5bc 0% 25%, transparent 0% 50%)",
-  backgroundSize: "60px 60px",
-  backgroundPosition: "calc(50% - 690px) 0",
-};
-
-/* Two things keep a collapsed row at Figma's 71px: the vertical padding lives on
-   the text column rather than the row (otherwise it stacks with the 71px toggle
-   icon and every row grows to 119px), and the rule is painted on the bottom edge
-   instead of being a border, since Figma's stroke sits inside the frame. */
-function FaqRow({ item, isOpen, onToggle }) {
-  return (
-    <div className="relative w-full">
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-clay" />
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-start justify-between gap-[8px] text-left lg:gap-[12px]"
-      >
-        <div className="flex flex-1 flex-col gap-[8px] py-[17px] lg:gap-[12px] lg:py-[24px]">
-          <p className="font-dm text-[17px] capitalize tracking-[-0.17px] text-cocoa lg:text-[20px] lg:leading-[23px] lg:tracking-[-0.2px]">
-            {item.q}
-          </p>
-          {isOpen && item.a && (
-            /* Figma sets this in a 892px box where Neulis Sans runs to two
-               lines; DM Sans is narrower, so the box is tightened to keep the
-               same two-line break (and the row's 125px height). */
-            <p className="font-dm text-[14px] capitalize text-cocoa lg:w-[800px] lg:text-[16px] lg:leading-[21px]">
-              {item.a}
-            </p>
-          )}
-        </div>
-        <img
-          src={isOpen ? iconCross : iconPlus}
-          alt=""
-          className="size-[49px] shrink-0 lg:size-[71px]"
-        />
-      </button>
-    </div>
-  );
-}
-
 export default function Home() {
-  const [openFaq, setOpenFaq] = useState(0);
-
   return (
     <main className="w-full overflow-x-hidden bg-cream">
       {/* HERO - 878px tall, navbar floats over it */}
@@ -357,71 +279,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SEASONAL SPECIALS */}
-      <section className="relative w-full overflow-hidden bg-cream px-[16px] py-[60px] lg:h-[841px] lg:py-0 lg:pt-[75px]">
-        <div className="pointer-events-none absolute inset-0" style={GINGHAM_BG} />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[30px] lg:bottom-[1px] lg:h-[60px]"
-          style={CHECKERBOARD_BG}
-        />
-
-        <div className="relative mx-auto flex w-full max-w-[1082px] flex-col items-center gap-[47px] lg:gap-[80px]">
-          <div className="flex flex-col items-center gap-[33px] lg:gap-[56px]">
-            {/* Title lockup: Figma centres the text+blob pair, not the text. */}
-            {/* Blob is painted first so the wordmark sits on top of it. */}
-            <div className="relative lg:h-[79px] lg:w-[272.96px]">
-              <img
-                src={blobSpecials}
-                alt=""
-                className="absolute left-[100px] top-0 h-[97px] w-[61px] -rotate-90 lg:left-[147.96px] lg:h-[79px] lg:w-[125px] lg:rotate-0"
-              />
-              <p className="relative font-display text-[18.1px] text-cocoa lg:absolute lg:left-0 lg:top-[18.18px] lg:w-[250px] lg:text-[48px] lg:leading-[53px]">
-                SEASONAL Specials
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-[12px] lg:flex lg:gap-[16.92px]">
-              {SPECIALS.map(({ name, price, img }) => (
-                <div
-                  key={name}
-                  className="relative h-[258px] w-[179px] lg:h-[371.95px] lg:w-[257.81px]"
-                >
-                  <img
-                    src={cardScallop}
-                    alt=""
-                    className="absolute inset-0 h-full w-full -scale-y-100"
-                  />
-                  <img
-                    src={img}
-                    alt={name}
-                    className="absolute left-[6px] top-[6px] h-[197px] w-[167px] rounded-[4px] object-cover lg:left-[8.46px] lg:top-[8.46px] lg:h-[284.15px] lg:w-[240.18px] lg:rounded-[5.5px]"
-                  />
-                  <p className="absolute left-1/2 top-[208px] -translate-x-1/2 whitespace-nowrap font-parkinsans text-[12px] text-cocoa lg:top-[299.38px] lg:text-[16.91px] lg:leading-[24px]">
-                    {name}
-                  </p>
-                  <div className="absolute left-1/2 top-[230px] flex h-[25px] w-[99px] -translate-x-1/2 items-center justify-center lg:top-[330.67px] lg:h-[36.37px] lg:w-[142.48px]">
-                    <img
-                      src={priceTab}
-                      alt=""
-                      className="absolute inset-0 h-full w-full"
-                    />
-                    <p className="relative pt-[2px] font-parkinsans text-[14px] font-medium text-cocoa lg:pt-[4px] lg:text-[20.3px] lg:leading-[28px]">
-                      {price}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[28px] py-[6px] font-parkinsans text-[12px] text-white lg:px-[48px] lg:py-[10px] lg:text-[16px] lg:leading-[22px]"
-          >
-            View Specials
-          </button>
-        </div>
-      </section>
+      <SeasonalSpecials specials={SPECIALS} />
 
       {/* TESTIMONIAL */}
       <section className="relative w-full bg-cream px-[16px] py-[60px] lg:h-[562px] lg:py-0">
@@ -482,24 +340,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="w-full bg-linen px-[16px] py-[60px] lg:h-[798px] lg:px-[70px] lg:py-0 lg:pt-[84px]">
-        <div className="mx-auto flex w-full max-w-[1302px] flex-col items-start gap-[22px] lg:gap-[31px]">
-          <p className="font-parkinsans text-[19px] text-cocoa lg:text-[28px] lg:leading-[39px]">
-            Frequently asked questions
-          </p>
-          <div className="flex w-full flex-col gap-[16px]">
-            {FAQS.map((item, i) => (
-              <FaqRow
-                key={item.q}
-                item={item}
-                isOpen={openFaq === i}
-                onToggle={() => setOpenFaq((cur) => (cur === i ? null : i))}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      <FaqSection />
     </main>
   );
 }

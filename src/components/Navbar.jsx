@@ -20,7 +20,7 @@ const NAV_LINKS = [
 const STRIPES =
   "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_111px,#faf3e0_111px,#faf3e0_222px)]";
 
-const OVERLAY_ROUTES = new Set(["/", "/about"]);
+const OVERLAY_ROUTES = new Set(["/", "/about", "/menu"]);
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
