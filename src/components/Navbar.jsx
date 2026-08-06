@@ -20,12 +20,14 @@ const NAV_LINKS = [
 const STRIPES =
   "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_111px,#faf3e0_111px,#faf3e0_222px)]";
 
+const OVERLAY_ROUTES = new Set(["/", "/about"]);
+
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  /* On the home page the pill floats over the hero itself (Figma has the hero
-     running full-bleed from y=0 with the nav laid on top at y=44); every other
-     page sits it on the striped band. */
-  const overlay = useLocation().pathname === "/";
+  /* On these pages the pill floats over the hero itself (Figma runs the hero
+     full-bleed from y=0 with the nav laid on top at y=44); every other page
+     sits it on the striped band. */
+  const overlay = OVERLAY_ROUTES.has(useLocation().pathname);
 
   return (
     <header
