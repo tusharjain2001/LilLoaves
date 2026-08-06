@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/shared/logo-latte.svg";
 import iconSearch from "../assets/shared/icon-search.svg";
 import iconPerson from "../assets/shared/icon-person.svg";
@@ -22,11 +22,21 @@ const STRIPES =
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  /* On the home page the pill floats over the hero itself (Figma has the hero
+     running full-bleed from y=0 with the nav laid on top at y=44); every other
+     page sits it on the striped band. */
+  const overlay = useLocation().pathname === "/";
 
   return (
-    <header className={`w-full ${STRIPES}`}>
+    <header
+      className={
+        overlay
+          ? "absolute inset-x-0 top-0 z-50 w-full"
+          : `w-full ${STRIPES}`
+      }
+    >
       <div className="relative mx-auto w-full max-w-[1440px] px-[16px] pt-[20px] lg:px-[45px] lg:pt-[44px]">
-        <div className="flex h-[55px] items-center justify-between rounded-full border border-blush bg-cream px-[26px] lg:h-[76px] lg:px-[28px]">
+        <div className="flex h-[55px] items-center justify-between rounded-full border border-shell bg-cream px-[26px] backdrop-blur-[52.5px] lg:h-[76px] lg:px-[28px]">
           <div className="flex items-center gap-[16px]">
             <button
               type="button"
@@ -45,26 +55,30 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <nav className="hidden items-center gap-[35px] font-parkinsans text-[20px] text-cocoa lg:flex">
-            {NAV_LINKS.map(({ label, to }) =>
-              to ? (
-                <NavLink
-                  key={label}
-                  to={to}
-                  className={({ isActive }) =>
-                    isActive
-                      ? "underline underline-offset-4"
-                      : "hover:underline hover:underline-offset-4"
-                  }
-                >
-                  {label}
-                </NavLink>
-              ) : (
-                <span key={label} className="cursor-default">
-                  {label}
-                </span>
-              ),
-            )}
+          <nav className="hidden lg:flex lg:w-[629px] lg:items-center lg:justify-center">
+            <div className="flex items-center gap-[35px] font-parkinsans text-[16px] text-cocoa [-webkit-text-stroke:0.2px_#57423d]">
+              {NAV_LINKS.map(({ label, to }) =>
+                to ? (
+                  <NavLink
+                    key={label}
+                    to={to}
+                    className={({ isActive }) =>
+                      `whitespace-nowrap ${
+                        isActive
+                          ? "underline underline-offset-4"
+                          : "hover:underline hover:underline-offset-4"
+                      }`
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                ) : (
+                  <span key={label} className="cursor-default whitespace-nowrap">
+                    {label}
+                  </span>
+                ),
+              )}
+            </div>
           </nav>
 
           <div className="flex items-center gap-[9px] lg:gap-[16px]">

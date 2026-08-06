@@ -21,16 +21,31 @@
   font-display: swap;
 }
 
-/* The design's display face is "Ligema DEMO", licensed for personal use only, so
-   it cannot ship here. Its uppercase reads as a geometric sans (Parkinsans stands
-   in) and its lowercase is a looped script (Pacifico stands in). Ligema also draws
-   unusually small on the em square, so type sizes taken from Figma are scaled down
-   at each usage - roughly 0.475x for the sans and 0.70x for the script - to fill
-   the same boxes as the design. */
+/* The design's display face. Its uppercase is a geometric sans and its lowercase
+   is a looped script, which is why headings like "Our PRODUCTS" read as two faces
+   in one string - no span-splitting needed, just type the mixed-case text.
+   Ligema draws small on the em square (cap height 0.435em vs Parkinsans' 0.71em),
+   so Figma sizes are used verbatim rather than scaled. It ships no digits or "$",
+   which the design never asks of it. LICENCE: free for personal use only - see
+   assets/fonts/ligema-demo-LICENSE.txt. A commercial licence is required before
+   this goes live: creativemarket.com/PandekaStudio/253626971-Ligema */
+@font-face {
+  font-family: "Ligema DEMO";
+  src: url("./assets/fonts/ligema-demo.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* "Neulis Sans" (info-bar labels, testimonial body, FAQ copy) is commercial and
+   not licensed here; DM Sans stands in for it. */
 
 @theme {
   /* Fonts */
   --font-parkinsans: "Parkinsans", sans-serif;
+  --font-display: "Ligema DEMO", "Parkinsans", sans-serif;
+  /* Legacy stand-in kept for the pages not yet reworked against Figma; they use
+     sizes pre-scaled by 0.475x. Migrate each to --font-display with the real
+     Figma sizes as we go page by page. */
   --font-ligema: "Parkinsans", sans-serif;
   --font-script: "Pacifico", cursive;
   --font-dm: "DM Sans", sans-serif;
@@ -46,8 +61,14 @@
   --color-vanilla: #fcf7ea; /* hero stripe + toggle background */
   --color-butter: #faf3e0; /* hero base background */
   --color-sand: #f8efd6; /* hero wave cream */
-  --color-blush: #e2d2cd; /* nav icon button bg + pill border */
-  --color-rose: #f0dcd7; /* order sub-bar background */
+  --color-blush: #e2d2cd; /* nav icon button bg */
+  --color-shell: #d8cbbe; /* navbar pill border */
+  --color-rose: #f0dcd7; /* hero base + specials price tab */
+  --color-terracotta: #cc8a7a; /* hero stripes + heart */
+  --color-clay-tint: #e5c5bc; /* specials gingham + checkerboard + title blob */
   --color-petal: #eed9d3; /* mobile dropdown active item bg */
   --color-oat: #ebe9dd; /* category strip background */
+  --color-honey: #f7ebca; /* products section background */
+  --color-linen: #f7f5f1; /* FAQ section background */
+  --color-bark: #2e2017; /* testimonial body copy */
 }

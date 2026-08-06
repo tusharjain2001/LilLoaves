@@ -14,7 +14,7 @@ import EmailPickup from "./pages/EmailPickup.jsx";
 
 function Layout() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="relative flex min-h-screen flex-col bg-white">
       <Navbar />
       <div className="flex-1">
         <Outlet />

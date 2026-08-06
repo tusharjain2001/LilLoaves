@@ -22,7 +22,7 @@ const QUICK_LINKS = [
 export default function Footer() {
   return (
     <footer className="w-full bg-mocha">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center px-[16px] pt-[60px] lg:flex-row lg:items-start lg:justify-between lg:px-[65px] lg:pt-[66px] lg:pb-[60px]">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center px-[16px] pt-[60px] lg:flex-row lg:items-start lg:justify-between lg:px-[65px] lg:pt-[66px] lg:pb-[61px]">
         <div className="flex flex-col items-center gap-[36px] lg:items-start">
           <img
             src={logoWhite}
@@ -38,7 +38,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-[40px] flex flex-col gap-[9px] lg:order-last lg:mt-0">
-          <p className="font-parkinsans text-[20px] text-white">
+          <p className="font-parkinsans text-[20px] leading-[28px] text-white">
             📍 Find us here
           </p>
           <img
@@ -86,8 +86,10 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="mx-auto mt-[40px] w-full max-w-[1440px] lg:mt-0">
-        <div className="mx-auto h-px w-[calc(100%-75px)] max-w-[1365px] bg-white" />
+      {/* The rule sits on the bottom bar's top edge in Figma rather than above
+          it, so it is absolutely placed and adds no height to the 99px bar. */}
+      <div className="relative mx-auto mt-[40px] w-full max-w-[1440px] lg:mt-0">
+        <div className="absolute inset-x-0 top-0 mx-auto h-px w-[calc(100%-75px)] max-w-[1365px] bg-white" />
         <div className="flex flex-col items-center gap-[22px] px-[16px] py-[28px] lg:flex-row lg:justify-between lg:px-[64px] lg:py-[27.5px]">
           <div className="flex items-center gap-[12px]">
             <a href="https://www.facebook.com" aria-label="Facebook">
