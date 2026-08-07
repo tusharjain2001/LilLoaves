@@ -60,17 +60,70 @@ screen: the WooCommerce checkout page where payment is taken.
 
 ### Read path
 
-React calls the **Store API** (`/wp-json/wc/store/v1/`) directly from the
-browser. That API is public and read-only by design, so no credentials exist in
-the Vite bundle.
+**Amended 2026-08-08 after testing against the live host.** The original design
+had React call the Store API directly from the browser. Measurement showed that
+is not viable on WordPress.com.
+
+A burst of 8 unauthenticated requests from one IP returned five `429 Too Many
+Requests`. The error page carries `_error = '429-lb'` — the throttle is at
+WordPress.com's **load balancer**, so the request never reaches WordPress and no
+plugin or setting can raise the limit. Separately, the Store API response
+carries `Access-Control-Allow-Methods`, `-Allow-Headers` and
+`-Allow-Credentials` but **not `Access-Control-Allow-Origin`**, so a browser
+would refuse the response even when it succeeds.
+
+Both problems are solved by one small caching function on Vercel:
+
+```
+React  ->  /api/products  (Vercel serverless, edge-cached 60s)  ->  Store API
+```
+
+- **Rate limiting disappears.** A thousand customers become at most one upstream
+  request per minute.
+- **CORS disappears.** `/api/products` is same-origin; there are no headers to
+  negotiate.
+- **An outage degrades gracefully.** The edge serves the last good response.
+- **The WordPress URL stops being public**, a small security gain.
+
+The Vercel deploy is therefore no longer purely static. It stays on the free
+tier and the function is a single file.
 
 The WooCommerce **admin** REST API (`/wp-json/wc/v3/`, consumer key + secret)
-must never be called from the frontend. Those keys are effectively admin
-credentials and anything in a client bundle is public.
+must never be called — not from the browser and not from the proxy. Those keys
+are effectively admin credentials. The proxy forwards only to the public,
+read-only Store API and holds no credentials at all.
 
-Responses cache in `sessionStorage` for the session. A build-time snapshot at
-`src/data/products.fallback.json` renders the menu if the API is unreachable,
-so an outage degrades stock accuracy rather than showing an empty bakery.
+React caches proxy responses in `sessionStorage` for the session. A build-time
+snapshot at `src/data/products.fallback.json` renders the menu if both the proxy
+and its cache fail.
+
+### Store API facts, verified against the live store
+
+These were confirmed by querying the real WooCommerce 11.0.0 instance. Each one
+contradicts a reasonable assumption, so they are recorded explicitly.
+
+**Prices are minor-unit strings, not decimals.**
+
+```json
+"prices": { "price": "2113", "currency_minor_unit": 2, "currency_code": "USD" }
+```
+
+`"2113"` means $21.13. `woo.js` exposes one conversion helper and no other code
+formats money. Getting this wrong charges 100x.
+
+**Products do not expose `is_featured`.** The key is absent from the product
+object. Seasonal Specials therefore come from a separate `?featured=true`
+query rather than a flag read off each product. Verified: it returns exactly the
+starred product. Free once the proxy caches it.
+
+**Tag filtering takes term IDs, not slugs.** `?tag=1376` works; `?tag=lunchbox-bread`
+does not. `woo.js` fetches the tags endpoint once, builds a slug-to-ID map, and
+caches it.
+
+**Empty categories are omitted** from `/products/categories`. With products only
+in Breads, that is the sole category returned. Menu tabs therefore reflect
+categories that actually have products, and the remaining tabs appear as the
+client fills them. This is intended behaviour, not a bug to work around.
 
 ### Write path
 
@@ -235,7 +288,8 @@ limits, which avoids a reservation race condition at checkout.
 
 | File | Job |
 |---|---|
-| `src/lib/woo.js` | Store API client — products, categories, tagged sets, pickup config; `sessionStorage` cache + fallback |
+| `api/products.js` | Vercel serverless proxy — forwards to the Store API, edge-caches 60s. Solves the 429 throttle and CORS. |
+| `src/lib/woo.js` | Proxy client — products, categories, tagged sets, pickup config; minor-unit price conversion; tag slug-to-ID map; `sessionStorage` cache + fallback |
 | `src/context/CartContext.jsx` | Single source of cart truth, persisted to `localStorage` |
 | `src/lib/quote.js` | Calls `/quote` on cart change (debounced); returns authoritative totals |
 | `src/lib/checkout.js` | Builds and submits the handoff form |
@@ -317,6 +371,33 @@ display convenience and never the authority.
 
 The minimum order value for delivery is configurable on the settings screen and
 defaults to 0 (disabled).
+
+## Provisioned backend state
+
+Live as of 2026-08-08. WordPress 7.0.3, PHP 8.4, WooCommerce 11.0.0, plan
+**Business** (so WooCommerce was installed manually — Commerce would have
+preinstalled it). Country `US:CA`, currency USD, taxes disabled.
+
+Site: `jessnix04-bvcul.wpcomstaging.com`. Access via `ssh lilloaves-wp`, which
+provides WP-CLI. Credentials and object IDs live in the `LilLoaves-backend`
+repo's gitignored `.env`.
+
+| Object | ID |
+|---|---|
+| Categories: Breads / Muffins / Cookies / Crackers | 1372 / 1373 / 1374 / 1375 |
+| Tags: `lunchbox-bread` / `-cracker` / `-dessert` | 1376 / 1377 / 1378 |
+| Sour Dough (cat breads, tag lunchbox-bread) | 13 |
+| Danish Pastries (featured) | 14 |
+| Lunch Box ($39, no category) | 15 |
+| Japanese Milk Bread (out of stock) | 16 |
+| Shipping zone + Local Pickup + Flat Rate | zone 1, instances 1 and 2 |
+
+**Gate result:** a test file written to `/srv/htdocs/wp-content/mu-plugins/` was
+loaded by WordPress and its constant was visible to `wp eval`. The must-use
+plugin approach the checkout handoff depends on is confirmed on this host.
+
+Still to provision: the Blueberry Muffin **variable** product (Pack of 2 / Pack
+of 4), which is the test case for the variations path.
 
 ## Emails
 
