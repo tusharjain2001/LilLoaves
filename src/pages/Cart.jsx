@@ -10,19 +10,10 @@ import bgPickupScallop from "../assets/cart/bg-pickup-scallop.svg";
 import iconChevronLeft from "../assets/cart/icon-chevron-left.svg";
 import iconChevronRight from "../assets/cart/icon-chevron-right.svg";
 
-// fetchQuote's own short-circuit for an empty cart ({ ok: true, all totals
-// "" }) is what this mirrors before any quote has landed — never a hardcoded
-// $0.00, since a real currency object may not even be known yet.
-const EMPTY_QUOTE = {
-  ok: true,
-  lines: [],
-  subtotalFormatted: "",
-  deliveryFormatted: "",
-  discountFormatted: "",
-  taxFormatted: "",
-  totalFormatted: "",
-  errors: [],
-};
+// Shown for any money figure whose quote hasn't landed yet - never blank
+// beside a label, never a fabricated $0.00 (there's no currency object to
+// build one from until a quote actually returns).
+const PENDING = "—";
 
 const CONTACT_FIELDS = [
   { key: "email", label: "Email Address", tone: "latte", type: "email" },
@@ -100,7 +91,11 @@ export default function Cart() {
   const [pickupTab, setPickupTab] = useState("date");
   const [deliveryFields, setDeliveryFields] = useState({});
   const [pickupFields, setPickupFields] = useState({});
-  const [quote, setQuote] = useState(EMPTY_QUOTE);
+  // null means "no quote has landed yet" - distinct from a real quote that
+  // happens to have blank totals (a failed fetch). Both render as PENDING,
+  // but only this flag decides whether the block below is even trustworthy.
+  const [quote, setQuote] = useState(null);
+  const hasQuoted = quote !== null;
 
   const updateDeliveryField = (key) => (e) =>
     setDeliveryFields((prev) => ({ ...prev, [key]: e.target.value }));
@@ -149,15 +144,18 @@ export default function Cart() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linesKey, mode, postcode, appliedCoupon]);
 
+  // `|| PENDING` (not `?? PENDING`) on purpose: a landed-but-failed quote
+  // (network error, non-200) is a real object with genuinely blank ""
+  // strings, not null - it must show the same placeholder, not an empty row.
   const quoteLineTotals = new Map(
-    quote.lines.map((l) => [l.id, l.totalFormatted])
+    (quote?.lines ?? []).map((l) => [l.id, l.totalFormatted])
   );
   const summaryRows = [
-    { key: "subtotal", label: "Subtotal", value: quote.subtotalFormatted },
-    { key: "shipping", label: "Shipping", value: quote.deliveryFormatted },
-    { key: "discount", label: "Discount", value: quote.discountFormatted },
+    { key: "subtotal", label: "Subtotal", value: quote?.subtotalFormatted || PENDING },
+    { key: "shipping", label: "Shipping", value: quote?.deliveryFormatted || PENDING },
+    { key: "discount", label: "Discount", value: quote?.discountFormatted || PENDING },
   ];
-  const checkoutDisabled = cart.isEmpty || quote.errors.length > 0;
+  const checkoutDisabled = cart.isEmpty || !hasQuoted || quote.errors.length > 0;
 
   return (
     <main className="w-full bg-cream">
@@ -263,7 +261,7 @@ export default function Cart() {
                       </div>
                       <div className="hidden items-center gap-[35px] lg:flex">
                         <p className="font-parkinsans text-[24px] text-cocoa">
-                          {quoteLineTotals.get(line.id) ?? ""}
+                          {quoteLineTotals.get(line.id) || PENDING}
                         </p>
                         <button
                           type="button"
@@ -427,12 +425,12 @@ export default function Cart() {
                 {!cart.isEmpty && (
                   <div className="flex w-full items-center justify-between font-parkinsans font-medium text-cocoa">
                     <p className="text-[20px]">Total</p>
-                    <p className="text-[24px]">{quote.totalFormatted}</p>
+                    <p className="text-[24px]">{quote?.totalFormatted || PENDING}</p>
                   </div>
                 )}
               </div>
               <div className="flex w-full flex-col gap-[12px]">
-                {quote.errors.length > 0 && (
+                {hasQuoted && quote.errors.length > 0 && (
                   <p role="alert" className="font-parkinsans text-[13px] text-[#c80000]">
                     {quote.errors.join(" ")}
                   </p>

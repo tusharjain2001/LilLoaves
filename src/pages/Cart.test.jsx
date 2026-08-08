@@ -116,12 +116,41 @@ describe('Cart items', () => {
 
 describe('Empty cart', () => {
   it('renders an empty state without any blank money rows and disables checkout', async () => {
-    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote()) // must not even be called
+    // The effect still fires fetchQuote({ lines: [], ... }) after the debounce -
+    // the empty-cart short-circuit lives inside fetchQuote itself, not here.
+    // What's asserted below is that whatever this mock resolves with never
+    // reaches the DOM: rendering is gated on cart.isEmpty, not on quote content.
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
     renderCart()
 
     expect(await screen.findByText(/cart is empty/i)).toBeTruthy()
     expect(screen.queryByText('Subtotal')).toBeNull()
     expect(screen.queryByText('Total')).toBeNull()
+    expect(screen.getByText('Proceed to Checkout').closest('button').disabled).toBe(true)
+  })
+})
+
+describe('Before the first quote lands', () => {
+  it('shows a placeholder instead of a blank money row on a populated cart\'s first render', () => {
+    // A returning customer's cart loads from localStorage instantly, but the
+    // quote is still 300ms + a network round trip away. Assert synchronously,
+    // right after render and before that timer has any chance to fire, so
+    // fetchQuote is never even called yet - this is the window the bug lived in.
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockImplementation(() => new Promise(() => {}))
+    renderCart()
+
+    expect(quoteLib.fetchQuote).not.toHaveBeenCalled()
+    // Labels are already on screen... ("Shipping" also names a checkout
+    // stepper step elsewhere on the page, hence getAllByText there.
+    expect(screen.getByText('Subtotal')).toBeTruthy()
+    expect(screen.getAllByText('Shipping').length).toBeGreaterThan(0)
+    expect(screen.getByText('Discount')).toBeTruthy()
+    expect(screen.getByText('Total')).toBeTruthy()
+    // ...but nothing beside them is an empty string. Every pending figure -
+    // subtotal, shipping, discount, Total, and the per-line total - renders
+    // the same placeholder instead of "".
+    expect(screen.getAllByText('—')).toHaveLength(5)
     expect(screen.getByText('Proceed to Checkout').closest('button').disabled).toBe(true)
   })
 })
