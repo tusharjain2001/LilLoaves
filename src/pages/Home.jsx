@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
 import FaqSection from "../components/FaqSection.jsx";
 import { fetchFeatured } from "../lib/woo.js";
+import PLACEHOLDER_PRODUCT_IMAGE from "../lib/placeholderImage.js";
 import logoPink from "../assets/home/logo-pink.svg";
 import heart from "../assets/home/heart.svg";
 import flowerA from "../assets/home/flower-hero-a.svg";
@@ -78,7 +79,7 @@ export default function Home() {
         products.slice(0, 4).map((p) => ({
           name: p.name,
           price: p.priceFormatted,
-          img: p.images[0]?.src ?? "",
+          img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
         })),
       );
     });

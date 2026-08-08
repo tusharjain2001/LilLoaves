@@ -8,6 +8,7 @@ import {
   fetchFeatured,
   fetchByTagSlug,
 } from "../lib/woo.js";
+import PLACEHOLDER_PRODUCT_IMAGE from "../lib/placeholderImage.js";
 import flowerYellow from "../assets/shared/flower-yellow.svg";
 import blobButton from "../assets/menu/blob-button.svg";
 import blobSpecials from "../assets/menu/blob-specials.svg";
@@ -239,7 +240,7 @@ export default function Menu() {
           feat.slice(0, 4).map((p) => ({
             name: p.name,
             price: p.priceFormatted,
-            img: p.images[0]?.src ?? "",
+            img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
           })),
         );
       },
@@ -257,7 +258,10 @@ export default function Menu() {
       fetchByTagSlug("lunchbox-dessert"),
     ]).then(([bread, cracker, dessert]) => {
       if (!active) return;
-      const toOption = (p) => ({ name: p.name, img: p.images[0]?.src });
+      const toOption = (p) => ({
+        name: p.name,
+        img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
+      });
       setLunchbox({
         bread: bread.map(toOption),
         cracker: cracker.map(toOption),
@@ -372,7 +376,7 @@ export default function Menu() {
                   name: p.name,
                   desc: p.summary,
                   price: p.priceFormatted,
-                  img: p.images[0]?.src,
+                  img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
                   inStock: p.inStock,
                 };
                 return (

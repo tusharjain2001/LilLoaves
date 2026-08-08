@@ -76,6 +76,13 @@ describe('Menu', () => {
     await waitFor(() => expect(screen.getByText('Slow-fermented.')).toBeTruthy())
     expect(screen.queryByText(/<p/)).toBeNull()
   })
+
+  it('shows a placeholder image rather than a broken image when the product has none', async () => {
+    woo.fetchProducts.mockResolvedValue([product({ images: [] })])
+    renderMenu()
+    await waitFor(() => expect(screen.getByAltText('Sour Dough')).toBeTruthy())
+    expect(screen.getByAltText('Sour Dough').getAttribute('src')).not.toBe('')
+  })
 })
 
 describe('Menu lunch box', () => {
