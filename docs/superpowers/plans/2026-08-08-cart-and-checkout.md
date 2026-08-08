@@ -114,11 +114,23 @@ Create `c:\Users\asus\Desktop\LilLoaves-backend\README.md` with, at minimum:
 
 Also document the deploy command, how to verify the plugin loaded, and the `/quote` request/response shapes.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Add outage detection**
+
+The rollback in Step 3 only helps if somebody notices. A mu-plugin fatal 500s
+the whole site, the owner is non-technical and has no SSH, and WordPress.com
+auto-updates WooCommerce — so this plugin can break months from now, long after
+the staging gate is behind us, with the same blast radius.
+
+Set up one free external uptime check (UptimeRobot or equivalent) polling the
+storefront and `wp-admin` every five minutes, alerting **the developer** by
+email or SMS. Record in the README who is actually on call after handover,
+because it is not the bakery owner.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 cd c:\Users\asus\Desktop\LilLoaves-backend
-git add -A && git commit -m "Add staging config and rollback runbook" && git push
+git add -A && git commit -m "Add staging config, rollback runbook and uptime monitoring" && git push
 ```
 
 ---
@@ -934,13 +946,30 @@ Add `VITE_WP_CHECKOUT_URL=https://jessnix04-bvcul.wpcomstaging.com` to `.env`, c
 
 - [ ] **Step 2: Implement**
 
-`checkout.js` builds a `<form method="POST" action="{VITE_WP_CHECKOUT_URL}/wp-admin/admin-post.php">` carrying `action=ll_handoff`, a JSON payload of **ids and quantities only**, the fulfilment mode, contact and address fields, pickup store/date/slot, the coupon, and a freshly generated idempotency token. Append to `document.body` and submit — the page is navigating away.
+`checkout.js` builds a `<form method="POST" action="{VITE_WP_CHECKOUT_URL}/wp-admin/admin-post.php">` and submits it. Append to `document.body`, submit, and leave it — the page is navigating away.
 
-Tests: the form has the right method and action; the payload contains no prices; `fetch` is never called; a token is present and differs between submissions.
+**The POST field contract, pinned.** Task 7's handler and this module must agree exactly, or a field silently vanishes instead of erroring:
+
+| Field | Value |
+|---|---|
+| `action` | `ll_handoff` |
+| `items` | JSON string, `[{"id":13,"qty":2}]` — **ids and quantities only** |
+| `fulfilment` | `delivery` or `pickup` |
+| `token` | idempotency token, see below |
+| `coupon` | coupon code, or empty |
+| `email`, `phone`, `first_name`, `last_name` | contact |
+| `address_1`, `address_2`, `city`, `state`, `postcode` | delivery only |
+| `pickup_store`, `pickup_date`, `pickup_slot` | pickup only |
+
+**The idempotency token is generated once per cart state, not per click.** Revision 2 generated a fresh one inside the submit handler and tested that tokens "differ between submissions" — which defeats the whole guard, because a double-click produces two different tokens and Task 7's "have I seen this token" check never fires. Derive it once from the cart contents, regenerating only when the cart changes, so both clicks carry the same token.
+
+Tests: the form has the right method and action; every field above is present with the right name; the payload contains no prices; `fetch` is never called; **two submissions of an unchanged cart carry the same token**; changing the cart changes the token.
 
 - [ ] **Step 3: Wire the button and the error states**
 
-Wire "Proceed to Checkout" at `Cart.jsx:381`. Disable it when the cart is empty, a quote is in flight, or the quote reports errors. Read `?error=` on mount and render the matching message from Task 7's code list.
+Wire "Proceed to Checkout" at `Cart.jsx:381`. Disable it when the cart is empty, a quote is in flight, or the quote reports errors — **and disable it synchronously inside the click handler, before building the form.** That one line closes the human double-click, which is the dominant real-world trigger for a doubled order; the token guard alone does not, because both clicks race before either completes.
+
+Read `?error=` on mount and render the matching message for every code in Task 7's list, including `throttled`.
 
 - [ ] **Step 4: End-to-end on production**
 
