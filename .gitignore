@@ -25,3 +25,7 @@ dist-ssr
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+
+# Local env
+.env
+.env.local
