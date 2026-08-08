@@ -45,7 +45,6 @@ function jsonOnce(payload) {
 
 beforeEach(() => {
   clearCache()
-  sessionStorage.clear()
   global.fetch = vi.fn()
 })
 

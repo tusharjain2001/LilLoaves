@@ -20,32 +20,9 @@ function cacheKey(path, params) {
   return `woo:${path}?${new URLSearchParams(params).toString()}`
 }
 
-function readSession(key) {
-  try {
-    const raw = sessionStorage.getItem(key)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-
-function writeSession(key, value) {
-  try {
-    sessionStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Private mode or quota exceeded. The in-memory cache still applies.
-  }
-}
-
 async function get(path, params = {}) {
   const key = cacheKey(path, params)
   if (memory.has(key)) return memory.get(key)
-
-  const stored = readSession(key)
-  if (stored) {
-    memory.set(key, stored)
-    return stored
-  }
 
   const query = new URLSearchParams(params).toString()
   const response = await fetch(`${BASE}/${path}${query ? `?${query}` : ''}`)
@@ -53,7 +30,6 @@ async function get(path, params = {}) {
   const data = await response.json()
 
   memory.set(key, data)
-  writeSession(key, data)
   return data
 }
 
@@ -99,7 +75,7 @@ export async function fetchProducts(params = {}) {
 
 export async function fetchCategories() {
   try {
-    const raw = await get('products/categories')
+    const raw = await get('products/categories', { per_page: 100 })
     return raw.map((c) => ({ id: c.id, name: c.name, slug: c.slug, count: c.count }))
   } catch {
     return []
@@ -115,7 +91,7 @@ export async function fetchByTagSlug(slug) {
   // Tags with no products are omitted from the endpoint entirely.
   let tags
   try {
-    tags = await get('products/tags')
+    tags = await get('products/tags', { per_page: 100 })
   } catch {
     return []
   }
