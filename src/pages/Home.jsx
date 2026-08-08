@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
 import FaqSection from "../components/FaqSection.jsx";
+import { fetchFeatured } from "../lib/woo.js";
 import logoPink from "../assets/home/logo-pink.svg";
 import heart from "../assets/home/heart.svg";
 import flowerA from "../assets/home/flower-hero-a.svg";
@@ -15,10 +17,6 @@ import productCrackers from "../assets/home/product-crackers.png";
 import photoCorgis from "../assets/home/photo-corgis.jpg";
 import stickerSmiley from "../assets/home/sticker-smiley.svg";
 import ribbonTape from "../assets/home/ribbon-tape.svg";
-import specialDanish from "../assets/home/special-danish.jpg";
-import specialCroissants from "../assets/home/special-croissants.jpg";
-import specialBagels from "../assets/home/special-bagels.jpg";
-import specialDonuts from "../assets/home/special-donuts.jpg";
 import iconQuotes from "../assets/home/icon-quotes.svg";
 import photoTestimonial from "../assets/home/photo-testimonial.jpg";
 
@@ -59,13 +57,6 @@ const PRODUCTS = [
   { name: "Crackers", img: productCrackers },
 ];
 
-const SPECIALS = [
-  { name: "Danish Pastries", price: "$23", img: specialDanish },
-  { name: "Croissants", price: "$23", img: specialCroissants },
-  { name: "Bagels", price: "$23", img: specialBagels },
-  { name: "Donuts", price: "$23", img: specialDonuts },
-];
-
 const TESTIMONIAL_DOTS = [0, 1, 2, 3, 4];
 
 /* Hero bands: 110.08px of #cc8a7a every 220.15px starting at x=4. Figma stacks a
@@ -77,6 +68,25 @@ const HERO_STRIPES = {
 };
 
 export default function Home() {
+  const [specials, setSpecials] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchFeatured().then((products) => {
+      if (!active) return;
+      setSpecials(
+        products.slice(0, 4).map((p) => ({
+          name: p.name,
+          price: p.priceFormatted,
+          img: p.images[0]?.src ?? "",
+        })),
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <main className="w-full overflow-x-hidden bg-cream">
       {/* HERO - 878px tall, navbar floats over it */}
@@ -279,7 +289,7 @@ export default function Home() {
         </div>
       </section>
 
-      <SeasonalSpecials specials={SPECIALS} />
+      <SeasonalSpecials items={specials} />
 
       {/* TESTIMONIAL */}
       <section className="relative w-full bg-cream px-[16px] py-[60px] lg:h-[562px] lg:py-0">

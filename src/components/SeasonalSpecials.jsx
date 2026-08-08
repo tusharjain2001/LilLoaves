@@ -34,7 +34,9 @@ const CHECKERBOARD_BG = {
   backgroundPosition: "calc(50% - 690px) 0",
 };
 
-export default function SeasonalSpecials({ specials, className = "" }) {
+export default function SeasonalSpecials({ items = [], className = "" }) {
+  if (items.length === 0) return null;
+
   return (
     <section
       className={`relative w-full overflow-hidden bg-cream px-[16px] py-[60px] lg:h-[841px] lg:py-0 lg:pt-[75px] ${className}`}
@@ -61,7 +63,7 @@ export default function SeasonalSpecials({ specials, className = "" }) {
           </div>
 
           <div className="grid grid-cols-2 gap-[12px] lg:flex lg:gap-[16.92px]">
-            {specials.map(({ name, price, img }) => (
+            {items.map(({ name, price, img }) => (
               <div
                 key={name}
                 className="relative h-[258px] w-[179px] lg:h-[371.95px] lg:w-[257.81px]"
