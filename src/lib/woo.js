@@ -74,12 +74,20 @@ export function normalizeProduct(raw) {
   }
 }
 
+// The committed snapshot is an unfiltered product dump. It cannot honour a
+// featured/tag/slug/category filter, and the Store API doesn't even expose
+// `is_featured` for us to filter on locally, so a filtered fetch that fails
+// must return empty rather than silently ignore the filter and hand back
+// every product.
+const FILTER_PARAMS = ['featured', 'tag', 'slug', 'category']
+
 export async function fetchProducts(params = {}) {
   try {
     const raw = await get('products', { per_page: 100, ...params })
     return raw.map(normalizeProduct)
   } catch {
     // A WordPress outage must still render a bakery, just with stale stock.
+    if (FILTER_PARAMS.some((key) => params[key] !== undefined)) return []
     return fallbackProducts.map(normalizeProduct)
   }
 }
@@ -89,7 +97,17 @@ export async function fetchCategories() {
     const raw = await get('products/categories', { per_page: 100 })
     return raw.map((c) => ({ id: c.id, name: c.name, slug: c.slug, count: c.count }))
   } catch {
-    return []
+    // Derive categories from the snapshot so the menu tabs still render
+    // during an outage instead of leaving activeCategory stuck at null.
+    const bySlug = new Map()
+    for (const raw of fallbackProducts) {
+      for (const c of raw.categories ?? []) {
+        const existing = bySlug.get(c.slug)
+        if (existing) existing.count += 1
+        else bySlug.set(c.slug, { id: c.id, name: c.name, slug: c.slug, count: 1 })
+      }
+    }
+    return [...bySlug.values()]
   }
 }
 
@@ -113,5 +131,5 @@ export async function fetchByTagSlug(slug) {
 
 export async function fetchProductBySlug(slug) {
   const products = await fetchProducts({ slug })
-  return products.find((p) => p.slug === slug) ?? products[0] ?? null
+  return products.find((p) => p.slug === slug) ?? null
 }

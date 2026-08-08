@@ -131,7 +131,13 @@ describe('fetchProducts', () => {
   it('falls back to the committed snapshot when the proxy fails', async () => {
     global.fetch.mockRejectedValue(new Error('offline'))
     const products = await fetchProducts()
-    expect(Array.isArray(products)).toBe(true)
+    expect(products.map((p) => p.slug)).toContain('sour-dough')
+  })
+
+  it('does not serve the unfiltered snapshot for a filtered fetch it cannot honour', async () => {
+    global.fetch.mockRejectedValue(new Error('offline'))
+    const products = await fetchProducts({ featured: 'true' })
+    expect(products).toEqual([])
   })
 })
 
@@ -166,6 +172,12 @@ describe('fetchCategories', () => {
     const cats = await fetchCategories()
     expect(cats).toEqual([{ id: 1372, name: 'Breads', slug: 'breads', count: 3 }])
   })
+
+  it('derives categories from the committed snapshot when the proxy fails', async () => {
+    global.fetch.mockRejectedValue(new Error('offline'))
+    const cats = await fetchCategories()
+    expect(cats.map((c) => c.slug)).toContain('breads')
+  })
 })
 
 describe('fetchProductBySlug', () => {
@@ -178,5 +190,10 @@ describe('fetchProductBySlug', () => {
   it('returns null when nothing matches', async () => {
     jsonOnce([])
     expect(await fetchProductBySlug('nope')).toBeNull()
+  })
+
+  it('does not guess a different product when the proxy fails on an unknown slug', async () => {
+    global.fetch.mockRejectedValue(new Error('offline'))
+    expect(await fetchProductBySlug('definitely-not-a-real-product')).toBeNull()
   })
 })
