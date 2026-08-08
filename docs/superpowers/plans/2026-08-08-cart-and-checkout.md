@@ -90,7 +90,7 @@ Both have a default that ships if unanswered. Neither blocks starting.
 
 ---
 
-## Task 0: Staging safety net
+### Task 0: Staging safety net
 
 **Files:** none in either repo.
 
@@ -135,7 +135,7 @@ git add -A && git commit -m "Add staging config, rollback runbook and uptime mon
 
 ---
 
-## Task 1: Cart state
+### Task 1: Cart state
 
 **Files:**
 - Create: `src/context/CartContext.jsx`, `src/context/CartContext.test.jsx`
@@ -382,7 +382,7 @@ git commit -m "feat: add cart state with localStorage persistence"
 
 ---
 
-## Task 2: Mount the provider, remove the accounts UI
+### Task 2: Mount the provider, remove the accounts UI
 
 **Files:**
 - Modify: `src/App.jsx`, `src/components/Footer.jsx`
@@ -453,7 +453,7 @@ git commit -m "feat: mount cart provider, add order confirmation, drop accounts 
 
 ---
 
-## Task 3: Bridge plugin — `/quote`
+### Task 3: Bridge plugin — `/quote`
 
 **Files:**
 - Create: `c:\Users\asus\Desktop\LilLoaves-backend\mu-plugins\lil-loaves-bridge.php`
@@ -802,7 +802,7 @@ git add -A && git commit -m "Add bridge plugin with server-side cart quoting" &&
 
 ---
 
-## Task 4: Proxy POST to `/quote`
+### Task 4: Proxy POST to `/quote`
 
 **Files:**
 - Modify: `api/store/[...path].js`, `api/store/handler.test.js`
@@ -826,7 +826,7 @@ git commit -m "feat: proxy POST to the quote endpoint"
 
 ---
 
-## Task 5: Quote client
+### Task 5: Quote client
 
 **Files:**
 - Create: `src/lib/quote.js`, `src/lib/quote.test.js`
@@ -854,7 +854,7 @@ git commit -m "feat: add quote client for server-computed totals"
 
 ---
 
-## Task 6: Cart page — items, form, totals
+### Task 6: Cart page — items, form, totals
 
 **Files:**
 - Modify: `src/pages/Cart.jsx`
@@ -887,7 +887,7 @@ git commit -m "feat: cart page reads the real cart and server totals"
 
 ---
 
-## Task 7: Bridge plugin — checkout handoff
+### Task 7: Bridge plugin — checkout handoff
 
 **Files:**
 - Modify: `c:\Users\asus\Desktop\LilLoaves-backend\mu-plugins\lil-loaves-bridge.php`
@@ -935,7 +935,7 @@ Record actual output for each in your report:
 
 ---
 
-## Task 8: Add to cart from Menu and Product
+### Task 8: Add to cart from Menu and Product
 
 **Files:**
 - Modify: `src/pages/Menu.jsx`, `src/pages/Product.jsx` and their tests
@@ -960,7 +960,7 @@ which is the UI this task builds. Revision 2 had them the wrong way round.
 
 ---
 
-## Task 9: Checkout client and end-to-end
+### Task 9: Checkout client and end-to-end
 
 **Files:**
 - Create: `src/lib/checkout.js`, `src/lib/checkout.test.js`
