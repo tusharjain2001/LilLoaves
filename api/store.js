@@ -35,6 +35,25 @@ const ALLOWED_PARAMS = new Set([
   'include',
 ])
 
+/**
+ * Cache at the CDN, never in the browser.
+ *
+ * A plain `Cache-Control: s-maxage=...` did not reach Vercel's edge on this
+ * project — every request came back `X-Vercel-Cache: MISS`, `Age: 0`, with
+ * Vercel's default `max-age=0, must-revalidate` on the wire, so every page
+ * load was hitting WordPress directly and the 429 throttle this proxy exists
+ * to avoid was fully exposed. `Vercel-CDN-Cache-Control` is the header Vercel
+ * documents for controlling its own edge; `CDN-Cache-Control` covers any
+ * other CDN in front. Browsers keep revalidating so a price change is never
+ * stuck in someone's tab.
+ */
+function setCache(res, seconds, staleSeconds) {
+  const stale = staleSeconds ? `, stale-while-revalidate=${staleSeconds}` : ''
+  res.setHeader('Vercel-CDN-Cache-Control', `public, s-maxage=${seconds}${stale}`)
+  res.setHeader('CDN-Cache-Control', `public, s-maxage=${seconds}${stale}`)
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate')
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET')
@@ -69,15 +88,15 @@ export default async function handler(req, res) {
       // Still cacheable: during a 429 storm this is the exact case the
       // proxy exists for, and an uncached 502 fans out a fresh invocation
       // at the throttled origin on every single page load.
-      res.setHeader('Cache-Control', 'public, s-maxage=10')
+      setCache(res, 10, 0)
       return res.status(502).json({ error: 'Upstream error', status: response.status })
     }
     const data = await response.json()
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+    setCache(res, 60, 600)
     return res.status(200).json(data)
   } catch (error) {
     console.error('store proxy fetch failed', error)
-    res.setHeader('Cache-Control', 'public, s-maxage=10')
+    setCache(res, 10, 0)
     return res.status(502).json({ error: 'Upstream unreachable' })
   }
 }

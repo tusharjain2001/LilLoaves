@@ -66,9 +66,13 @@ describe('store proxy', () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => [] })
     const res = mockRes()
     await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
-    expect(res.headers['cache-control']).toBe(
+    expect(res.headers['vercel-cdn-cache-control']).toBe(
       'public, s-maxage=60, stale-while-revalidate=600',
     )
+    expect(res.headers['cdn-cache-control']).toBe(
+      'public, s-maxage=60, stale-while-revalidate=600',
+    )
+    expect(res.headers['cache-control']).toBe('public, max-age=0, must-revalidate')
   })
 
   it('returns 502 when upstream throttles', async () => {
@@ -92,7 +96,7 @@ describe('store proxy', () => {
     global.fetch.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) })
     const res = mockRes()
     await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
-    expect(res.headers['cache-control']).toBe('public, s-maxage=10')
+    expect(res.headers['vercel-cdn-cache-control']).toBe('public, s-maxage=10')
   })
 
   it('caches a 502 from an unreachable upstream too', async () => {
@@ -100,7 +104,7 @@ describe('store proxy', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = mockRes()
     await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
-    expect(res.headers['cache-control']).toBe('public, s-maxage=10')
+    expect(res.headers['vercel-cdn-cache-control']).toBe('public, s-maxage=10')
     consoleSpy.mockRestore()
   })
 
