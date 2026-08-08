@@ -93,9 +93,14 @@ must never be called — not from the browser and not from the proxy. Those keys
 are effectively admin credentials. The proxy forwards only to the public,
 read-only Store API and holds no credentials at all.
 
-React caches proxy responses in `sessionStorage` for the session. A build-time
-snapshot at `src/data/products.fallback.json` renders the menu if both the proxy
-and its cache fail.
+React caches proxy responses in memory for the page view — deliberately not in
+`sessionStorage`, which survives reloads and would leave a customer with an open
+tab seeing stale prices and stock indefinitely. The in-memory cache dies on
+reload, which is the freshness semantic a store needs, and the proxy's 60s edge
+cache already does the traffic collapsing.
+
+A build-time snapshot at `src/data/products.fallback.json` renders the menu if
+both the proxy and its cache fail.
 
 ### Store API facts, verified against the live store
 

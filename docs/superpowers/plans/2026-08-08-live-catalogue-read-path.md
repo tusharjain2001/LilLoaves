@@ -42,7 +42,16 @@ Plan 1 is standalone: at the end the bakery's real catalogue is on the site, and
 | `api/store/[...path].js` | **Create.** Vercel serverless proxy. Allowlists paths and params, forwards to the Store API, sets cache headers. The only code that knows the WordPress URL at runtime. |
 | `src/lib/money.js` | **Create.** Minor-unit conversion and currency formatting. No other module formats money. |
 | `src/lib/money.test.js` | **Create.** |
-| `src/lib/woo.js` | **Create.** Proxy client: fetch, normalise, `sessionStorage` cache, tag slug→ID map, fallback. The only module that fetches. |
+| `src/lib/woo.js` | **Create.** Proxy client: fetch, normalise, in-memory cache, tag slug→ID map, fallback. The only module that fetches. |
+
+> **Task 4 amended during execution (human decision).** Its text below specifies
+> a `sessionStorage` cache layer. That was deleted: `sessionStorage` survives
+> page reloads and had no TTL, so a customer with the tab open would see stale
+> prices and stock indefinitely. Only the in-memory `Map` remains — it dies on
+> reload, which is the correct freshness semantic. The proxy's 60s edge cache
+> already collapses customer traffic to one upstream request per minute, which
+> was the problem the second layer was meant to solve. Ignore the
+> `readSession`/`writeSession` code in Task 4's Step 4 listing.
 | `src/lib/woo.test.js` | **Create.** |
 | `api/store/handler.test.js` | **Create.** Unit tests for the proxy handler. |
 | `scripts/fetch-fallback.mjs` | **Create.** Build-time snapshot generator. Never fails the build. |
