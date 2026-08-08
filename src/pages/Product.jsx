@@ -99,10 +99,14 @@ export default function Product() {
     );
   }
 
-  const GALLERY_IMAGES =
-    product.images.length > 0
-      ? product.images.map((i) => i.src)
-      : PLACEHOLDER_IMAGES;
+  // 0, 1 or 2 uploaded photos are all real states (the owner's first upload
+  // is the most likely next event on this site) - pad out with placeholders
+  // rather than only handling the fully-empty case, so a lone photo doesn't
+  // leave the other two gallery slots pointing at an undefined src.
+  const GALLERY_IMAGES = [
+    ...product.images.map((i) => i.src),
+    ...PLACEHOLDER_IMAGES,
+  ].slice(0, 3);
 
   return (
     <main className="w-full bg-cream">
@@ -162,9 +166,11 @@ export default function Product() {
                     </p>
                     <div className="flex items-center gap-[10px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
                       <p className="text-[23px] text-cocoa lg:text-[36px]">{product.priceFormatted}</p>
-                      <p className="text-[20px] text-[#d8cbbe] line-through decoration-solid lg:text-[32px]">
-                        {product.priceFormatted}
-                      </p>
+                      {product.onSale && (
+                        <p className="text-[20px] text-[#d8cbbe] line-through decoration-solid lg:text-[32px]">
+                          {product.regularPriceFormatted}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-[13px] lg:items-start lg:gap-[20px]">
@@ -194,18 +200,26 @@ export default function Product() {
                 </div>
 
                 <div className="flex w-full items-start gap-[10px] lg:gap-[16px]">
-                  <button
-                    type="button"
-                    className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
-                  >
-                    Add to Cart
-                  </button>
-                  <button
-                    type="button"
-                    className="flex-1 cursor-pointer whitespace-nowrap rounded-full border border-cocoa px-[30px] py-[6px] font-parkinsans text-[13px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
-                  >
-                    Buy Now
-                  </button>
+                  {product.inStock ? (
+                    <>
+                      <button
+                        type="button"
+                        className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
+                      >
+                        Add to Cart
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 cursor-pointer whitespace-nowrap rounded-full border border-cocoa px-[30px] py-[6px] font-parkinsans text-[13px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
+                      >
+                        Buy Now
+                      </button>
+                    </>
+                  ) : (
+                    <span className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]">
+                      Sold out
+                    </span>
+                  )}
                 </div>
               </div>
 

@@ -98,6 +98,23 @@ describe('normalizeProduct', () => {
     const p = normalizeProduct({ ...RAW, short_description: '', description: '' })
     expect(p.summary).toBe('')
   })
+
+  it('is not on sale when sale_price equals regular_price', () => {
+    const p = normalizeProduct(RAW)
+    expect(p.onSale).toBe(false)
+    expect(p.regularPriceFormatted).toBe('$21.13')
+  })
+
+  it('is on sale when sale_price differs from regular_price', () => {
+    const onSaleRaw = {
+      ...RAW,
+      prices: { ...PRICES, price: '1800', sale_price: '1800', regular_price: '2113' },
+    }
+    const p = normalizeProduct(onSaleRaw)
+    expect(p.onSale).toBe(true)
+    expect(p.priceFormatted).toBe('$18.00')
+    expect(p.regularPriceFormatted).toBe('$21.13')
+  })
 })
 
 describe('fetchProducts', () => {

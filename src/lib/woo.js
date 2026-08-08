@@ -54,6 +54,8 @@ export function normalizeProduct(raw) {
     summary: toPlainText(raw.short_description || raw.description),
     price: minorToMajor(raw.prices.price, raw.prices.currency_minor_unit),
     priceFormatted: formatPrice(raw.prices),
+    regularPriceFormatted: formatPrice(raw.prices, raw.prices.regular_price),
+    onSale: raw.prices.sale_price !== raw.prices.regular_price,
     inStock: raw.is_in_stock,
     purchasable: raw.is_purchasable,
     hasOptions: raw.has_options ?? false,

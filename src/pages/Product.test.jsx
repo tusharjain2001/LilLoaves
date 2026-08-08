@@ -19,6 +19,8 @@ const PRODUCT = {
   images: [{ src: 'a.jpg', thumbnail: 't.jpg', srcset: '', sizes: '', alt: 'Loaf' }],
   categories: [],
   tags: [],
+  regularPriceFormatted: '$21.13',
+  onSale: false,
 }
 
 const renderAt = (path) =>
@@ -45,5 +47,63 @@ describe('Product', () => {
     vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue(null)
     renderAt('/product/nope')
     await waitFor(() => expect(screen.getByText(/couldn.t find/i)).toBeTruthy())
+  })
+
+  it('replaces the purchase actions with Sold out when the product is out of stock', async () => {
+    // "Add to Cart" also appears in the unrelated, out-of-scope RELATED_ITEMS
+    // tiles, so assert on "Buy Now" (unique to the main purchase row) and the
+    // Sold out replacement rather than a global "Add to Cart" text query.
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue({ ...PRODUCT, inStock: false })
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    expect(screen.getByText('Sold out')).toBeTruthy()
+    expect(screen.queryByText('Buy Now')).toBeNull()
+  })
+
+  it('offers the purchase actions when the product is in stock', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue(PRODUCT)
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    expect(screen.getByText('Buy Now')).toBeTruthy()
+    expect(screen.getAllByText('Add to Cart').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Sold out')).toBeNull()
+  })
+
+  it('does not render a struck-through "was" price when the product is not on sale', async () => {
+    // $21.13 also appears in the unrelated, out-of-scope RELATED_ITEMS
+    // tiles, so query the struck-through element directly rather than
+    // counting text occurrences across the whole page.
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue(PRODUCT)
+    const { container } = renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    expect(container.querySelector('.line-through')).toBeNull()
+  })
+
+  it('renders the struck-through regular price when the product is on sale', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue({
+      ...PRODUCT,
+      priceFormatted: '$18.00',
+      regularPriceFormatted: '$21.13',
+      onSale: true,
+    })
+    const { container } = renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    expect(screen.getByText('$18.00')).toBeTruthy()
+    expect(container.querySelector('.line-through')?.textContent).toBe('$21.13')
+  })
+})
+
+describe('Product gallery', () => {
+  it('fills empty gallery slots with placeholders when only one photo exists, without an undefined src', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue({
+      ...PRODUCT,
+      images: [{ src: 'only-photo.jpg', thumbnail: '', srcset: '', sizes: '', alt: 'Loaf' }],
+    })
+    const { container } = renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    const galleryImages = container.querySelectorAll('img')
+    galleryImages.forEach((img) => {
+      expect(img.getAttribute('src')).toBeTruthy()
+    })
   })
 })
