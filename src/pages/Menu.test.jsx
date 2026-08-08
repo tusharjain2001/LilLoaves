@@ -97,4 +97,24 @@ describe('Menu lunch box', () => {
     await waitFor(() => expect(woo.fetchByTagSlug).toHaveBeenCalled())
     expect(screen.queryByText('Chief’s Crackers (5oz)')).toBeNull()
   })
+
+  it('selects the first bread option once loaded', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread' ? [product()] : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByAltText('Selected')).toBeTruthy())
+    expect(screen.getByAltText('Selected').closest('button').textContent).toContain('Sour Dough')
+  })
+
+  it('leaves a column with no options unselected but still renders its card', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread' ? [product()] : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('CHoose your Crackers')).toBeTruthy())
+    expect(screen.getByText('CHoose your Dessert')).toBeTruthy()
+    // Only the bread column has an option to select; crackers/dessert have none.
+    expect(screen.getAllByAltText('Selected').length).toBe(1)
+  })
 })

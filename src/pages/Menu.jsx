@@ -218,11 +218,9 @@ export default function Menu() {
   const [specials, setSpecials] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [quantities, setQuantities] = useState({});
-  const [selectedBread, setSelectedBread] = useState("Soudough");
-  const [selectedCracker, setSelectedCracker] = useState(
-    "Chief’s Crackers (5oz)",
-  );
-  const [selectedDessert, setSelectedDessert] = useState("Muffins (Pack of 4)");
+  const [selectedBread, setSelectedBread] = useState("");
+  const [selectedCracker, setSelectedCracker] = useState("");
+  const [selectedDessert, setSelectedDessert] = useState("");
   const [lunchboxQty, setLunchboxQty] = useState(1);
   const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [], dessert: [] });
 
@@ -259,12 +257,15 @@ export default function Menu() {
       fetchByTagSlug("lunchbox-dessert"),
     ]).then(([bread, cracker, dessert]) => {
       if (!active) return;
-      const toOption = (p) => ({ name: p.name, img: p.images[0]?.src ?? "" });
+      const toOption = (p) => ({ name: p.name, img: p.images[0]?.src });
       setLunchbox({
         bread: bread.map(toOption),
         cracker: cracker.map(toOption),
         dessert: dessert.map(toOption),
       });
+      setSelectedBread(bread[0]?.name ?? "");
+      setSelectedCracker(cracker[0]?.name ?? "");
+      setSelectedDessert(dessert[0]?.name ?? "");
     });
     return () => {
       active = false;
