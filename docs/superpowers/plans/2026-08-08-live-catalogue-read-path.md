@@ -59,7 +59,7 @@ Plan 1 is standalone: at the end the bakery's real catalogue is on the site, and
 
 ---
 
-## Task 1: Test harness
+### Task 1: Test harness
 
 **Files:**
 - Modify: `package.json`
@@ -78,7 +78,6 @@ npm install -D vitest@^3 jsdom@^26 @testing-library/react@^16
 No `@testing-library/jest-dom` — every assertion in this plan uses plain
 `expect(...).toBeTruthy()`. Add it only when a test genuinely needs a DOM
 matcher.
-```
 
 - [ ] **Step 2: Add test config to `vite.config.js`**
 
@@ -138,7 +137,7 @@ git commit -m "test: add vitest harness"
 
 ---
 
-## Task 2: Money conversion
+### Task 2: Money conversion
 
 **Files:**
 - Create: `src/lib/money.js`
@@ -266,7 +265,7 @@ git commit -m "feat: add minor-unit money conversion and formatting"
 
 ---
 
-## Task 3: Vercel Store API proxy
+### Task 3: Vercel Store API proxy
 
 **Files:**
 - Create: `api/store/[...path].js`
@@ -526,7 +525,7 @@ git commit -m "feat: add caching Store API proxy"
 
 ---
 
-## Task 4: Store API client
+### Task 4: Store API client
 
 **Files:**
 - Create: `src/lib/woo.js`
@@ -879,7 +878,7 @@ git commit -m "feat: add Store API client with caching and fallback"
 
 ---
 
-## Task 5: Build-time fallback snapshot
+### Task 5: Build-time fallback snapshot
 
 **Files:**
 - Create: `scripts/fetch-fallback.mjs`
@@ -961,7 +960,7 @@ git commit -m "feat: refresh product snapshot at build time"
 
 ---
 
-## Task 6: Home page Seasonal Specials from live data
+### Task 6: Home page Seasonal Specials from live data
 
 **Files:**
 - Modify: `src/components/SeasonalSpecials.jsx`
@@ -1077,7 +1076,7 @@ git commit -m "feat: render seasonal specials from featured products"
 
 ---
 
-## Task 7: Menu page categories and products from live data
+### Task 7: Menu page categories and products from live data
 
 **Files:**
 - Modify: `src/pages/Menu.jsx`
@@ -1246,7 +1245,7 @@ git commit -m "feat: render menu categories and products from the store"
 
 ---
 
-## Task 8: Product page on a real slug
+### Task 8: Product page on a real slug
 
 **Files:**
 - Modify: `src/App.jsx`
@@ -1407,7 +1406,7 @@ git commit -m "feat: render product page from route slug"
 
 ---
 
-## Task 9: Lunch Box options from tagged products
+### Task 9: Lunch Box options from tagged products
 
 **Files:**
 - Modify: `src/pages/Menu.jsx`
