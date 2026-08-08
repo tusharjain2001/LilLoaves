@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Revision 2.** Revision 1 was rejected by three independent verifiers with eight blocking findings. Every one is addressed below; see *What Revision 1 Got Wrong* for the list, because several were real money bugs and the reasoning matters more than the patch.
+**Revision 3.** Revision 1 was rejected by three verifiers with eight blocking findings; revision 2 was rejected again with eleven narrower ones, including a fatal that would have hit every checkout. Both rounds are recorded below, because the reasoning matters more than the patches and these mistakes are easy to reintroduce.
 
 **Goal:** A customer can add bakery items to a cart that persists, see authoritative totals computed by WooCommerce, and be handed to WooCommerce's checkout to pay.
 
@@ -586,12 +586,17 @@ function ll_quote(WP_REST_Request $request) {
         $errors[] = sprintf('Delivery orders have a %s minimum', strip_tags(wc_price($minimum)));
     }
 
+    // line_subtotal is pre-discount and shares its basis with get_subtotal().
+    // line_total is post-discount, so using it here would make the line items
+    // visibly fail to sum to the Subtotal row whenever a coupon is applied.
+    // The discount is shown on its own row; it must not also be baked into
+    // the lines.
     $lines = [];
     foreach (WC()->cart->get_cart() as $cart_item) {
         $lines[] = [
             'id'    => (int) $cart_item['product_id'],
             'qty'   => (int) $cart_item['quantity'],
-            'total' => ll_minor($cart_item['line_total'] + $cart_item['line_tax']),
+            'total' => ll_minor($cart_item['line_subtotal'] + $cart_item['line_subtotal_tax']),
             'unit'  => ll_minor($cart_item['data']->get_price()),
         ];
     }
@@ -721,19 +726,25 @@ Expected: `loaded`. Then confirm `wp-admin` and the storefront still load — a 
 
 Run each and record the actual output in your report. Use `wp eval` rather than curl — the load balancer throttles external REST traffic.
 
+**Store configuration these cases depend on**, already applied to production and staging — verify before running them, because without it cases 2 and 3 cannot distinguish a working fix from a broken one:
+
+- Shipping zone 1 is restricted to postcodes **92866, 92867, 92868, 92869** (placeholders; the bakery edits them). Before this, the zone had **no** location rows and matched every postcode on earth.
+- `flat_rate` instance 2 costs **5.00**. Before this it cost `0`, so "delivery is non-zero" was unprovable.
+
 | # | Case | Expected |
 |---|---|---|
-| 1 | 2 × Sour Dough (13), `pickup` | `subtotal` 4226, `delivery` **0**, one entry in `lines` with `total` 4226, no errors |
-| 2 | 2 × Sour Dough, `delivery`, in-zone postcode | `delivery` **non-zero**. This is the honest-customer case revision 1 never tested. |
-| 3 | 2 × Sour Dough, `delivery`, postcode outside the zone | `delivery` 0 **and** an error `We do not deliver to that postcode yet` |
+| 1 | 2 × Sour Dough (13), `pickup` | `subtotal` 4226, `delivery` **0**, `lines[0].total` 4226, chosen method id is **`local_pickup:1`**, no errors |
+| 2 | 2 × Sour Dough, `delivery`, postcode **92868** | `delivery` **500**, chosen method id is **`flat_rate:2`** |
+| 3 | 2 × Sour Dough, `delivery`, postcode **90210** | `delivery` 0, chosen methods **empty**, and an error `We do not deliver to that postcode yet` |
 | 4 | Nonexistent product id | error, no fatal, other lines still priced |
 | 5 | Japanese Milk Bread (16), out of stock | rejected with a "sold out" error |
 | 6 | An invalid coupon | generic invalid-coupon error; totals otherwise unchanged |
-| 7 | 25 quotes in a row | the later ones return HTTP 429 |
-| 8 | `items: []` | a zeroed quote with a full `currency` object, HTTP 200 |
-| 9 | Full response shape | `currency` carries prefix, suffix, both separators and `currency_minor_unit` |
+| 7 | A **valid** coupon | `Σ lines[].total === subtotal`, with the discount on its own row. This is the assertion that proves the pre/post-discount basis is right. |
+| 8 | 25 quotes in a row | the later ones return HTTP 429 |
+| 9 | `items: []` | a zeroed quote with a full `currency` object, HTTP 200 |
+| 10 | Full response shape | `currency` carries prefix, suffix, both separators and `currency_minor_unit` |
 
-Case 2 versus case 3 is the pair that proves finding #1 and finding #2 are actually fixed. If case 2 returns `delivery: 0`, the two-pass shipping is still wrong — stop and report.
+Cases 1-3 are the set that proves the two-pass shipping fix. **Assert on the chosen shipping method id, not only on the dollar amount** — a zero amount is ambiguous, a method id is not. Read it with `WC()->session->get('chosen_shipping_methods')`. If case 2 does not select `flat_rate:2`, the two-pass fix is still wrong — stop and report.
 
 - [ ] **Step 4: Promote to production**
 
@@ -829,7 +840,7 @@ Cover: renders lines from the cart context; the items count reflects total quant
 
 - [ ] **Step 2: Run, implement, run**
 
-Replace `INITIAL_CART_ITEMS` with `useCart()`, `SUMMARY_ROWS` and the Total with quote values, and the line total with the quote's per-line figure. Add controlled state for every contact, address and pickup field. Re-quote when lines, fulfilment mode, postcode or coupon change — **debounced at least 300ms** and with the previous request aborted, since quantity buttons fire rapidly and each quote is a real WordPress request. Wire "Apply Coupon". When a quote returns, call `syncSnapshot` for each line so a stale cached unit price cannot sit beside a fresh total.
+Replace `INITIAL_CART_ITEMS` with `useCart()`, `SUMMARY_ROWS` and the Total with quote values, and the line total with the quote's per-line figure. Add controlled state for every contact, address and pickup field. Re-quote when the cart **contents**, fulfilment mode, postcode or coupon change. Derive the effect's dependency from a string key of `id:qty` pairs, **not from the `lines` array itself** — `syncSnapshot` calls `setLines`, producing a new array reference on every quote, so depending on `lines` makes each quote trigger another one forever against a rate-limited endpoint. Debounce at least 300ms and with the previous request aborted, since quantity buttons fire rapidly and each quote is a real WordPress request. Wire "Apply Coupon". When a quote returns, call `syncSnapshot` for each line so a stale cached unit price cannot sit beside a fresh total.
 
 - [ ] **Step 3: Commit**
 
@@ -852,18 +863,19 @@ Registered on **both** `admin_post_ll_handoff` and `admin_post_nopriv_ll_handoff
 Required behaviour, in order:
 
 1. **Guard.** If `!ll_wc_ready()`, redirect back to the cart with an error. Never fatal.
-2. **Origin check.** Reject unless `Origin` or `Referer` matches an allowlisted storefront origin, stored in an option. Revision 1 argued CSRF was harmless here; that was wrong — CSRF forces a *victim's* browser to submit, and without this check a third-party page can land a victim on the real checkout prefilled with an attacker's shipping address.
-3. **Throttle** using the same helper as `/quote`.
-4. **Idempotency.** The client sends a token generated once per cart submission. If that token has been seen (transient, 5 minutes), redirect straight to checkout without re-adding anything.
-5. **`WC()->cart->empty_cart()` before adding.** Revision 1 omitted this; a double-click or a back-then-resubmit doubled the order and the charge. This operates on the customer's real, persistent session, so it is not optional.
-6. **Re-price every line** from WooCommerce. Ignore anything price-shaped in the POST.
-7. **Re-validate fulfilment** with the same `ll_apply_fulfilment` used by `/quote`. If it returns errors, abort and redirect back to `/cart` with an error code — do not proceed with no shipping method.
-8. **Enforce the delivery minimum** server-side.
-9. **Prefill** billing and shipping from the POST, sanitised.
-10. **Store pickup store, date and slot** as session data that carries onto the order, and display it on the admin order screen.
-11. `wp_safe_redirect(wc_get_checkout_url())`.
+2. **Boot the cart — `ll_boot_cart()`, the same helper `/quote` uses.** WooCommerce only auto-creates `WC()->cart`, `WC()->session` and `WC()->customer` when `is_request('frontend')` is true, which requires `!is_admin()`. `admin-post.php` defines `WP_ADMIN` before `wp-load.php` runs, so `is_admin()` is true for the entire request and **none of them exist**. Revision 2 omitted this and every checkout submission would have fataled on `empty_cart() on null`. Note `ll_wc_ready()` does **not** cover this — it checks that the `WC_Cart` *class* exists, not that `WC()->cart` was instantiated.
+3. **Origin check.** Reject unless `Origin` or `Referer` matches an allowlisted storefront origin, stored in an option. **Fail closed:** if both headers are absent, reject. Revision 1 argued CSRF was harmless here; that was wrong — CSRF forces a *victim's* browser to submit, and without this check a third-party page can land a victim on the real checkout prefilled with an attacker's shipping address.
+4. **Throttle** using the same per-client helper as `/quote`, but with **its own global bucket** — not `ll_quote_global`. Sharing one bucket means anyone flooding `/quote` directly (the WordPress URL is public by necessity, it is the form's `action`) can trip the cap and block real customers from *completing checkout*, not merely from seeing quotes. Use an atomic counter (`wp_cache_incr`, available here — the host runs a persistent object cache) rather than `get_transient`/`set_transient`, whose read-modify-write undercounts precisely under the concurrent bursts that matter.
+5. **Idempotency.** The client sends a token generated **once per cart state**, not once per click — see Task 8. Mark the token seen **immediately on check**, before doing any work. The tradeoff is explicit: a submission that crashes partway leaves the token spent, so a retry redirects to a checkout with an empty cart rather than risking a double charge. Prefer a confusing empty cart over billing someone twice.
+6. **`WC()->cart->empty_cart()` before adding.** Revision 1 omitted this; a double-click or a back-then-resubmit doubled the order and the charge. This operates on the customer's real, persistent session, so it is not optional.
+7. **Re-price every line** from WooCommerce. Ignore anything price-shaped in the POST.
+8. **Re-validate fulfilment** with the same `ll_apply_fulfilment` used by `/quote`. If it returns errors, abort and redirect back to `/cart` with an error code — do not proceed with no shipping method.
+9. **Enforce the delivery minimum** server-side.
+10. **Prefill** billing and shipping from the POST, sanitised.
+11. **Store pickup store, date and slot** as session data that carries onto the order, and display it on the admin order screen.
+12. `wp_safe_redirect(wc_get_checkout_url())`.
 
-**Failure UX, explicitly:** every rejection redirects to `{storefront}/cart?error=<code>` with a short machine code (`out_of_area`, `below_minimum`, `unavailable`, `origin`). No `wp_die()` — a bakery customer must never see a raw WordPress error page. Task 8 renders these.
+**Failure UX, explicitly:** every rejection redirects to `{storefront}/cart?error=<code>` with a short machine code (`out_of_area`, `below_minimum`, `unavailable`, `origin`, `throttled`). No `wp_die()` — a bakery customer must never see a raw WordPress error page. Task 9 renders these. Build the redirect target from the **stored allowlist option**, never from the incoming `Origin` or `Referer`, or the failure path becomes an open redirect.
 
 - [ ] **Step 2: Deploy to staging and prove the defences**
 
@@ -884,7 +896,32 @@ Record actual output for each in your report:
 
 ---
 
-## Task 8: Checkout client and end-to-end
+## Task 8: Add to cart from Menu and Product
+
+**Files:**
+- Modify: `src/pages/Menu.jsx`, `src/pages/Product.jsx` and their tests
+
+`Menu.jsx` keys its quantity state by product **name** (lines 222, 234, 397-400) — verified. Re-key to `id`; `p.id` is already available. `Product.jsx` has dead "Add to Cart" and "Buy Now" buttons at lines 203-222, already gated on `product.inStock`.
+
+"Buy Now" adds to the cart and navigates to `/cart`.
+
+- [ ] **Step 1: Tests, implementation, commit**
+
+Cover: adding from a Menu card puts the line in the cart; adding twice increments; an out-of-stock product cannot be added from either page; "Add to Cart" adds one; "Buy Now" adds and navigates; two products with the same name remain distinct lines.
+
+```bash
+git add src/pages/
+git commit -m "feat: add to cart from the menu and product pages"
+```
+
+---
+
+This must precede the checkout task: its end-to-end test begins "add items on `/menu`",
+which is the UI this task builds. Revision 2 had them the wrong way round.
+
+---
+
+## Task 9: Checkout client and end-to-end
 
 **Files:**
 - Create: `src/lib/checkout.js`, `src/lib/checkout.test.js`
@@ -913,26 +950,6 @@ Enable **Cash on delivery** in `WooCommerce → Settings → Payments`. Then pla
 
 ---
 
-## Task 9: Add to cart from Menu and Product
-
-**Files:**
-- Modify: `src/pages/Menu.jsx`, `src/pages/Product.jsx` and their tests
-
-`Menu.jsx` keys its quantity state by product **name** (lines 222, 234, 397-400) — verified. Re-key to `id`; `p.id` is already available. `Product.jsx` has dead "Add to Cart" and "Buy Now" buttons at lines 203-222, already gated on `product.inStock`.
-
-"Buy Now" adds to the cart and navigates to `/cart`.
-
-- [ ] **Step 1: Tests, implementation, commit**
-
-Cover: adding from a Menu card puts the line in the cart; adding twice increments; an out-of-stock product cannot be added from either page; "Add to Cart" adds one; "Buy Now" adds and navigates; two products with the same name remain distinct lines.
-
-```bash
-git add src/pages/
-git commit -m "feat: add to cart from the menu and product pages"
-```
-
----
-
 ## Definition of Done
 
 - `npm test`, `npm run lint` and `npm run build` all pass.
@@ -948,4 +965,4 @@ git commit -m "feat: add to cart from the menu and product pages"
 - Deleting the plugin file over SSH restores the site — verified once on staging.
 - `grep -rn "INITIAL_CART_ITEMS\|SUMMARY_ROWS" src/` returns nothing.
 - `src/pages/Profile.jsx` is gone; no route serves `/profile`; `Footer.jsx` has no `/profile` links.
-- `git diff origin/master -- src/components/Navbar.jsx` is **empty**.
+- **This plan contributed no commit touching `src/components/Navbar.jsx`:** `git log <merge-base>..HEAD -- src/components/Navbar.jsx` is empty. Do not compare against live `origin/master` — the colleague keeps pushing to it, so that check can never pass and says nothing about our discipline.
