@@ -6,8 +6,8 @@ import meetCorgis from "../assets/about/meet-corgis.png";
 import quoteMark from "../assets/about/quote-mark.svg";
 import patternLoaf from "../assets/about/pattern-loaf.svg";
 import patternCroissant from "../assets/about/pattern-croissant.svg";
-import tributeCorgi from "../assets/about/tribute-corgi.jpg";
-import tributeRibbon from "../assets/about/tribute-ribbon.svg";
+import tributeGroup from "../assets/about/tribute-group.png";
+import tributeGroupMobile from "../assets/about/tribute-group-mobile.png";
 
 /* Desktop geometry is taken verbatim from the Figma About page (node 247:7, a
    1440-wide canvas). The navbar overlays the hero there, so these are Figma's
@@ -45,6 +45,16 @@ const HERO_STRIPES = {
   backgroundPosition: `${CANVAS_ORIGIN} 0`,
 };
 
+/* The 402 mobile canvas draws the same bands wider and sparser: 80.32px every
+   160.65px from x=0, phase-locked to 402 the way the desktop set is to 1440. */
+const MOBILE_CANVAS_ORIGIN = "calc(50% - 201px)";
+
+const HERO_STRIPES_MOBILE = {
+  backgroundImage:
+    "repeating-linear-gradient(90deg, rgba(239,216,149,0.12) 0 80.32px, transparent 80.32px 160.65px)",
+  backgroundPosition: `${MOBILE_CANVAS_ORIGIN} 0`,
+};
+
 /* Gingham behind "Meet Our Doc & Chief": 35px bands of #e5c5bc at 0.07 on an
    88px pitch - horizontals from y=0, verticals from x=37. */
 const MEET_GINGHAM_BG = {
@@ -62,6 +72,10 @@ const MEET_GINGHAM_BG = {
 /* Patch and motif y values below are section-relative for the first band; the
    second band is the same content shifted down by one band height. */
 const QUOTE_BAND_OFFSETS = [0, 241.83];
+
+/* Mobile scales the band down, so four of them are needed to cover the section
+   once it starts 69px above the top edge. */
+const QUOTE_BAND_OFFSETS_MOBILE = [0, 241.83, 483.66, 725.49];
 
 /* [x, y, flipped] - four of the twelve patches start on an empty cell rather
    than a filled one, so they carry the opposite checker phase. */
@@ -105,12 +119,62 @@ const DIVIDER_BG = {
   backgroundPosition: "calc(50% - 690px) 0",
 };
 
+/* Same band on the 402 canvas: 20.1px cells, top row starting on a filled one. */
+const DIVIDER_BG_MOBILE = {
+  backgroundImage: "repeating-conic-gradient(#e5c5bc 0 25%, transparent 0 50%)",
+  backgroundSize: "40.2px 40.2px",
+  backgroundPosition: "calc(50% - 180.9px) 0",
+};
+
+/* One repeat of the pull-quote backdrop, laid out in the 1440 canvas's units.
+   Both breakpoints render the same composition; mobile just scales the wrapper. */
+function QuoteBands({ offsets }) {
+  return offsets.map((bandY) => (
+    <div key={bandY}>
+      <div className="absolute inset-x-0 top-0 opacity-90">
+        {QUOTE_PATCHES.map(([x, y, flipped], i) => (
+          <span
+            key={i}
+            className="absolute block"
+            style={{
+              left: x,
+              top: bandY + y,
+              width: 120.08,
+              height: 120.08,
+              ...QUOTE_PATCH_BG,
+              backgroundPosition: flipped ? "0 0" : "20.01px 0",
+            }}
+          />
+        ))}
+      </div>
+      <div className="absolute inset-x-0 top-0 opacity-70">
+        {QUOTE_MOTIFS.map((m, i) => (
+          <img
+            key={i}
+            src={m.img}
+            alt=""
+            className={`absolute max-w-none ${m.flip ? "-scale-x-100" : ""}`}
+            style={{ left: m.x, top: bandY + m.y, width: m.w, height: m.h }}
+          />
+        ))}
+      </div>
+    </div>
+  ));
+}
+
 export default function About() {
   return (
     <main className="w-full overflow-x-hidden bg-cream">
       {/* HERO - 769px tall, navbar floats over it */}
       <section className="relative w-full overflow-hidden bg-vanilla">
-        <div className="pointer-events-none absolute inset-0" style={HERO_STRIPES} />
+        <div
+          className="pointer-events-none absolute inset-0 lg:hidden"
+          style={HERO_STRIPES_MOBILE}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 hidden lg:block"
+          style={HERO_STRIPES}
+        />
 
         <div className="pointer-events-none absolute inset-0 lg:hidden">
           {HERO_FLOWERS_MOBILE.map((f, i) => (
@@ -135,7 +199,7 @@ export default function About() {
           ))}
         </div>
 
-        <div className="relative mx-auto w-full max-w-[1440px] px-[16px] pb-[40px] pt-[124px] lg:h-[769px] lg:px-0 lg:pb-0 lg:pt-0">
+        <div className="relative mx-auto w-full max-w-[1440px] px-[16px] pt-[124px] lg:h-[769px] lg:px-0 lg:pt-0">
           <div className="flex flex-col items-center gap-[17px] lg:absolute lg:left-[72px] lg:top-[207px] lg:h-[562px] lg:w-[1295px] lg:flex-row lg:items-start lg:gap-[17px]">
             {/* welcome card */}
             <div className="relative h-[244.69px] w-[370px] shrink-0 lg:h-[450.35px] lg:w-[681px]">
@@ -144,34 +208,37 @@ export default function About() {
                 alt=""
                 className="absolute left-1/2 top-1/2 h-[370px] w-[244.69px] -translate-x-1/2 -translate-y-1/2 rotate-90 lg:h-[681px] lg:w-[450.35px]"
               />
-              <div className="absolute left-[34px] top-[57px] flex w-[313px] flex-col items-start gap-[10px] lg:left-[63px] lg:top-[104px] lg:w-[576px] lg:gap-[19px]">
-                <h1 className="font-display text-[16.6px] uppercase leading-none text-white lg:text-[64px] lg:leading-[70px]">
+              <div className="absolute left-[34.23px] top-[56.51px] flex w-[312.95px] flex-col items-start gap-[10.32px] lg:left-[63px] lg:top-[104px] lg:w-[576px] lg:gap-[25px]">
+                <h1 className="w-[296.11px] font-parkinsans text-[24px] font-medium uppercase leading-[34px] tracking-[-1.2px] text-white lg:w-[545px] lg:text-[36px] lg:leading-[50px] lg:tracking-[-1.8px]">
                   welcome to Lil&rsquo; Loaves!
                 </h1>
-                {/* Figma flows this in a 576px box where Neulis Sans runs to
-                    three lines; DM Sans is narrower, so the box is tightened to
-                    the widest value that keeps the same three-line shape (and
-                    therefore the button's y). */}
-                <p className="font-dm text-[11px] text-white lg:w-[486px] lg:text-[20px] lg:leading-[26px]">
+                <p className="font-dm text-[10.87px] text-white lg:w-[576px] lg:font-parkinsans lg:text-[20px] lg:leading-[28px]">
                   We&rsquo;re a family-owned bakery with a simple mission: make
                   bread, do it right, keep family close, and our community fed.
                 </p>
                 <button
                   type="button"
-                  className="cursor-pointer whitespace-nowrap rounded-full bg-[#fdfcf8] px-[23px] py-[8px] font-parkinsans text-[11px] text-cocoa lg:rounded-[88.92px] lg:px-[42.68px] lg:py-[14.23px] lg:text-[16px] lg:leading-[22px]"
+                  className="cursor-pointer whitespace-nowrap rounded-full bg-[#fdfcf8] px-[23.19px] py-[7.73px] font-parkinsans text-[10.87px] text-cocoa lg:rounded-[88.92px] lg:px-[42.68px] lg:py-[14.23px] lg:text-[16px] lg:leading-[22px]"
                 >
                   Explore Our Menu
                 </button>
               </div>
             </div>
 
-            {/* hero photo */}
+            {/* hero photo - Figma holds this as a 562x597 portrait frame turned
+                -90deg inside a 597x562 slot, and crops the landscape source to
+                159.61% wide at left -15.29%. Dropping the source straight in
+                with object-cover laid the loaf on its side. The inner box is
+                the container's dimensions swapped, so rotating it back lands
+                exactly on the slot. */}
             <div className="relative h-[299px] w-[318px] shrink-0 overflow-hidden lg:h-[562px] lg:w-[597px]">
-              <img
-                src={heroPhoto}
-                alt="Hands presenting a freshly baked braided loaf"
-                className="h-full w-full object-cover"
-              />
+              <div className="absolute left-1/2 top-1/2 h-[318px] w-[299px] -translate-x-1/2 -translate-y-1/2 -rotate-90 overflow-hidden lg:h-[597px] lg:w-[562px]">
+                <img
+                  src={heroPhoto}
+                  alt="Hands presenting a freshly baked braided loaf"
+                  className="absolute left-[-15.29%] top-[-0.05%] h-[100.1%] w-[159.61%] max-w-none"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -183,20 +250,22 @@ export default function About() {
       {/* MEET OUR DOC & CHIEF */}
       <section className="relative w-full overflow-hidden bg-cream lg:h-[782px]">
         <div className="pointer-events-none absolute inset-0" style={MEET_GINGHAM_BG} />
-        <div className="relative mx-auto flex w-full max-w-[1079px] flex-col items-center gap-[24px] px-[16px] py-[86px] lg:px-0 lg:py-[57px]">
-          <div className="flex items-center justify-center gap-[8px] text-center font-display uppercase text-cocoa lg:h-[70px] lg:gap-[5px]">
-            <p className="text-[40px] leading-none lg:text-[64px] lg:leading-[70px]">
+        <div className="relative mx-auto flex w-full max-w-[1079px] flex-col items-center gap-[24px] px-[16px] pb-[79.6px] pt-[86px] lg:px-0 lg:pb-[60px] lg:pt-[57px]">
+          <div className="flex items-center justify-center gap-[8px] text-center font-parkinsans font-medium uppercase text-cocoa lg:h-[67px] lg:gap-[5px]">
+            <p className="text-[24px] leading-[34px] tracking-[-1.2px] lg:text-[36px] lg:leading-[50px] lg:tracking-[-1.8px]">
               Meet Our Doc
             </p>
-            <span className="text-[40px] leading-none text-transparent [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1px_#57423d] lg:text-[64px] lg:leading-[70px] lg:[-webkit-text-stroke:2px_#57423d]">
+            {/* Medium on the 402 canvas, Regular at 1440 - Figma sets the two
+                ampersands differently, so the weight is overridden at lg. */}
+            <span className="text-[35.37px] leading-[50px] tracking-[-1.77px] text-transparent [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1px_#57423d] lg:text-[48px] lg:font-normal lg:leading-[67px] lg:tracking-normal lg:[-webkit-text-stroke:2px_#57423d]">
               &amp;
             </span>
-            <p className="text-[40px] leading-none lg:text-[64px] lg:leading-[70px]">
+            <p className="text-[24px] leading-[34px] tracking-[-1.2px] lg:text-[36px] lg:leading-[50px] lg:tracking-[-1.8px]">
               Chief
             </p>
           </div>
 
-          <div className="relative h-[169px] w-full overflow-hidden rounded-[6px] lg:h-[494px] lg:w-[1079px] lg:rounded-[16px]">
+          <div className="relative h-[169.4px] w-full overflow-hidden rounded-[5.49px] lg:h-[494px] lg:w-[1079px] lg:rounded-[16px]">
             <img
               src={meetCorgis}
               alt="Illustration of Doc and Chief, the two corgis behind Lil' Loaves"
@@ -214,94 +283,72 @@ export default function About() {
 
       {/* PULL QUOTE */}
       <section className="relative w-full overflow-hidden bg-[#eee2df] lg:h-[483px]">
+        {/* The 402 canvas draws the same band at 0.5711 (patches 120.08 ->
+            68.58, croissants 62.03 -> 35.43, loaves 97.87 -> 55.90 all carry
+            that one ratio), starting 69px above the section and repeated four
+            times to cover its 414px. */}
+        <div className="pointer-events-none absolute left-1/2 top-[-69px] w-[1440px] origin-top -translate-x-1/2 scale-[0.5711] lg:hidden">
+          <QuoteBands offsets={QUOTE_BAND_OFFSETS_MOBILE} />
+        </div>
         <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-[1440px] -translate-x-1/2 lg:block">
-          {QUOTE_BAND_OFFSETS.map((bandY) => (
-            <div key={bandY}>
-              <div className="absolute inset-x-0 top-0 opacity-90">
-                {QUOTE_PATCHES.map(([x, y, flipped], i) => (
-                  <span
-                    key={i}
-                    className="absolute block"
-                    style={{
-                      left: x,
-                      top: bandY + y,
-                      width: 120.08,
-                      height: 120.08,
-                      ...QUOTE_PATCH_BG,
-                      backgroundPosition: flipped ? "0 0" : "20.01px 0",
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="absolute inset-x-0 top-0 opacity-70">
-                {QUOTE_MOTIFS.map((m, i) => (
-                  <img
-                    key={i}
-                    src={m.img}
-                    alt=""
-                    className={`absolute max-w-none ${m.flip ? "-scale-x-100" : ""}`}
-                    style={{ left: m.x, top: bandY + m.y, width: m.w, height: m.h }}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+          <QuoteBands offsets={QUOTE_BAND_OFFSETS} />
         </div>
 
-        <div className="relative mx-auto flex w-full max-w-[1440px] items-center justify-center px-[16px] py-[63px] lg:h-full lg:px-0 lg:py-0">
+        <div className="relative mx-auto flex w-full max-w-[1440px] items-center justify-center px-[40px] py-[63px] lg:h-full lg:px-0 lg:py-0">
           <div className="relative flex w-full max-w-[1199px] items-center justify-center rounded-[16px] bg-[#f7f5f1] px-[16px] py-[60px] lg:h-[242px] lg:p-[10px]">
             <img
               src={quoteMark}
               alt=""
-              className="absolute left-[-3px] top-[23px] size-[83px] opacity-[0.4] lg:left-[29px] lg:top-[60px]"
+              className="absolute left-0 top-[31px] size-[71px] opacity-[0.4] lg:left-[29px] lg:top-[60px] lg:size-[83px]"
             />
-            <p className="relative max-w-[290px] text-center font-display text-[24.7px] uppercase leading-[19.9px] text-cocoa lg:max-w-none lg:text-[52.01px] lg:leading-[57px] lg:tracking-[2.6px]">
-              Every loaf tells a story of love, loss, and new beginnings.
+            {/* Figma sets this on one line with a double space after each
+                comma, so the desktop copy keeps them and turns off collapsing. */}
+            <p className="relative max-w-[290px] text-center font-parkinsans text-[32px] font-medium uppercase leading-[42px] tracking-[-1.6px] text-cocoa lg:max-w-none lg:whitespace-pre lg:text-[36px] lg:font-normal lg:leading-[50px] lg:tracking-[-1.8px]">
+              {"Every loaf tells a story of love,  loss,  and new beginnings."}
             </p>
           </div>
         </div>
       </section>
 
       {/* TRIBUTE */}
-      <section className="w-full bg-cream px-[16px] py-[60px] lg:h-[717px] lg:px-0">
+      {/* pb carries the 16.42px of cream Figma leaves between this section and
+          the checkerboard band; both are cream, so it reads as one gap. */}
+      <section className="w-full bg-cream px-[16px] pb-[76.42px] pt-[60px] lg:h-[717px] lg:px-0 lg:py-[60px]">
         <div className="mx-auto flex h-full w-full max-w-[1218.29px] flex-col items-center gap-[52px] lg:flex-row lg:items-center lg:justify-center lg:gap-[18px]">
-          <div className="flex w-full flex-col gap-[29px] text-cocoa lg:h-[496px] lg:w-[745px] lg:shrink-0 lg:gap-[25px]">
-            <h2 className="font-display text-[19px] uppercase lg:text-[48px] lg:leading-[53px]">
+          <div className="flex w-full flex-col gap-[29px] text-cocoa lg:h-[488px] lg:w-[745px] lg:shrink-0 lg:gap-[25px]">
+            <h2 className="font-parkinsans text-[20px] font-medium uppercase leading-[28px] tracking-[-1px] lg:text-[32px] lg:leading-[45px] lg:tracking-[-1.6px]">
               Tribute
             </h2>
             {/* Figma keeps this as one text node with a blank line between the
-                paragraphs, filling a 418px box. Our Parkinsans wraps to 14 lines
-                where Figma's got 13, so the line unit is 418/16 rather than
-                Figma's 27.87 - gap still equals leading, and the block lands on
-                its 418px height either way. */}
-            <div className="flex flex-col gap-[16px] text-justify font-parkinsans text-[16px] lg:gap-[26.125px] lg:leading-[26.125px]">
+                paragraphs, so the gap equals one line box (16px Parkinsans at
+                leading-normal = 22.4px). */}
+            <div className="flex flex-col gap-[22px] text-justify font-parkinsans text-[16px] leading-[22px]">
               {TRIBUTE_PARAGRAPHS.map((paragraph, i) => (
                 <p key={i}>{paragraph}</p>
               ))}
             </div>
           </div>
 
-          {/* photo group is 455.29 wide: the tape overhangs the photo's left edge */}
-          <div className="relative w-full max-w-[370px] shrink-0 lg:h-[597px] lg:w-[455.29px] lg:max-w-none">
-            <img
-              src={tributeCorgi}
-              alt="Doc, one of the corgis behind Lil' Loaves"
-              className="aspect-[370/532] w-full object-cover lg:absolute lg:right-0 lg:top-0 lg:aspect-auto lg:h-[597px] lg:w-[415.23px]"
-            />
-            <img
-              src={tributeRibbon}
-              alt=""
-              className="absolute -right-[8px] -top-[20px] h-[68px] w-[66px] -scale-y-100 rotate-[36.5deg] skew-x-[-2.83deg] lg:bottom-auto lg:left-[21.9px] lg:right-auto lg:top-[2.21px] lg:h-[77.42px] lg:w-[39.68px] lg:-rotate-[53.5deg] lg:scale-y-100 lg:skew-x-0"
-            />
-          </div>
+          {/* Figma's "Group 185" exported whole at each breakpoint - photo and
+              tape in one file, so neither the tape's rotated position nor the
+              two frames' different arrangements have to be rebuilt in CSS.
+              402 canvas: 370x558.58. 1440 canvas: 455.29x597. */}
+          <img
+            src={tributeGroupMobile}
+            alt="Doc, one of the corgis behind Lil' Loaves"
+            className="w-full max-w-[370px] shrink-0 lg:hidden"
+          />
+          <img
+            src={tributeGroup}
+            alt="Doc, one of the corgis behind Lil' Loaves"
+            className="hidden shrink-0 lg:block lg:h-[597px] lg:w-[455.29px]"
+          />
         </div>
       </section>
 
-      {/* checkerboard transition band above the (shared) Footer */}
-      <div
-        className="h-[40px] w-full lg:hidden"
-        style={{ ...DIVIDER_BG, backgroundSize: "40px 40px" }}
-      />
+      {/* checkerboard transition band above the (shared) Footer - 30px cells on
+          desktop, 20.1px on the 402 canvas, each phase-locked to its own. */}
+      <div className="h-[40.2px] w-full lg:hidden" style={DIVIDER_BG_MOBILE} />
       <div className="hidden h-[60px] w-full lg:block" style={DIVIDER_BG} />
     </main>
   );

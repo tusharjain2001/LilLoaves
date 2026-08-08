@@ -1,4 +1,4 @@
-import { Outlet, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
@@ -39,6 +39,10 @@ export default function App() {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/order-confirmed" element={<OrderConfirmed />} />
+          {/* The design has no customer accounts, so the Profile page is gone.
+              Navbar still links to /profile and is owned by another developer,
+              so redirect rather than leave their link dead-ending. */}
+          <Route path="/profile" element={<Navigate to="/" replace />} />
         </Route>
         <Route path="/email-pickup" element={<EmailPickup />} />
       </Routes>

@@ -73,6 +73,26 @@
   font-display: swap;
 }
 
+/* The gallery's "lil memories" script. Figma names Great Vibes, which is on
+   Google Fonts under the OFL; subset to latin.
+
+   The metric overrides are load-bearing, not tidiness. Great Vibes' hhea box
+   (851/-401) and its OS/2 usWin box (1160/590) disagree, and browsers disagree
+   about which one "line-height: normal" follows - Chrome on Windows takes
+   usWin, giving 1.75em instead of the 1.252em Figma lays out with. Pinning the
+   overrides to the hhea values makes normal leading 155.2px at Figma's
+   123.964px, exactly the 155px it reports, and puts the baseline where it
+   draws it on every engine. */
+@font-face {
+  font-family: "Great Vibes";
+  src: url("./assets/fonts/greatvibes-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  ascent-override: 85.1%;
+  descent-override: 40.1%;
+  line-gap-override: 0%;
+}
+
 /* The hero's script word ("hand"), by Keithzo. LICENCE: 1001Fonts Free For
    Commercial Use - see assets/fonts/fallin-for-you-script-LICENSE.txt. That
    licence forbids modifying the font but expressly permits WOFF conversion, so
@@ -111,6 +131,7 @@
      Figma sizes as we go page by page. */
   --font-ligema: "Parkinsans", sans-serif;
   --font-rochester: "Rochester", cursive;
+  --font-greatvibes: "Great Vibes", cursive;
   --font-script: "Pacifico", cursive;
   --font-dm: "DM Sans", sans-serif;
 

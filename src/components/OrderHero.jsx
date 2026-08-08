@@ -5,9 +5,11 @@ import iconBack from "../assets/shared/icon-back.svg";
 
 const STEPS = ["Shipping", "Payment", "Review"];
 
-/* Same seamless stripe pattern as Navbar - the two sections stack flush. */
+/* Same seamless stripe pattern as Navbar - the two sections stack flush, so
+   this has to stay byte-for-byte identical to the copy there or the band above
+   seams against this one. */
 const STRIPES =
-  "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_111px,#faf3e0_111px,#faf3e0_222px)]";
+  "bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_80.323px,#fcf7ea_80.323px,#fcf7ea_160.646px)] lg:bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_110.769px,#fcf7ea_110.769px,#fcf7ea_221.538px)]";
 
 export default function OrderHero({
   mode = "delivery",
