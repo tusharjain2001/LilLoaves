@@ -1,4 +1,4 @@
-import handler from './[...path].js'
+import handler from './store.js'
 
 function mockRes() {
   const res = {
@@ -20,13 +20,13 @@ beforeEach(() => {
 describe('store proxy', () => {
   it('rejects non-GET methods', async () => {
     const res = mockRes()
-    await handler({ method: 'POST', query: { path: ['products'] } }, res)
+    await handler({ method: 'POST', query: { endpoint: 'products' } }, res)
     expect(res.statusCode).toBe(405)
   })
 
   it('rejects paths outside the allowlist', async () => {
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['orders'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'orders' } }, res)
     expect(res.statusCode).toBe(404)
     expect(global.fetch).not.toHaveBeenCalled()
   })
@@ -34,7 +34,7 @@ describe('store proxy', () => {
   it('forwards an allowed path and returns the payload', async () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => [{ id: 13 }] })
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
     expect(global.fetch).toHaveBeenCalledWith(
       'https://wp.example.com/wp-json/wc/store/v1/products?',
       expect.anything(),
@@ -46,7 +46,7 @@ describe('store proxy', () => {
   it('forwards a nested allowed path', async () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => [] })
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products', 'categories'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products/categories' } }, res)
     expect(global.fetch.mock.calls[0][0]).toContain('/wc/store/v1/products/categories')
   })
 
@@ -54,7 +54,7 @@ describe('store proxy', () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => [] })
     const res = mockRes()
     await handler(
-      { method: 'GET', query: { path: ['products'], featured: 'true', evil: 'x' } },
+      { method: 'GET', query: { endpoint: 'products', featured: 'true', evil: 'x' } },
       res,
     )
     const url = global.fetch.mock.calls[0][0]
@@ -65,7 +65,7 @@ describe('store proxy', () => {
   it('sets an edge cache header so upstream sees one request a minute', async () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => [] })
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
     expect(res.headers['cache-control']).toBe(
       'public, s-maxage=60, stale-while-revalidate=600',
     )
@@ -74,7 +74,7 @@ describe('store proxy', () => {
   it('returns 502 when upstream throttles', async () => {
     global.fetch.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) })
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
     expect(res.statusCode).toBe(502)
   })
 
@@ -82,7 +82,7 @@ describe('store proxy', () => {
     global.fetch.mockRejectedValue(new Error('ECONNREFUSED'))
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
     expect(res.statusCode).toBe(502)
     expect(consoleSpy).toHaveBeenCalledWith('store proxy fetch failed', expect.any(Error))
     consoleSpy.mockRestore()
@@ -91,7 +91,7 @@ describe('store proxy', () => {
   it('caches a throttled 502 so a 429 storm does not fan out on every retry', async () => {
     global.fetch.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) })
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
     expect(res.headers['cache-control']).toBe('public, s-maxage=10')
   })
 
@@ -99,7 +99,7 @@ describe('store proxy', () => {
     global.fetch.mockRejectedValue(new Error('ECONNREFUSED'))
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
     expect(res.headers['cache-control']).toBe('public, s-maxage=10')
     consoleSpy.mockRestore()
   })
@@ -107,7 +107,7 @@ describe('store proxy', () => {
   it('applies a fetch timeout so a hanging upstream fails fast into the 502 path', async () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => [] })
     const res = mockRes()
-    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    await handler({ method: 'GET', query: { endpoint: 'products' } }, res)
     const options = global.fetch.mock.calls[0][1]
     expect(options.signal).toBeInstanceOf(AbortSignal)
   })

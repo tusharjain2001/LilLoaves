@@ -8,9 +8,16 @@
  * s-maxage=60 collapses all customer traffic into roughly one upstream
  * request per minute. stale-while-revalidate keeps the menu rendering from
  * the last good response for ten minutes if WordPress is throttling or down.
+ *
+ * The endpoint arrives as a query parameter rather than a path segment. This
+ * started life as `api/store/[...path].js`, but Vercel did not populate
+ * `req.query.path` from that catch-all on this project: a single segment
+ * reached the function with no `path` at all, and a two-segment path never
+ * reached it. One flat file with an explicit `?endpoint=` has no routing
+ * behaviour to get wrong.
  */
 
-const ALLOWED_PATHS = new Set([
+const ALLOWED_ENDPOINTS = new Set([
   'products',
   'products/categories',
   'products/tags',
@@ -34,23 +41,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const raw = req.query.path
-  const segments = Array.isArray(raw) ? raw : [raw]
-  const path = segments.filter(Boolean).join('/')
+  const endpoint = String(req.query.endpoint ?? '')
 
-  if (!ALLOWED_PATHS.has(path)) {
+  if (!ALLOWED_ENDPOINTS.has(endpoint)) {
     return res.status(404).json({ error: 'Unknown endpoint' })
   }
 
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(req.query)) {
-    if (key !== 'path' && ALLOWED_PARAMS.has(key)) params.set(key, String(value))
+    if (key !== 'endpoint' && ALLOWED_PARAMS.has(key)) params.set(key, String(value))
   }
 
   const base = process.env.WP_STORE_URL
   if (!base) return res.status(500).json({ error: 'WP_STORE_URL is not set' })
 
-  const upstream = `${base}/wp-json/wc/store/v1/${path}?${params}`
+  const upstream = `${base}/wp-json/wc/store/v1/${endpoint}?${params}`
 
   try {
     const response = await fetch(upstream, {

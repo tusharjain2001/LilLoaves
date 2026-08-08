@@ -12,10 +12,20 @@ export default defineConfig(({ mode }) => {
         // In production this path is served by api/store/[...path].js on Vercel.
         // The dev server has no serverless runtime, so forward straight to
         // WordPress. Run `vercel dev` instead if you need the real cache.
+        // Dev only. In production this path is the serverless function in
+        // api/store.js. The dev server has no serverless runtime, so forward
+        // straight to WordPress, translating ?endpoint= into a path segment.
         '/api/store': {
           target: env.WP_STORE_URL,
           changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/api\/store/, '/wp-json/wc/store/v1'),
+          rewrite: (p) => {
+            const [, query = ''] = p.split('?')
+            const params = new URLSearchParams(query)
+            const endpoint = params.get('endpoint') ?? ''
+            params.delete('endpoint')
+            const rest = params.toString()
+            return `/wp-json/wc/store/v1/${endpoint}${rest ? `?${rest}` : ''}`
+          },
         },
       },
     },

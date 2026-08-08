@@ -121,7 +121,7 @@ describe('fetchProducts', () => {
   it('calls the proxy, not WordPress', async () => {
     jsonOnce([RAW])
     await fetchProducts()
-    expect(global.fetch.mock.calls[0][0]).toMatch(/^\/api\/store\/products/)
+    expect(global.fetch.mock.calls[0][0]).toMatch(/^\/api\/store\?endpoint=products/)
   })
 
   it('returns normalised products', async () => {
@@ -171,7 +171,7 @@ describe('fetchByTagSlug', () => {
     jsonOnce([{ id: 1376, name: 'lunchbox-bread', slug: 'lunchbox-bread', count: 2 }])
     jsonOnce([RAW])
     await fetchByTagSlug('lunchbox-bread')
-    expect(global.fetch.mock.calls[0][0]).toContain('/api/store/products/tags')
+    expect(global.fetch.mock.calls[0][0]).toContain('endpoint=products%2Ftags')
     expect(global.fetch.mock.calls[1][0]).toContain('tag=1376')
   })
 

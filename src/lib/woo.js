@@ -34,8 +34,8 @@ async function get(path, params = {}) {
   const key = cacheKey(path, params)
   if (memory.has(key)) return memory.get(key)
 
-  const query = new URLSearchParams(params).toString()
-  const response = await fetch(`${BASE}/${path}${query ? `?${query}` : ''}`)
+  const search = new URLSearchParams({ endpoint: path, ...params }).toString()
+  const response = await fetch(`${BASE}?${search}`)
   if (!response.ok) throw new Error(`Store proxy returned ${response.status}`)
   const data = await response.json()
 
