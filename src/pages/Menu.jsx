@@ -1,17 +1,11 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import CategoryStrip from "../components/CategoryStrip.jsx";
 import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
 import FaqSection from "../components/FaqSection.jsx";
+import { fetchCategories, fetchProducts, fetchFeatured } from "../lib/woo.js";
 import flowerYellow from "../assets/shared/flower-yellow.svg";
 import blobButton from "../assets/menu/blob-button.svg";
 import blobSpecials from "../assets/menu/blob-specials.svg";
-import specialDanish from "../assets/menu/special-danish.jpg";
-import specialCroissants from "../assets/menu/special-croissants.jpg";
-import specialBagels from "../assets/menu/special-bagels.jpg";
-import specialDonuts from "../assets/menu/special-donuts.jpg";
-import breadSourdough from "../assets/menu/bread-sourdough.png";
-import breadJapaneseMilk from "../assets/menu/bread-japanese-milk.png";
-import breadDinnerRolls from "../assets/menu/bread-dinner-rolls.png";
 import lunchboxIconsSprite from "../assets/menu/lunchbox-icons-sprite.png";
 import lunchboxSourdough from "../assets/menu/lunchbox-sourdough.jpg";
 import lunchboxJapaneseMilk from "../assets/menu/lunchbox-japanese-milk.jpg";
@@ -77,57 +71,6 @@ const SCALLOP_MOBILE = {
     "radial-gradient(circle at 50% 0%, #f4e7e3 37.6px, transparent 37.7px)",
   backgroundSize: "56.23px 38px",
   backgroundRepeat: "repeat-x",
-};
-
-const SPECIALS = [
-  { name: "Danish Pastries", price: "$23", img: specialDanish },
-  { name: "Croissants", price: "$23", img: specialCroissants },
-  { name: "Bagels", price: "$23", img: specialBagels },
-  { name: "Donuts", price: "$23", img: specialDonuts },
-];
-
-/* Figma sizes each pill to its own label; our Parkinsans renders narrower than
-   the one in the file, so the widths are pinned rather than derived. */
-const CATEGORIES = [
-  { name: "Breads", w: 148 },
-  { name: "Muffins", w: 150 },
-  { name: "Cookies", w: 160 },
-  { name: "Crackers", w: 172 },
-];
-
-/* Photos are exported from Figma already cropped to the card frame, so they
-   need no object-position of their own. */
-const BREADS_ITEMS = [
-  {
-    name: "Sour Dough",
-    desc: "Slow-fermented and hand-shaped for a crisp crust, airy crumb, and rich, tangy flavor.",
-    price: "$21.13",
-    img: breadSourdough,
-    initialQty: 1,
-  },
-  {
-    name: "Japanese Milk Bread",
-    desc: "Soft, fluffy, and delicately sweet—perfect for sandwiches, toast, or enjoying on its own.",
-    price: "$21.13",
-    img: breadJapaneseMilk,
-    initialQty: 0,
-  },
-  {
-    name: "Dinner Rolls",
-    desc: "Pillowy, buttery rolls baked fresh to bring warmth to every meal and gathering.",
-    price: "$21.13",
-    img: breadDinnerRolls,
-    initialQty: 0,
-  },
-];
-
-/* Figma only mocks item art/copy for the "Breads" tab; the other 3 tabs are
-   real, clickable filters but have no source content yet. */
-const MENU_ITEMS = {
-  Breads: BREADS_ITEMS,
-  Muffins: [],
-  Cookies: [],
-  Crackers: [],
 };
 
 /* Crop windows into the shared lunchbox-icons-sprite.png - each "what's
@@ -211,7 +154,11 @@ function BreadCard({ item, qty, onAdd, onInc, onDec }) {
             <p className="font-parkinsans text-[19px] text-cocoa lg:w-[140.52px] lg:text-[22.29px] lg:leading-[31px]">
               {item.price}
             </p>
-            {qty > 0 ? (
+            {!item.inStock ? (
+              <span className="font-parkinsans text-[13px] font-semibold text-taupe">
+                Sold out
+              </span>
+            ) : qty > 0 ? (
               <div className="flex w-[141px] shrink-0 items-center justify-between rounded-full border-[1.65px] border-taupe px-[13px] py-[6px] font-parkinsans text-[13px] font-semibold text-taupe lg:w-[140.52px] lg:rounded-[79.61px] lg:px-[12.74px] lg:py-[6.37px] lg:text-[12.74px]">
                 <button type="button" onClick={onDec} className="cursor-pointer px-[4px]">
                   -
@@ -287,10 +234,11 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
 }
 
 export default function Menu() {
-  const [activeCategory, setActiveCategory] = useState("Breads");
-  const [quantities, setQuantities] = useState(() =>
-    Object.fromEntries(BREADS_ITEMS.map((i) => [i.name, i.initialQty])),
-  );
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [specials, setSpecials] = useState([]);
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [quantities, setQuantities] = useState({});
   const [selectedBread, setSelectedBread] = useState("Soudough");
   const [selectedCracker, setSelectedCracker] = useState(
     "Chief’s Crackers (5oz)",
@@ -301,7 +249,31 @@ export default function Menu() {
   const setQty = (name, next) =>
     setQuantities((prev) => ({ ...prev, [name]: Math.max(0, next) }));
 
-  const activeItems = MENU_ITEMS[activeCategory];
+  useEffect(() => {
+    let active = true;
+    Promise.all([fetchCategories(), fetchProducts(), fetchFeatured()]).then(
+      ([cats, prods, feat]) => {
+        if (!active) return;
+        setCategories(cats);
+        setProducts(prods);
+        setActiveCategory((current) => current ?? cats[0]?.slug ?? null);
+        setSpecials(
+          feat.slice(0, 4).map((p) => ({
+            name: p.name,
+            price: p.priceFormatted,
+            img: p.images[0]?.src ?? "",
+          })),
+        );
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const activeItems = products.filter((p) =>
+    p.categories.some((c) => c.slug === activeCategory),
+  );
 
   return (
     <main className="w-full overflow-x-hidden bg-cream">
@@ -352,7 +324,7 @@ export default function Menu() {
 
       {/* Figma runs the specials backdrop up under the last 7px of the
           category strip. */}
-      <SeasonalSpecials specials={SPECIALS} className="lg:-mt-[7px]" />
+      <SeasonalSpecials items={specials} className="lg:-mt-[7px]" />
 
       {/* OUR MENU */}
       <section className="w-full bg-cream px-[16px] py-[60px] lg:h-[1049px] lg:px-0 lg:py-0 lg:pt-[124.24px]">
@@ -372,19 +344,18 @@ export default function Menu() {
           </div>
 
           <div className="mx-auto grid w-full max-w-[500px] grid-cols-2 gap-x-[20px] gap-y-[16px] lg:flex lg:w-auto lg:max-w-none lg:gap-[38px]">
-            {CATEGORIES.map(({ name, w }) => (
+            {categories.map((c) => (
               <button
-                key={name}
+                key={c.slug}
                 type="button"
-                onClick={() => setActiveCategory(name)}
-                style={{ "--pill-w": `${w}px` }}
-                className={`box-border cursor-pointer whitespace-nowrap rounded-full bg-[#eaebe7] px-[20px] py-[8px] font-parkinsans text-[18px] text-cocoa lg:h-[50px] lg:w-[var(--pill-w)] lg:rounded-[100px] lg:px-0 lg:py-0 lg:text-[24px] lg:leading-[34px] ${
-                  activeCategory === name
+                onClick={() => setActiveCategory(c.slug)}
+                className={`box-border cursor-pointer whitespace-nowrap rounded-full bg-[#eaebe7] px-[20px] py-[8px] font-parkinsans text-[18px] text-cocoa lg:h-[50px] lg:rounded-[100px] lg:px-[32px] lg:py-0 lg:text-[24px] lg:leading-[34px] ${
+                  activeCategory === c.slug
                     ? "border-2 border-[#969985]"
                     : "border-2 border-transparent"
                 }`}
               >
-                {name}
+                {c.name}
               </button>
             ))}
           </div>
@@ -395,16 +366,25 @@ export default function Menu() {
                 More treats coming soon!
               </p>
             ) : (
-              activeItems.map((item) => (
-                <BreadCard
-                  key={item.name}
-                  item={item}
-                  qty={quantities[item.name] ?? 0}
-                  onAdd={() => setQty(item.name, 1)}
-                  onInc={() => setQty(item.name, (quantities[item.name] ?? 0) + 1)}
-                  onDec={() => setQty(item.name, (quantities[item.name] ?? 0) - 1)}
-                />
-              ))
+              activeItems.map((p) => {
+                const item = {
+                  name: p.name,
+                  desc: p.shortDescription || p.description,
+                  price: p.priceFormatted,
+                  img: p.images[0]?.src,
+                  inStock: p.inStock,
+                };
+                return (
+                  <BreadCard
+                    key={p.id}
+                    item={item}
+                    qty={quantities[item.name] ?? 0}
+                    onAdd={() => setQty(item.name, 1)}
+                    onInc={() => setQty(item.name, (quantities[item.name] ?? 0) + 1)}
+                    onDec={() => setQty(item.name, (quantities[item.name] ?? 0) - 1)}
+                  />
+                );
+              })
             )}
           </div>
         </div>
