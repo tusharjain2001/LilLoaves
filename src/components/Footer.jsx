@@ -13,8 +13,6 @@ const BAKERY_LINKS = [
 ];
 
 const QUICK_LINKS = [
-  { label: "Profile", to: "/profile" },
-  { label: "Orders", to: "/profile" },
   { label: "Contact Us", to: "/contact" },
   { label: "Refunds & Returns", to: null },
 ];
