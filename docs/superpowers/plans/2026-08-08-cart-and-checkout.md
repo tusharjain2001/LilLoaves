@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Revision 3.** Revision 1 was rejected by three verifiers with eight blocking findings; revision 2 was rejected again with eleven narrower ones, including a fatal that would have hit every checkout. Both rounds are recorded below, because the reasoning matters more than the patches and these mistakes are easy to reintroduce.
+**Revision 4.** Revision 1 was rejected by three verifiers with eight blocking findings; revision 2 with eleven narrower ones including a fatal that would have hit every checkout; revision 3 with five, one of which was a store misconfiguration that this plan's own earlier fix had introduced. Both rounds are recorded below, because the reasoning matters more than the patches and these mistakes are easy to reintroduce.
 
 **Goal:** A customer can add bakery items to a cart that persists, see authoritative totals computed by WooCommerce, and be handed to WooCommerce's checkout to pay.
 
@@ -505,18 +505,32 @@ function ll_wc_ready() {
  * global cap is what actually protects the origin from a distributed burst.
  */
 function ll_throttled($client, $bucket, $max) {
-    $key  = 'll_' . $bucket . '_' . md5($client);
-    $hits = (int) get_transient($key);
-    if ($hits >= $max) return true;
-    set_transient($key, $hits + 1, LL_QUOTE_WINDOW);
-    return false;
+    return ll_bump('ll_' . $bucket . '_' . md5($client), $max);
 }
 
-function ll_global_throttled() {
-    $hits = (int) get_transient('ll_quote_global');
-    if ($hits >= 300) return true;                 // ~30/s sustained, well under the LB's limit
-    set_transient('ll_quote_global', $hits + 1, LL_QUOTE_WINDOW);
-    return false;
+/**
+ * wp_cache_incr is atomic and this host runs a persistent Memcached object
+ * cache (verified). get_transient/set_transient is a read-modify-write and
+ * undercounts precisely under the concurrent bursts that matter. The transient
+ * path is only a fallback for a host without a persistent cache.
+ */
+function ll_bump($key, $max) {
+    $group = 'lilloaves';
+    wp_cache_add($key, 0, $group, LL_QUOTE_WINDOW);
+    $hits = wp_cache_incr($key, 1, $group);
+    if (false === $hits) {
+        $hits = (int) get_transient($key) + 1;
+        set_transient($key, $hits, LL_QUOTE_WINDOW);
+    }
+    return $hits > $max;
+}
+
+/**
+ * Named buckets, so a flood aimed at /quote can never exhaust the budget that
+ * lets real customers complete checkout. Task 7 passes its own bucket name.
+ */
+function ll_global_throttled($bucket = 'quote') {
+    return ll_bump('ll_global_' . $bucket, 300);   // ~30/s sustained, under the LB's limit
 }
 
 /**
@@ -742,6 +756,16 @@ Run each and record the actual output in your report. Use `wp eval` rather than 
 
 - Shipping zone 1 is restricted to postcodes **92866, 92867, 92868, 92869** (placeholders; the bakery edits them). Before this, the zone had **no** location rows and matched every postcode on earth.
 - `flat_rate` instance 2 costs **5.00**. Before this it cost `0`, so "delivery is non-zero" was unprovable.
+- **`local_pickup` also exists on zone 0** ("Rest of the world"), as instance 3. This matters: `ll_apply_fulfilment` blanks the postcode for pickup, and once zone 1 matched on postcode alone, a blank postcode matched *no* zone and pickup became unreachable — restricting the delivery area silently broke collection. Pickup availability must never depend on the delivery-area configuration, which the client edits freely. With `local_pickup` on both zones, all three paths resolve: blank postcode falls through to zone 0, an in-area postcode matches zone 1 which also carries pickup.
+- A test coupon **`LOAF10`** (10% off) exists. The store previously had none, so the coupon cases below were unrunnable.
+
+Verified live, exactly these results:
+
+```
+pickup   (blank)  -> local_pickup:3
+delivery 92868    -> flat_rate:2
+delivery 90210    -> NO MATCH
+```
 
 | # | Case | Expected |
 |---|---|---|
@@ -751,7 +775,7 @@ Run each and record the actual output in your report. Use `wp eval` rather than 
 | 4 | Nonexistent product id | error, no fatal, other lines still priced |
 | 5 | Japanese Milk Bread (16), out of stock | rejected with a "sold out" error |
 | 6 | An invalid coupon | generic invalid-coupon error; totals otherwise unchanged |
-| 7 | A **valid** coupon | `Σ lines[].total === subtotal`, with the discount on its own row. This is the assertion that proves the pre/post-discount basis is right. |
+| 7 | Coupon `LOAF10` | `Σ lines[].total === subtotal`, with the 10% discount on its own row. This is the assertion that proves the pre/post-discount basis is right. |
 | 8 | 25 quotes in a row | the later ones return HTTP 429 |
 | 9 | `items: []` | a zeroed quote with a full `currency` object, HTTP 200 |
 | 10 | Full response shape | `currency` carries prefix, suffix, both separators and `currency_minor_unit` |
@@ -878,16 +902,17 @@ Required behaviour, in order:
 2. **Boot the cart — `ll_boot_cart()`, the same helper `/quote` uses.** WooCommerce only auto-creates `WC()->cart`, `WC()->session` and `WC()->customer` when `is_request('frontend')` is true, which requires `!is_admin()`. `admin-post.php` defines `WP_ADMIN` before `wp-load.php` runs, so `is_admin()` is true for the entire request and **none of them exist**. Revision 2 omitted this and every checkout submission would have fataled on `empty_cart() on null`. Note `ll_wc_ready()` does **not** cover this — it checks that the `WC_Cart` *class* exists, not that `WC()->cart` was instantiated.
 3. **Origin check.** Reject unless `Origin` or `Referer` matches an allowlisted storefront origin, stored in an option. **Fail closed:** if both headers are absent, reject. Revision 1 argued CSRF was harmless here; that was wrong — CSRF forces a *victim's* browser to submit, and without this check a third-party page can land a victim on the real checkout prefilled with an attacker's shipping address.
 4. **Throttle** using the same per-client helper as `/quote`, but with **its own global bucket** — not `ll_quote_global`. Sharing one bucket means anyone flooding `/quote` directly (the WordPress URL is public by necessity, it is the form's `action`) can trip the cap and block real customers from *completing checkout*, not merely from seeing quotes. Use an atomic counter (`wp_cache_incr`, available here — the host runs a persistent object cache) rather than `get_transient`/`set_transient`, whose read-modify-write undercounts precisely under the concurrent bursts that matter.
-5. **Idempotency.** The client sends a token generated **once per cart state**, not once per click — see Task 8. Mark the token seen **immediately on check**, before doing any work. The tradeoff is explicit: a submission that crashes partway leaves the token spent, so a retry redirects to a checkout with an empty cart rather than risking a double charge. Prefer a confusing empty cart over billing someone twice.
+5. **Idempotency.** The client sends a token generated **once per cart state**, not once per click — see Task 9. Mark the token seen **immediately on check**, before doing any work. The tradeoff is explicit: a submission that crashes partway leaves the token spent, so a retry redirects to a checkout with an empty cart rather than risking a double charge. Prefer a confusing empty cart over billing someone twice.
 6. **`WC()->cart->empty_cart()` before adding.** Revision 1 omitted this; a double-click or a back-then-resubmit doubled the order and the charge. This operates on the customer's real, persistent session, so it is not optional.
 7. **Re-price every line** from WooCommerce. Ignore anything price-shaped in the POST.
-8. **Re-validate fulfilment** with the same `ll_apply_fulfilment` used by `/quote`. If it returns errors, abort and redirect back to `/cart` with an error code — do not proceed with no shipping method.
-9. **Enforce the delivery minimum** server-side.
-10. **Prefill** billing and shipping from the POST, sanitised.
-11. **Store pickup store, date and slot** as session data that carries onto the order, and display it on the admin order screen.
-12. `wp_safe_redirect(wc_get_checkout_url())`.
+8. **Apply the coupon** the client sent, using the same call `/quote` uses. Revision 3 contracted the client to send a `coupon` field and then never read it — a customer who saw a discounted quote would have been charged full price at checkout. If the coupon no longer validates, redirect back with `?error=coupon` rather than silently charging more than was quoted.
+9. **Re-validate fulfilment** with the same `ll_apply_fulfilment` used by `/quote`. If it returns errors, abort and redirect back to `/cart` with an error code — do not proceed with no shipping method.
+10. **Enforce the delivery minimum** server-side.
+11. **Prefill** billing and shipping from the POST, sanitised.
+12. **Store pickup store, date and slot** as session data that carries onto the order, and display it on the admin order screen.
+13. `wp_safe_redirect(wc_get_checkout_url())`.
 
-**Failure UX, explicitly:** every rejection redirects to `{storefront}/cart?error=<code>` with a short machine code (`out_of_area`, `below_minimum`, `unavailable`, `origin`, `throttled`). No `wp_die()` — a bakery customer must never see a raw WordPress error page. Task 9 renders these. Build the redirect target from the **stored allowlist option**, never from the incoming `Origin` or `Referer`, or the failure path becomes an open redirect.
+**Failure UX, explicitly:** every rejection redirects to `{storefront}/cart?error=<code>` with a short machine code (`out_of_area`, `below_minimum`, `unavailable`, `origin`, `throttled`, `coupon`). No `wp_die()` — a bakery customer must never see a raw WordPress error page. Task 9 renders these. Build the redirect target from the **stored allowlist option**, never from the incoming `Origin` or `Referer`, or the failure path becomes an open redirect.
 
 - [ ] **Step 2: Deploy to staging and prove the defences**
 
@@ -902,6 +927,8 @@ Record actual output for each in your report:
 | 5 | POST claiming `pickup` with a delivery postcode | no delivery rate applied |
 | 6 | POST with an out-of-zone postcode | redirected to `/cart?error=out_of_area`, no order |
 | 7 | POST from a foreign Origin | rejected |
+| 7b | POST with **neither** `Origin` nor `Referer` | rejected. The fail-closed case; a naive `if (present && !allowed) reject` passes case 7 and still fails open here. |
+| 7c | Valid submission carrying `LOAF10` | the coupon is applied and the WooCommerce order total matches the quoted total |
 | 8 | Empty cart POST | handled, no PHP error |
 
 - [ ] **Step 3: Promote to production and commit**
@@ -961,7 +988,7 @@ Add `VITE_WP_CHECKOUT_URL=https://jessnix04-bvcul.wpcomstaging.com` to `.env`, c
 | `address_1`, `address_2`, `city`, `state`, `postcode` | delivery only |
 | `pickup_store`, `pickup_date`, `pickup_slot` | pickup only |
 
-**The idempotency token is generated once per cart state, not per click.** Revision 2 generated a fresh one inside the submit handler and tested that tokens "differ between submissions" — which defeats the whole guard, because a double-click produces two different tokens and Task 7's "have I seen this token" check never fires. Derive it once from the cart contents, regenerating only when the cart changes, so both clicks carry the same token.
+**The idempotency token is generated once per cart state, not per click.** Revision 2 generated a fresh one inside the submit handler and tested that tokens "differ between submissions" — which defeats the whole guard, because a double-click produces two different tokens and Task 7's "have I seen this token" check never fires. Derive it once from everything that changes the order — item `id:qty` pairs, fulfilment mode, postcode and coupon — regenerating only when one of those changes. Both clicks of a double-click then carry the same token, while a customer who genuinely edits their address and resubmits gets a fresh one rather than hitting the guard as a false "already seen".
 
 Tests: the form has the right method and action; every field above is present with the right name; the payload contains no prices; `fetch` is never called; **two submissions of an unchanged cart carry the same token**; changing the cart changes the token.
 
