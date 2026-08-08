@@ -27,11 +27,12 @@ const MOBILE_NAV_LINKS = [
   { label: "contact", to: "/contact" },
 ];
 
-/* Striped bakery background: #fcf7ea stripes over #faf3e0 base.
-   80px period on mobile, 111px on desktop - identical in PageHero/OrderHero
-   so stacked sections tile seamlessly. */
+/* Striped bakery background, identical in PageHero/OrderHero so stacked
+   sections tile seamlessly. Desktop is #faf3e0 bands on a #fcf7ea field,
+   110.769px each on a 221.538px pitch - the board's 1440 in thirteenths, with
+   the first band starting at x=0. Mobile keeps its own 80px pitch. */
 const STRIPES =
-  "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_111px,#faf3e0_111px,#faf3e0_222px)]";
+  "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_110.769px,#fcf7ea_110.769px,#fcf7ea_221.538px)]";
 
 const OVERLAY_ROUTES = new Set(["/", "/about", "/menu"]);
 
@@ -70,8 +71,11 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <nav className="hidden lg:flex lg:w-[629px] lg:items-center lg:justify-center">
-            <div className="flex items-center gap-[35px] font-parkinsans text-[16px] text-cocoa [-webkit-text-stroke:0.2px_#57423d]">
+          {/* Figma's link row is 635px wide (247:5057): the five labels measure
+              90/56/165/73/111 with 35px between them, which only adds up at
+              20px - Parkinsans at 16px comes out 100px short. */}
+          <nav className="hidden lg:flex lg:w-[635px] lg:items-center lg:justify-center">
+            <div className="flex items-center gap-[35px] font-parkinsans text-[16px] text-cocoa [-webkit-text-stroke:0.2px_#57423d] lg:text-[20px]">
               {NAV_LINKS.map(({ label, to }) =>
                 to ? (
                   <NavLink
