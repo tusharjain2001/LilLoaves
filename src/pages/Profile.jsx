@@ -14,7 +14,7 @@ import emptyOrdersDotSm from "../assets/profile/empty-orders-dot-sm.svg";
    layout (avatar + "Welcome back" heading + Orders/Profile switcher), so it is
    rebuilt in-page rather than reusing PageHero (see report for details). */
 const HERO_STRIPES =
-  "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_111px,#faf3e0_111px,#faf3e0_222px)]";
+  "bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_80.323px,#fcf7ea_80.323px,#fcf7ea_160.646px)] lg:bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_110.769px,#fcf7ea_110.769px,#fcf7ea_221.538px)]";
 
 const TABS = [
   { key: "orders", label: "Orders" },

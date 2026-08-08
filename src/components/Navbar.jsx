@@ -28,11 +28,11 @@ const MOBILE_NAV_LINKS = [
 ];
 
 /* Striped bakery background, identical in PageHero/OrderHero so stacked
-   sections tile seamlessly. Desktop is #faf3e0 bands on a #fcf7ea field,
-   110.769px each on a 221.538px pitch - the board's 1440 in thirteenths, with
-   the first band starting at x=0. Mobile keeps its own 80px pitch. */
+   sections tile seamlessly. #faf3e0 bands on a #fcf7ea field, both boards
+   starting a band at x=0: 80.323px on a 160.646px pitch at 402, 110.769px on a
+   221.538px pitch at 1440. */
 const STRIPES =
-  "bg-[repeating-linear-gradient(90deg,#fcf7ea_0px,#fcf7ea_80px,#faf3e0_80px,#faf3e0_160px)] lg:bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_110.769px,#fcf7ea_110.769px,#fcf7ea_221.538px)]";
+  "bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_80.323px,#fcf7ea_80.323px,#fcf7ea_160.646px)] lg:bg-[repeating-linear-gradient(90deg,#faf3e0_0px,#faf3e0_110.769px,#fcf7ea_110.769px,#fcf7ea_221.538px)]";
 
 const OVERLAY_ROUTES = new Set(["/", "/about", "/menu"]);
 
@@ -51,8 +51,11 @@ export default function Navbar() {
           : `w-full ${STRIPES}`
       }
     >
-      <div className="relative mx-auto w-full max-w-[1440px] px-[16px] pt-[20px] lg:px-[45px] lg:pt-[44px]">
-        <div className="flex h-[55px] items-center justify-between rounded-full border border-shell bg-cream px-[26px] backdrop-blur-[52.5px] lg:h-[76px] lg:px-[28px]">
+      <div className="relative mx-auto w-full max-w-[1440px] px-[16px] pt-[19.69px] lg:px-[45px] lg:pt-[44px]">
+        {/* The 402 board insets the pill unevenly - 26.25px before the burger,
+            9.42px after the cart - so the icon pair sits close to the right
+            edge. Desktop is symmetric. */}
+        <div className="flex h-[54.84px] items-center justify-between rounded-full border border-shell bg-cream pl-[26.25px] pr-[9.42px] backdrop-blur-[52.5px] lg:h-[76px] lg:px-[28px]">
           <div className="flex items-center gap-[16px]">
             <button
               type="button"

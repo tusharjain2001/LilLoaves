@@ -1,6 +1,7 @@
 import PageHero from "../components/PageHero.jsx";
 
 import dotsBg from "../assets/gallery/dots-bg.svg";
+import dotsBgMobile from "../assets/gallery/dots-bg-mobile.svg";
 import iconCamera from "../assets/gallery/icon-camera.svg";
 import iconQuote from "../assets/gallery/icon-quote.svg";
 import heartIcon from "../assets/gallery/heart.svg";
@@ -54,29 +55,78 @@ const DESKTOP_TILES = [
   { src: photoR4C3, x: 832.23, y: 1116.57, w: 237.78, h: 237.78 },
 ];
 
-/* Mobile mosaic: 2 columns, plain sequential flow. Kept as-is pending its own
-   Figma frame; the tiles are the same scallop-masked exports. */
-const MOBILE_GRID = [
-  { kind: "photo", src: photoR0C0 },
-  { kind: "heart" },
-  { kind: "photo", src: photoR0C1 },
-  { kind: "photo", src: photoR0C2 },
-  { kind: "photo", src: photoR1C0 },
-  { kind: "photo", src: photoR1C1 },
-  { kind: "text" },
-  { kind: "photo", src: photoR1C2 },
-  { kind: "photo", src: photoR1C3 },
-  { kind: "photo", src: photoR2C0 },
-  { kind: "photo", src: photoR2C1 },
-  { kind: "photo", src: photoR2C2 },
-  { kind: "photo", src: photoR2C3 },
-  { kind: "photo", src: photoR3C1 },
+/* The 402 board (254:15608) reshuffles the mosaic into seven two-up rows rather
+   than reflowing the desktop grid: it drops four of the sixteen tiles, reorders
+   the rest, and gives every row its own gutter and cross-axis alignment - which
+   is what staggers the tiles vertically. Widths are percentages of the 370px
+   column so the rows still fit a phone narrower than the board.
+
+   Sizes below are the board's px converted to % of 370, e.g. 168.72 -> 45.6%. */
+const MOBILE_ROWS = [
+  {
+    gap: "16.32%",
+    align: "items-center",
+    cells: [
+      { src: photoR0C2, w: "45.600%", ratio: "168.72/169.312" },
+      { kind: "heart", w: "30.503%", ratio: "112.862/95.933" },
+    ],
+  },
+  {
+    gap: "7.680%",
+    align: "items-end",
+    cells: [
+      { src: photoR0C0, w: "45.600%", ratio: "168.72/169.312" },
+      { src: photoR0C1, w: "45.760%", ratio: "169.312/169.904" },
+    ],
+  },
+  {
+    gap: "7.680%",
+    align: "items-center",
+    cells: [
+      { src: photoR1C0, w: "46.080%", ratio: "170.496/171.088" },
+      { src: photoR1C1, w: "46.080%", ratio: "170.496/171.088" },
+    ],
+  },
+  {
+    gap: "8.160%",
+    align: "items-center",
+    cells: [
+      { kind: "memories", w: "44.960%" },
+      { src: photoR1C2, w: "46.240%", ratio: "1/1" },
+    ],
+  },
+  {
+    gap: "7.680%",
+    align: "items-start",
+    cells: [
+      { src: photoR2C0, w: "45.760%", ratio: "169.312/169.904" },
+      { src: photoR2C1, w: "45.600%", ratio: "168.72/169.312" },
+    ],
+  },
+  {
+    gap: "7.680%",
+    align: "items-end",
+    cells: [
+      { src: photoR2C2, w: "45.760%", ratio: "1/1" },
+      { src: photoR2C3, w: "45.760%", ratio: "169.312/169.904" },
+    ],
+  },
+  {
+    gap: "8.800%",
+    align: "items-end",
+    cells: [
+      { src: photoR1C3, w: "45.440%", ratio: "1/1" },
+      { src: photoR4C3, w: "45.760%", ratio: "1/1" },
+    ],
+  },
 ];
 
 /* Figma "Frame 2797". "lil" sits in a 122.216px box while its line box is
    155.2px tall, which is how the board pulls "memories" up to y=100.13 - so the
-   two lines are placed outright instead of stacked. Drawn once at the board's
-   own size and scaled down for the mobile cell. */
+   two lines are placed outright instead of stacked. The 402 board repeats the
+   block at 0.4378 of this size - its 54.275px type and its 94.69x59.72 blob are
+   both exactly that fraction of these numbers - so mobile scales this rather
+   than restating it. */
 function MemoriesLockup() {
   return (
     <div className="relative h-[255.13px] w-[379.95px]">
@@ -99,7 +149,8 @@ function MemoriesLockup() {
 
 /* Figma "Group 194". The ribbon and its three lines are siblings on the board,
    each with its own angle, so they are placed that way rather than nested in a
-   single rotated block. Coordinates are the group's own 183.02 x 134.6 box. */
+   single rotated block. Coordinates are the group's own 183.02 x 134.6 box; the
+   402 board draws the same group at 0.6895 of it. */
 function RibbonBadge() {
   return (
     <div className="relative h-[134.6px] w-[183.02px]">
@@ -136,47 +187,88 @@ function RibbonBadge() {
   );
 }
 
+/* Washi tape, Figma 247:5187. The SVG's own box is larger than the taped area -
+   it carries the shadow - so the leaf is offset inside its 48.65 x 164.33 slot
+   before the whole thing is flipped and turned. The 402 board reuses it at
+   0.6895, the same fraction as the ribbon. */
+function WashiTape() {
+  return (
+    <div className="flex h-[139.35px] w-[159.54px] items-center justify-center">
+      <div className="flex-none -scale-y-100 rotate-[127.91deg]">
+        <div className="relative h-[164.33px] w-[48.65px]">
+          <img
+            src={tapeIcon}
+            alt=""
+            aria-hidden="true"
+            className="absolute left-[-14.51px] top-[-6.69px] h-[181.18px] w-[65.51px] max-w-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TESTIMONIAL = `I ordered the sourdough after seeing it online, and it completely exceeded my expectations. The crust had the perfect crunch, while the inside was incredibly soft and flavorful. You can tell every loaf is made with patience and genuine care. It's rare to find bread that tastes this fresh and homemade, and it reminded me of the kind my grandmother used to bake. Lil' Loaves has quickly become our new weekend tradition.`;
 
 function MobileCell({ cell }) {
   if (cell.kind === "heart") {
     return (
-      <div className="flex aspect-square items-center justify-center">
-        <img src={heartIcon} alt="" className="h-[70px] w-[82.4px]" />
-      </div>
+      <img
+        src={heartIcon}
+        alt=""
+        style={{ width: cell.w, aspectRatio: cell.ratio }}
+        className="shrink-0"
+      />
     );
   }
 
-  if (cell.kind === "text") {
+  if (cell.kind === "memories") {
     return (
-      <div className="flex items-center">
-        <div className="relative h-[107.03px] w-[159.4px]">
-          <div className="absolute left-0 top-0 origin-top-left scale-[0.4195]">
-            <MemoriesLockup />
-          </div>
+      <div
+        style={{ width: cell.w }}
+        className="h-[111.7px] shrink-0 overflow-visible"
+      >
+        <div className="origin-top-left scale-[0.4378]">
+          <MemoriesLockup />
         </div>
       </div>
     );
   }
 
-  return <img src={cell.src} alt="" className="aspect-square w-full" />;
+  return (
+    <img
+      src={cell.src}
+      alt=""
+      style={{ width: cell.w, aspectRatio: cell.ratio }}
+      className="shrink-0"
+    />
+  );
 }
 
 /* Figma stacks two bands of rectangles over a #f7f5f1 field: 35px verticals on
-   an 88px pitch and 32.757px horizontals on an 82.757px pitch, both starting at
-   the section's own top-left. Sampling the board gives #f7f5f1 for the field,
-   #f6f2ed where one band lies and #f5efe9 where two cross - which is one tint
-   painted twice at 0.1, not two opaque fills, hence the translucent layers. */
-const MOSAIC_PLAID = {
-  backgroundColor: "#f7f5f1",
-  backgroundImage: [
-    "repeating-linear-gradient(90deg, rgba(238,216,202,0.1) 0 35px, transparent 35px 88px)",
-    "repeating-linear-gradient(180deg, rgba(238,216,202,0.1) 0 32.757px, transparent 32.757px 82.757px)",
-  ].join(","),
+   an 88px pitch and 32.757px horizontals on an 82.757px pitch. Sampling the
+   board gives #f7f5f1 for the field, #f6f2ed where one band lies and #f5efe9
+   where two cross - which is one tint painted twice at 0.1, not two opaque
+   fills, hence the translucent layers. */
+const PLAID_BANDS = [
+  "repeating-linear-gradient(90deg, rgba(238,216,202,0.1) 0 35px, transparent 35px 88px)",
+  "repeating-linear-gradient(180deg, rgba(238,216,202,0.1) 0 32.757px, transparent 32.757px 82.757px)",
+].join(",");
+
+/* Desktop starts the verticals at the section's own left edge. The 402 board
+   slides the same 1440-wide sheet 523px left, which puts its bands at x=5, 93,
+   181... - so mobile is phase-locked to the centre of the 402 canvas instead. */
+const MOSAIC_PLAID = { backgroundImage: PLAID_BANDS };
+const MOSAIC_PLAID_MOBILE = {
+  backgroundImage: PLAID_BANDS,
+  backgroundPosition: "calc(50% - 196px) 0",
 };
 
-/* Both section headings are Parkinsans Medium tracked at -0.05em, same as the
-   hero title. */
+/* Every heading on the page is Parkinsans Medium tracked at -0.05em. The 402
+   board still sets these four in Ligema DEMO at its old sizes - it predates the
+   type migration the 1440 board has already been through - so the faces follow
+   desktop while the sizes are the ones that reproduce the board's cap height
+   (17px for the two section headings, 15px for the hero title). */
 const HEADING = "font-parkinsans font-medium uppercase tracking-[-0.05em]";
 
 export default function Gallery() {
@@ -184,21 +276,23 @@ export default function Gallery() {
     <main className="w-full bg-cream">
       <PageHero title="Gallery" />
 
-      {/* A Peek Inside Lil' Loaves - Figma "Frame 2795" (247:5147). Clipped on
-          x only: the dot row is wider than the viewport and would scroll the
-          page sideways, but it is also meant to hang past the band's bottom
-          edge, which plain overflow-hidden would cut off. */}
-      <section className="relative w-full overflow-x-clip bg-cream">
+      {/* A Peek Inside Lil' Loaves - Figma 247:5147 / 254:15386. Clipped on x
+          only: the dot row is wider than the viewport and would scroll the page
+          sideways, but it is also meant to hang past the band's bottom edge,
+          which plain overflow-hidden would cut off. */}
+      {/* z-10 keeps the dot row on top: the mosaic below is positioned too, so
+          without it that later sibling paints its plaid over the scallop. */}
+      <section className="relative z-10 w-full overflow-x-clip bg-cream">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start gap-[40px] px-[16px] py-[60px] lg:h-[409px] lg:justify-center lg:gap-[64px] lg:px-[72px] lg:py-0">
-          <div className="flex flex-col gap-[15px] text-cocoa lg:gap-[24px]">
+          <div className="flex flex-col gap-[14.77px] text-cocoa lg:gap-[24px]">
             <h2
-              className={`${HEADING} text-[18.5px] leading-normal lg:text-[40px] lg:leading-[57px]`}
+              className={`${HEADING} text-[24.3px] leading-[35.08px] lg:text-[40px] lg:leading-[57px]`}
             >
               A Peek Inside Lil&apos; Loaves
             </h2>
-            {/* 34px lines, not Parkinsans' own 36px normal - Figma reports the
-                two-line block at 68px tall. */}
-            <p className="text-justify font-parkinsans text-[15px] lg:w-[1126px] lg:text-[24px] lg:leading-[34px]">
+            {/* 21px lines on mobile and 34px on desktop, not Parkinsans' own
+                normal - Figma reports the blocks at 84px and 68px tall. */}
+            <p className="text-justify font-parkinsans text-[14.77px] leading-[21px] lg:w-[1126px] lg:text-[24px] lg:leading-[34px]">
               From hand-shaped loaves fresh out of the oven to sweet treats
               made with care, here&apos;s a glimpse of the moments, flavors,
               and craftsmanship that make Lil&apos; Loaves feel like home.
@@ -207,48 +301,68 @@ export default function Gallery() {
 
           <button
             type="button"
-            className="flex cursor-pointer items-center gap-[6px] rounded-full bg-taupe px-[30px] py-[10px] lg:gap-[10px] lg:px-[48px] lg:py-[16px]"
+            className="flex cursor-pointer items-center gap-[6.15px] rounded-full bg-taupe px-[29.54px] py-[9.85px] lg:gap-[10px] lg:px-[48px] lg:py-[16px]"
           >
             <img
               src={iconCamera}
               alt=""
               className="size-[18px] shrink-0 lg:size-[24px]"
             />
-            <span className="whitespace-nowrap font-parkinsans text-[16px] text-white">
+            <span className="whitespace-nowrap font-parkinsans text-[16px] leading-[22px] text-white">
               Submit your Pictures Here
             </span>
           </button>
         </div>
 
-        {/* Group 153: 18 circles of r=57.73 on an 86.6px pitch, so the row's
-            underside reads as a scallop. Figma runs it from x=-30 to x=1471 and
-            hangs it 60.46px past the band's bottom edge, over the mosaic. */}
+        {/* Group 153: a row of overlapping circles, so its underside reads as a
+            scallop. Both boards hang it past the band's bottom edge over the
+            mosaic - 60.46px on the 1440 canvas, 32.69px on the 402 one - and
+            each has its own circle count, so they are separate exports rather
+            than one asset scaled. */}
+        <img
+          src={dotsBgMobile}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-[-32.69px] left-[-65px] h-[75.23px] w-[974.92px] max-w-none lg:hidden"
+        />
         <img
           src={dotsBg}
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-[-32px] h-[75px] w-full lg:inset-x-auto lg:bottom-[-60.46px] lg:left-[calc(50%-750px)] lg:h-[115.46px] lg:w-[1501px]"
+          className="pointer-events-none absolute hidden lg:bottom-[-60.46px] lg:left-[calc(50%-750px)] lg:block lg:h-[115.46px] lg:w-[1501px]"
         />
       </section>
 
-      {/* Photo mosaic + lil memories - Figma "Frame 2799" (247:5076). The board
-          starts it at y=781, 33px under the band above, so the two overlap;
-          that slice is hidden behind the band's own fill either way, but the
-          overlap is what keeps the page its designed 3506px. The band above is
-          positioned, so it paints over this section's background. */}
-      <section
-        className="w-full overflow-hidden pb-[60px] pt-[56px] lg:mt-[-33px] lg:py-0"
-        style={MOSAIC_PLAID}
-      >
-        <div className="px-[16px] lg:hidden">
-          <div className="grid grid-cols-2 gap-[16px]">
-            {MOBILE_GRID.map((cell, i) => (
-              <MobileCell key={i} cell={cell} />
-            ))}
-          </div>
+      {/* Photo mosaic + lil memories - Figma 247:5076 / 254:15599. Both boards
+          tuck this under the band above - 33px on desktop, 4.54px on mobile - so
+          the two overlap; that slice is hidden behind the band's own fill either
+          way, but the overlap is what keeps each page its designed height. The
+          band above is positioned, so it paints over this section. */}
+      <section className="relative mt-[-4.54px] w-full overflow-hidden bg-linen lg:mt-[-33px]">
+        <div
+          className="pointer-events-none absolute inset-0 lg:hidden"
+          style={MOSAIC_PLAID_MOBILE}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 hidden lg:block"
+          style={MOSAIC_PLAID}
+        />
+
+        <div className="relative flex flex-col gap-[21.31px] px-[16px] pb-[98.62px] pt-[105px] lg:hidden">
+          {MOBILE_ROWS.map((row, i) => (
+            <div
+              key={i}
+              className={`flex w-full ${row.align}`}
+              style={{ columnGap: row.gap }}
+            >
+              {row.cells.map((cell, j) => (
+                <MobileCell key={j} cell={cell} />
+              ))}
+            </div>
+          ))}
         </div>
 
-        <div className="mx-auto hidden w-full max-w-[1440px] lg:block">
+        <div className="relative mx-auto hidden w-full max-w-[1440px] lg:block">
           <div className="relative h-[1705px] w-full">
             <div className="absolute left-[181px] top-[219px] h-[1354.35px] w-[1075px]">
               {DESKTOP_TILES.map(({ src, x, y, w, h }) => (
@@ -280,49 +394,47 @@ export default function Gallery() {
         </div>
       </section>
 
-      {/* Hear it from our customers - Figma "Frame 2747" (247:5174), 561px. */}
-      <section className="w-full overflow-hidden bg-cream px-[16px] py-[60px] lg:px-0 lg:py-0">
-        {/* Mobile keeps the stacked flow; desktop is the board's own 1440x561
-            arrangement, where the tape and ribbon overhang the photo. */}
-        <div className="flex flex-col gap-[40px] lg:hidden">
-          <div className="flex flex-col gap-[25px]">
-            <div className="flex flex-col gap-[20px]">
-              <h2
-                className={`${HEADING} text-[15.2px] leading-normal text-cocoa`}
-              >
-                Hear it from our customers
-              </h2>
-              <div className="text-justify font-dm text-[16px] text-bark">
-                <p>{TESTIMONIAL}</p>
-                <p className="mt-[20px]">-Emily R.</p>
-              </div>
+      {/* Hear it from our customers - Figma 247:5174 / 254:15609. The 402 board
+          stacks it and drops the opening quote mark; the 1440 one lays it out
+          side by side at fixed coordinates. */}
+      <section className="w-full overflow-hidden bg-cream lg:px-0 lg:py-0">
+        <div className="flex flex-col items-start gap-[25px] px-[16px] py-[60px] lg:hidden">
+          {/* Frame 2746 */}
+          <div className="w-full">
+            <h2 className={`${HEADING} text-[24.3px] leading-[44px] text-cocoa`}>
+              Hear it from our customers
+            </h2>
+            {/* DM Sans stands in for Neulis Sans and sets a little narrower, so
+                at 370px it saves a line the board does not - which would pull
+                everything below it up by 21px. 0.4px of tracking restores the
+                board's 10-line measure and its 252px block. Desktop is wide
+                enough that its line count never changed, so it opts out. */}
+            <div className="mt-[20.67px] text-justify font-dm text-[16px] leading-[21px] tracking-[0.4px] text-bark">
+              <p>{TESTIMONIAL}</p>
+              <p>&nbsp;</p>
+              <p>-Emily R.</p>
             </div>
+          </div>
+
+          {/* Frame 2147225573 - the tape and ribbon hang outside this box, so it
+              stays the positioning context for both. */}
+          <div className="relative flex w-full flex-col items-center gap-[25px]">
+            <img
+              src={testimonialPhotoMobile}
+              alt="Freshly baked sourdough loaf being sliced on a plaid cloth"
+              className="h-[425px] w-full rounded-[8px] object-cover"
+            />
             <img
               src={paginationDots}
               alt=""
               aria-hidden="true"
-              className="h-[10px] w-[82px] self-center"
+              className="h-[6.08px] w-[49.85px]"
             />
-          </div>
-
-          <div className="relative">
-            <img
-              src={testimonialPhotoMobile}
-              alt="Freshly baked sourdough loaf being sliced on a plaid cloth"
-              className="h-[300px] w-full rounded-[8px] object-cover"
-            />
-            <img
-              src={tapeIcon}
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute -bottom-[22px] -left-[18px] h-[120px] w-[38px] -scale-y-100 rotate-[128deg]"
-            />
-            {/* Same badge as desktop, scaled to the 136x100 slot it occupies
-                here. Its own frame has not been checked against Figma yet. */}
-            <div className="absolute -right-[10px] -top-[18px] h-[100px] w-[136px]">
-              <div className="origin-top-left scale-[0.7431]">
-                <RibbonBadge />
-              </div>
+            <div className="pointer-events-none absolute left-[62.162%] top-[-46.67px] origin-top-left scale-[0.6895]">
+              <RibbonBadge />
+            </div>
+            <div className="pointer-events-none absolute left-[-9.189%] top-[354.33px] origin-top-left scale-[0.6895]">
+              <WashiTape />
             </div>
           </div>
         </div>
@@ -369,20 +481,8 @@ export default function Gallery() {
               />
             </div>
 
-            {/* Washi tape. The SVG's own box is larger than the taped area - it
-                carries the shadow - so the leaf is offset inside its
-                48.65 x 164.33 slot before the whole thing is flipped and turned. */}
-            <div className="absolute left-[754px] top-[342.62px] flex h-[139.35px] w-[159.54px] items-center justify-center">
-              <div className="flex-none -scale-y-100 rotate-[127.91deg]">
-                <div className="relative h-[164.33px] w-[48.65px]">
-                  <img
-                    src={tapeIcon}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute left-[-14.51px] top-[-6.69px] h-[181.18px] w-[65.51px] max-w-none"
-                  />
-                </div>
-              </div>
+            <div className="absolute left-[754px] top-[342.62px]">
+              <WashiTape />
             </div>
 
             <div className="absolute left-[1190px] top-[17.9px]">
