@@ -1,0 +1,130 @@
+import { minorToMajor, formatPrice } from './money.js'
+import fallbackProducts from '../data/products.fallback.json'
+
+/**
+ * The only module that talks to the store.
+ *
+ * Everything goes through /api/store, the Vercel proxy — WordPress.com
+ * throttles direct browser traffic at its load balancer and omits
+ * Access-Control-Allow-Origin, so direct calls fail under any real load.
+ */
+
+const BASE = '/api/store'
+const memory = new Map()
+
+export function clearCache() {
+  memory.clear()
+}
+
+function cacheKey(path, params) {
+  return `woo:${path}?${new URLSearchParams(params).toString()}`
+}
+
+function readSession(key) {
+  try {
+    const raw = sessionStorage.getItem(key)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeSession(key, value) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Private mode or quota exceeded. The in-memory cache still applies.
+  }
+}
+
+async function get(path, params = {}) {
+  const key = cacheKey(path, params)
+  if (memory.has(key)) return memory.get(key)
+
+  const stored = readSession(key)
+  if (stored) {
+    memory.set(key, stored)
+    return stored
+  }
+
+  const query = new URLSearchParams(params).toString()
+  const response = await fetch(`${BASE}/${path}${query ? `?${query}` : ''}`)
+  if (!response.ok) throw new Error(`Store proxy returned ${response.status}`)
+  const data = await response.json()
+
+  memory.set(key, data)
+  writeSession(key, data)
+  return data
+}
+
+export function normalizeProduct(raw) {
+  return {
+    id: raw.id,
+    slug: raw.slug,
+    name: raw.name,
+    type: raw.type,
+    description: raw.description ?? '',
+    shortDescription: raw.short_description ?? '',
+    price: minorToMajor(raw.prices.price, raw.prices.currency_minor_unit),
+    priceFormatted: formatPrice(raw.prices),
+    inStock: raw.is_in_stock,
+    purchasable: raw.is_purchasable,
+    hasOptions: raw.has_options ?? false,
+    variationIds: (raw.variations ?? []).map((v) => v.id),
+    images: (raw.images ?? []).map((i) => ({
+      src: i.src,
+      thumbnail: i.thumbnail,
+      srcset: i.srcset,
+      sizes: i.sizes,
+      alt: i.alt || raw.name,
+    })),
+    categories: (raw.categories ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+    })),
+    tags: (raw.tags ?? []).map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
+  }
+}
+
+export async function fetchProducts(params = {}) {
+  try {
+    const raw = await get('products', { per_page: 100, ...params })
+    return raw.map(normalizeProduct)
+  } catch {
+    // A WordPress outage must still render a bakery, just with stale stock.
+    return fallbackProducts.map(normalizeProduct)
+  }
+}
+
+export async function fetchCategories() {
+  try {
+    const raw = await get('products/categories')
+    return raw.map((c) => ({ id: c.id, name: c.name, slug: c.slug, count: c.count }))
+  } catch {
+    return []
+  }
+}
+
+export function fetchFeatured() {
+  return fetchProducts({ featured: 'true' })
+}
+
+export async function fetchByTagSlug(slug) {
+  // The Store API filters tags by term id, not slug, so resolve it first.
+  // Tags with no products are omitted from the endpoint entirely.
+  let tags
+  try {
+    tags = await get('products/tags')
+  } catch {
+    return []
+  }
+  const match = tags.find((t) => t.slug === slug)
+  if (!match) return []
+  return fetchProducts({ tag: String(match.id) })
+}
+
+export async function fetchProductBySlug(slug) {
+  const products = await fetchProducts({ slug })
+  return products.find((p) => p.slug === slug) ?? products[0] ?? null
+}
