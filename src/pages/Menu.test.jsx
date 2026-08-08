@@ -84,6 +84,23 @@ describe('Menu', () => {
     await waitFor(() => expect(screen.getByAltText('Sour Dough')).toBeTruthy())
     expect(screen.getByAltText('Sour Dough').getAttribute('src')).not.toBe('')
   })
+
+  it('does not flash the empty state before the first fetch resolves', async () => {
+    let resolveProducts
+    woo.fetchProducts.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProducts = resolve
+      }),
+    )
+    renderMenu()
+    // Still loading: the empty-state copy must not appear yet, even though
+    // there are (so far) zero visible products, same as the empty state.
+    expect(screen.queryByText('More treats coming soon!')).toBeNull()
+    resolveProducts([])
+    await waitFor(() =>
+      expect(screen.getByText('More treats coming soon!')).toBeTruthy(),
+    )
+  })
 })
 
 describe('Menu lunch box', () => {

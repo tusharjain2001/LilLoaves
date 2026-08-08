@@ -226,6 +226,10 @@ export default function Menu() {
   const [lunchboxQty, setLunchboxQty] = useState(1);
   const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [], dessert: [] });
   const [lunchBoxProduct, setLunchBoxProduct] = useState(null);
+  // The loading state is otherwise indistinguishable from the empty state
+  // (both show zero visible products), so every visitor would see "More
+  // treats coming soon!" flash before the real catalogue lands.
+  const [loading, setLoading] = useState(true);
 
   const setQty = (name, next) =>
     setQuantities((prev) => ({ ...prev, [name]: Math.max(0, next) }));
@@ -250,6 +254,7 @@ export default function Menu() {
         })),
       );
       setLunchBoxProduct(lunchBox);
+      setLoading(false);
     });
     return () => {
       active = false;
@@ -372,7 +377,7 @@ export default function Menu() {
           </div>
 
           <div className="flex w-full flex-col items-center gap-[20px] lg:flex-row lg:items-center lg:justify-center lg:gap-[16px]">
-            {activeItems.length === 0 ? (
+            {!loading && activeItems.length === 0 ? (
               <p className="py-[40px] text-center font-parkinsans text-[16px] text-clay">
                 More treats coming soon!
               </p>
