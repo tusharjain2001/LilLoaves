@@ -202,9 +202,11 @@ export default function Home() {
             <div className="flex flex-col items-center gap-[8px] text-center text-cocoa">
               {/* Title lockup: Figma sets the script word in Rochester and the
                   uppercase word in Parkinsans, bottom-aligned to a shared edge. */}
-              <p className="flex items-end justify-center whitespace-nowrap">
+              {/* 23.32px, not a space: Figma's "Our" sits in a 90px box whose
+                  glyphs stop at 66.68, and a Rochester space is only 11px. */}
+              <p className="flex items-end justify-center gap-[6px] whitespace-nowrap lg:gap-[23.32px]">
                 <span className="font-display text-[18.5px] lg:font-rochester lg:text-[48px] lg:leading-[62px]">
-                  Our&nbsp;
+                  Our
                 </span>
                 <span className="font-display text-[18.5px] lg:font-parkinsans lg:text-[36px] lg:leading-[50px] lg:tracking-[-1.8px]">
                   PRODUCTS
