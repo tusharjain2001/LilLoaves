@@ -14,6 +14,26 @@
   font-display: swap;
 }
 
+/* The hero's uppercase wordmark ("ShAPED" / "LOAVES"). This is the face Figma
+   names, by Ray Larabie, released CC0 - public domain, no attribution required.
+   Subset to latin. Its own glyph for H is the low-waisted one that makes
+   "SHAPED" read as "ShAPED"; that is the font, not a typo in the copy. */
+@font-face {
+  font-family: "Mail Ray Stuff";
+  src: url("./assets/fonts/mailraystuff-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* The script half of the section-title lockups ("Our PRODUCTS", "SEASONAL
+   specials"). Figma names Rochester, which is on Google Fonts under the OFL. */
+@font-face {
+  font-family: "Rochester";
+  src: url("./assets/fonts/rochester-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
 @font-face {
   font-family: "Pacifico";
   src: url("./assets/fonts/pacifico-latin.woff2") format("woff2");
@@ -21,12 +41,21 @@
   font-display: swap;
 }
 
-/* The design's display face. Its uppercase is a geometric sans and its lowercase
-   is a looped script, which is why headings like "Our PRODUCTS" read as two faces
-   in one string - no span-splitting needed, just type the mixed-case text.
-   Ligema draws small on the em square (cap height 0.435em vs Parkinsans' 0.71em),
-   so Figma sizes are used verbatim rather than scaled. It ships no digits or "$",
-   which the design never asks of it. LICENCE: free for personal use only - see
+/* The hero's script word ("hand"), by Keithzo. LICENCE: 1001Fonts Free For
+   Commercial Use - see assets/fonts/fallin-for-you-script-LICENSE.txt. That
+   licence forbids modifying the font but expressly permits WOFF conversion, so
+   this is the whole face converted, not subset.  */
+@font-face {
+  font-family: "Fallin For You Script";
+  src: url("./assets/fonts/fallinforyou-script.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Ligema stood in for the hero wordmark before both real faces were sourced.
+   Other pages still reference it via --font-display; the home page no longer
+   does. It ships no digits or "$", which those designs never ask of it.
+   LICENCE: free for personal use only - see
    assets/fonts/ligema-demo-LICENSE.txt. A commercial licence is required before
    this goes live: creativemarket.com/PandekaStudio/253626971-Ligema */
 @font-face {
@@ -43,10 +72,13 @@
   /* Fonts */
   --font-parkinsans: "Parkinsans", sans-serif;
   --font-display: "Ligema DEMO", "Parkinsans", sans-serif;
+  --font-mailray: "Mail Ray Stuff", "Parkinsans", sans-serif;
+  --font-fallin: "Fallin For You Script", cursive;
   /* Legacy stand-in kept for the pages not yet reworked against Figma; they use
      sizes pre-scaled by 0.475x. Migrate each to --font-display with the real
      Figma sizes as we go page by page. */
   --font-ligema: "Parkinsans", sans-serif;
+  --font-rochester: "Rochester", cursive;
   --font-script: "Pacifico", cursive;
   --font-dm: "DM Sans", sans-serif;
 

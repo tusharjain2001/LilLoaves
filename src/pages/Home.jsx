@@ -59,11 +59,13 @@ const PRODUCTS = [
   { name: "Crackers", img: productCrackers },
 ];
 
+/* No prices here - the home page's specials cards drop the price tab (the Menu
+   page's copy of the same section keeps it). */
 const SPECIALS = [
-  { name: "Danish Pastries", price: "$23", img: specialDanish },
-  { name: "Croissants", price: "$23", img: specialCroissants },
-  { name: "Bagels", price: "$23", img: specialBagels },
-  { name: "Donuts", price: "$23", img: specialDonuts },
+  { name: "Danish Pastries", img: specialDanish },
+  { name: "Croissants", img: specialCroissants },
+  { name: "Bagels", img: specialBagels },
+  { name: "Donuts", img: specialDonuts },
 ];
 
 const TESTIMONIAL_DOTS = [0, 1, 2, 3, 4];
@@ -107,36 +109,45 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="relative mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[27px] px-[16px] pb-[100px] pt-[60px] lg:h-[878px] lg:gap-[41px] lg:px-0 lg:pb-0 lg:pt-[200px]">
+        <div className="relative mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[27px] px-[16px] pb-[100px] pt-[60px] lg:h-[878px] lg:gap-[41px] lg:px-0 lg:pb-0 lg:pt-[190px]">
           <img
             src={logoPink}
             alt="Lil' Loaves"
             className="size-[73px] lg:size-[112px]"
           />
-          <div className="flex flex-col items-center gap-[48px] lg:gap-[73.81px]">
-            <div className="flex flex-col items-center gap-[25px] lg:gap-[38.24px]">
+          <div className="flex flex-col items-center gap-[48px] lg:gap-[63.86px]">
+            <div className="flex flex-col items-center gap-[25px] lg:gap-[34px]">
               <p className="font-parkinsans text-[16px] text-cocoa lg:text-[24px] lg:leading-[34px]">
                 Welcome to Lil&rsquo; Loaves!
               </p>
-              <div className="flex flex-col items-center gap-[14px] lg:gap-[22.23px]">
-                {/* Fixed-height row: the display type overflows it top and
-                    bottom exactly as the Figma auto-layout does. */}
-                <div className="flex items-center gap-[9px] lg:h-[65.8px] lg:gap-[13.34px]">
-                  <p className="font-display text-[73.5px] leading-none text-cocoa lg:text-[161.03px] lg:leading-[177px]">
+              {/* Figma's "Group 208": a 612x221.14 box whose four pieces are
+                  placed by their own coordinates rather than by an auto-layout,
+                  because the row and LOAVES deliberately overlap - "hand" runs
+                  to y=121 while LOAVES starts at y=108. The whole lockup is
+                  scaled down as one unit on mobile (0.59, to a 393 canvas) so
+                  the proportions stay exactly Figma's. */}
+              <div className="h-[130.47px] w-[361.08px] lg:h-[221.14px] lg:w-[612px]">
+                <div className="relative h-[221.14px] w-[612px] origin-top-left scale-[0.59] lg:scale-100">
+                  {/* Figma weights "hand" up with a 2px outward stroke in the
+                      text colour rather than a bolder cut - the face has only a
+                      Regular. -webkit-text-stroke is centred, so 4px gives the
+                      same 2px of outward growth, and matching fill and stroke
+                      colours make the inward half invisible. */}
+                  <p className="absolute left-[3.58px] top-0 h-[121px] font-fallin text-[105.28px] leading-[121px] text-cocoa [-webkit-text-stroke:4px_#57423d]">
                     hand
                   </p>
                   <img
                     src={heart}
                     alt=""
-                    className="h-[29px] w-[35px] shrink-0 lg:h-[45.35px] lg:w-[53.35px]"
+                    className="absolute left-[266.05px] top-[27px] h-[56.01px] w-[65.9px]"
                   />
-                  <p className="font-display text-[38.9px] leading-none text-cocoa lg:text-[126.11px] lg:leading-[139px]">
+                  <p className="absolute left-[348.42px] top-[8px] font-mailray text-[76px] leading-[91px] tracking-[2.28px] text-cocoa">
                     SHAPED
                   </p>
+                  <p className="absolute left-0 top-[108px] w-[612px] text-center font-mailray text-[86.93px] leading-[114.4px] tracking-[6.09px] text-transparent [-webkit-text-fill-color:transparent] [-webkit-text-stroke:2.67px_#57423d]">
+                    LOAVES
+                  </p>
                 </div>
-                <p className="font-display text-[51.3px] leading-none text-transparent [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1.3px_#57423d] lg:text-[166.04px] lg:leading-[105.37px] lg:[-webkit-text-stroke:2.67px_#57423d]">
-                  LOAVES
-                </p>
               </div>
             </div>
             <button
@@ -188,9 +199,16 @@ export default function Home() {
       <section className="w-full bg-honey px-[16px] py-[60px]">
         <div className="mx-auto flex w-full max-w-[1073.99px] flex-col items-center gap-[46px] lg:gap-[90px]">
           <div className="flex flex-col items-center gap-[39px] lg:w-[654px] lg:gap-[64px]">
-            <div className="flex flex-col items-center text-center text-cocoa">
-              <p className="font-display text-[18.5px] lg:text-[48px] lg:leading-[53px]">
-                Our PRODUCTS
+            <div className="flex flex-col items-center gap-[8px] text-center text-cocoa">
+              {/* Title lockup: Figma sets the script word in Rochester and the
+                  uppercase word in Parkinsans, bottom-aligned to a shared edge. */}
+              <p className="flex items-end justify-center whitespace-nowrap">
+                <span className="font-display text-[18.5px] lg:font-rochester lg:text-[48px] lg:leading-[62px]">
+                  Our&nbsp;
+                </span>
+                <span className="font-display text-[18.5px] lg:font-parkinsans lg:text-[36px] lg:leading-[50px] lg:tracking-[-1.8px]">
+                  PRODUCTS
+                </span>
               </p>
               <p className="font-parkinsans text-[15px] lg:text-[20px] lg:leading-[28px]">
                 We serve 4 delecteble items on our menu. All items are freshly
@@ -201,7 +219,7 @@ export default function Home() {
               type="button"
               className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[12px] text-white lg:px-[48px] lg:py-[10px] lg:text-[16px] lg:leading-[22px]"
             >
-              View Specials
+              View All Products
             </button>
           </div>
 
@@ -216,7 +234,7 @@ export default function Home() {
                   alt={name}
                   className="h-[282px] w-full object-cover lg:h-[411.87px] lg:w-[258.56px]"
                 />
-                <p className="font-display text-[12.8px] uppercase text-cocoa lg:text-[39.78px] lg:leading-[44px]">
+                <p className="font-display text-[12.8px] uppercase text-cocoa lg:font-parkinsans lg:text-[24px] lg:font-medium lg:leading-[34px]">
                   {name}
                 </p>
               </div>
@@ -228,11 +246,13 @@ export default function Home() {
       {/* WHO ARE WE */}
       <section className="w-full bg-cream px-[16px] py-[60px] lg:h-[682px] lg:py-0">
         <div className="mx-auto flex h-full w-full max-w-[1188px] flex-col items-center gap-[52px] lg:flex-row lg:justify-center lg:gap-[82px]">
-          <div className="flex w-full flex-col gap-[29px] text-cocoa lg:h-[346px] lg:w-[691px] lg:shrink-0">
-            <p className="font-display text-[19px] uppercase lg:text-[48px] lg:leading-[53px]">
+          <div className="flex w-full flex-col gap-[29px] text-cocoa lg:h-[338px] lg:w-[691px] lg:shrink-0">
+            <p className="font-display text-[19px] uppercase lg:font-parkinsans lg:text-[32px] lg:font-medium lg:leading-[45px] lg:tracking-[-1.6px]">
               who are we
             </p>
-            <div className="flex flex-col gap-[16px] text-justify font-parkinsans text-[16px] leading-relaxed lg:gap-[14px] lg:leading-[22px]">
+            {/* Figma separates the paragraphs with an empty line, so the gap is
+                one line box (16px Parkinsans at leading-normal = 22.4px). */}
+            <div className="flex flex-col gap-[16px] text-justify font-parkinsans text-[16px] leading-relaxed lg:gap-[22px] lg:leading-[22px]">
               <p>
                 Lil&rsquo; Loaves is inspired by our two corgis, Doc and Chief
                 (the &ldquo;loaves&rdquo; behind the business) a compliment that
@@ -279,7 +299,11 @@ export default function Home() {
         </div>
       </section>
 
-      <SeasonalSpecials specials={SPECIALS} />
+      <SeasonalSpecials
+        specials={SPECIALS}
+        withPriceTab={false}
+        ctaLabel="View Specials in Menu"
+      />
 
       {/* TESTIMONIAL */}
       <section className="relative w-full bg-cream px-[16px] py-[60px] lg:h-[562px] lg:py-0">
@@ -291,10 +315,10 @@ export default function Home() {
               className="hidden h-[61px] w-[61px] opacity-[0.33] lg:absolute lg:-left-[23.5px] lg:top-[63px] lg:block"
             />
             <div className="flex flex-col gap-[21px] text-cocoa lg:gap-[34px]">
-              <p className="font-display text-[19px] uppercase lg:text-[48px] lg:leading-[53px]">
+              <p className="font-display text-[19px] uppercase lg:font-parkinsans lg:text-[32px] lg:font-medium lg:leading-[45px] lg:tracking-[-1.6px]">
                 Hear it from our customers
               </p>
-              <p className="text-justify font-dm text-[16px] leading-relaxed text-bark lg:leading-[24px]">
+              <p className="text-justify font-dm text-[16px] leading-relaxed text-bark lg:font-parkinsans lg:leading-[22px]">
                 I ordered the sourdough after seeing it online, and it
                 completely exceeded my expectations. The crust had the perfect
                 crunch, while the inside was incredibly soft and flavorful. You
