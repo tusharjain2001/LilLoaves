@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { fetchProductBySlug } from "../lib/woo.js";
 import iconBack from "../assets/shared/icon-back.svg";
 import productMain from "../assets/product/product-main.png";
 import productThumb1 from "../assets/product/product-thumb-1.jpg";
@@ -10,7 +12,9 @@ import cardMilkBread from "../assets/product/card-milk-bread.jpg";
 import cardDinnerRolls from "../assets/product/card-dinner-rolls.jpg";
 import cardBlueberryMuffins from "../assets/product/card-blueberry-muffins.jpg";
 
-const GALLERY_IMAGES = [productMain, productThumb1, productThumb2];
+// No product in the live store has an image yet, so this placeholder trio is
+// the path that actually executes today. Keeps the gallery from collapsing.
+const PLACEHOLDER_IMAGES = [productMain, productThumb1, productThumb2];
 
 const PACK_OPTIONS = ["Pack of 2", "Pack of 4"];
 
@@ -55,6 +59,19 @@ const RELATED_ITEMS = [
 ];
 
 export default function Product() {
+  const { slug } = useParams();
+  const [product, setProduct] = useState(undefined);
+
+  useEffect(() => {
+    let active = true;
+    fetchProductBySlug(slug).then((p) => {
+      if (active) setProduct(p);
+    });
+    return () => {
+      active = false;
+    };
+  }, [slug]);
+
   // gallery[0] is the elevated hero slot, gallery[1]/[2] are the plain thumbnails
   const [galleryOrder, setGalleryOrder] = useState([0, 1, 2]);
   const [selectedPack, setSelectedPack] = useState(0);
@@ -70,6 +87,22 @@ export default function Product() {
 
   const toggleAccordion = (key) =>
     setOpenAccordion((cur) => (cur === key ? null : key));
+
+  if (product === undefined) return null;
+  if (product === null) {
+    return (
+      <main className="flex min-h-[50vh] items-center justify-center px-[24px]">
+        <p className="font-parkinsans text-[18px] text-cocoa">
+          We couldn&rsquo;t find that bake. Try the menu.
+        </p>
+      </main>
+    );
+  }
+
+  const GALLERY_IMAGES =
+    product.images.length > 0
+      ? product.images.map((i) => i.src)
+      : PLACEHOLDER_IMAGES;
 
   return (
     <main className="w-full bg-cream">
@@ -97,7 +130,7 @@ export default function Product() {
               <div className="relative aspect-[370/234] w-full overflow-hidden rounded-[8px] bg-[#d8cbbe] lg:aspect-[531/372] lg:rounded-[13px]">
                 <img
                   src={GALLERY_IMAGES[galleryOrder[0]]}
-                  alt="Sourdough Bread"
+                  alt={product.name}
                   className="absolute left-[20.53%] top-[5.64%] h-[88.79%] w-[53.56%] object-contain object-bottom shadow-[0_9px_14px_rgba(0,0,0,0.25)] lg:w-[59.13%] lg:shadow-[0_15px_23px_rgba(0,0,0,0.25)]"
                 />
               </div>
@@ -125,36 +158,38 @@ export default function Product() {
                 <div className="flex w-full flex-col items-center gap-[31px] lg:items-start lg:gap-[50px]">
                   <div className="flex flex-col items-center gap-[11px] text-center lg:items-start lg:gap-[17px] lg:text-left">
                     <p className="font-ligema text-[16.6px] uppercase text-cocoa lg:text-[26.6px]">
-                      Sourdough Bread
+                      {product.name}
                     </p>
                     <div className="flex items-center gap-[10px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
-                      <p className="text-[23px] text-cocoa lg:text-[36px]">$21.13</p>
+                      <p className="text-[23px] text-cocoa lg:text-[36px]">{product.priceFormatted}</p>
                       <p className="text-[20px] text-[#d8cbbe] line-through decoration-solid lg:text-[32px]">
-                        $21.13
+                        {product.priceFormatted}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-[13px] lg:items-start lg:gap-[20px]">
-                    <p className="max-w-[370px] text-center font-parkinsans text-[13px] text-[#9e8e7f] lg:max-w-none lg:text-left lg:text-[20px]">
-                      Slow-fermented and hand-shaped for a crisp crust, airy
-                      crumb, and rich, tangy flavor.
-                    </p>
-                    <div className="flex items-center gap-[10px] lg:gap-[16px]">
-                      {PACK_OPTIONS.map((label, i) => (
-                        <button
-                          key={label}
-                          type="button"
-                          onClick={() => setSelectedPack(i)}
-                          className={`cursor-pointer whitespace-nowrap rounded-[10px] border px-[10px] py-[5px] font-parkinsans text-[13px] lg:rounded-[15px] lg:border-2 lg:px-[16px] lg:py-[8px] lg:text-[16px] ${
-                            selectedPack === i
-                              ? "border-taupe bg-taupe text-white"
-                              : "border-latte bg-transparent text-latte"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+                    <p
+                      className="max-w-[370px] text-center font-parkinsans text-[13px] text-[#9e8e7f] lg:max-w-none lg:text-left lg:text-[20px]"
+                      dangerouslySetInnerHTML={{ __html: product.description }}
+                    />
+                    {product.hasOptions && (
+                      <div className="flex items-center gap-[10px] lg:gap-[16px]">
+                        {PACK_OPTIONS.map((label, i) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => setSelectedPack(i)}
+                            className={`cursor-pointer whitespace-nowrap rounded-[10px] border px-[10px] py-[5px] font-parkinsans text-[13px] lg:rounded-[15px] lg:border-2 lg:px-[16px] lg:py-[8px] lg:text-[16px] ${
+                              selectedPack === i
+                                ? "border-taupe bg-taupe text-white"
+                                : "border-latte bg-transparent text-latte"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
