@@ -72,7 +72,12 @@ Plan 1 is standalone: at the end the bakery's real catalogue is on the site, and
 - [ ] **Step 1: Install test dependencies**
 
 ```bash
-npm install -D vitest@^3 jsdom@^26 @testing-library/react@^16 @testing-library/jest-dom@^6
+npm install -D vitest@^3 jsdom@^26 @testing-library/react@^16
+```
+
+No `@testing-library/jest-dom` — every assertion in this plan uses plain
+`expect(...).toBeTruthy()`. Add it only when a test genuinely needs a DOM
+matcher.
 ```
 
 - [ ] **Step 2: Add test config to `vite.config.js`**
@@ -1367,7 +1372,11 @@ Inside the component:
 
 Replace the hardcoded name, price and description with `product.name`, `product.priceFormatted` and `product.description` (rendered with `dangerouslySetInnerHTML` since the Store API returns HTML). Feed `GALLERY_IMAGES` from `product.images.map((i) => i.src)`, falling back to the existing placeholder import when `product.images` is empty so the layout never collapses.
 
-Leave `PACK_OPTIONS` in place for now — variable products arrive with the Blueberry Muffin in Task 9 of the next plan. Hide the pack selector when `!product.hasOptions`.
+Leave `PACK_OPTIONS` in place and hide the pack selector when
+`!product.hasOptions`. **Variable products are deliberately out of scope for
+this plan** — the Blueberry Muffin variable product does not exist in
+WooCommerce yet, so there is nothing to test against. It is assigned to Plan 2,
+alongside the cart work that needs variation IDs anyway.
 
 - [ ] **Step 5: Run to verify it passes**
 
