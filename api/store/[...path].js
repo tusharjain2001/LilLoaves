@@ -62,7 +62,8 @@ export default async function handler(req, res) {
     const data = await response.json()
     res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
     return res.status(200).json(data)
-  } catch {
+  } catch (error) {
+    console.error('store proxy fetch failed', error)
     return res.status(502).json({ error: 'Upstream unreachable' })
   }
 }

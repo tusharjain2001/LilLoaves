@@ -80,8 +80,11 @@ describe('store proxy', () => {
 
   it('returns 502 when upstream is unreachable', async () => {
     global.fetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = mockRes()
     await handler({ method: 'GET', query: { path: ['products'] } }, res)
     expect(res.statusCode).toBe(502)
+    expect(consoleSpy).toHaveBeenCalledWith('store proxy fetch failed', expect.any(Error))
+    consoleSpy.mockRestore()
   })
 })
