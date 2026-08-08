@@ -77,6 +77,27 @@ describe('normalizeProduct', () => {
     expect(p.tags).toEqual([])
     expect(p.variationIds).toEqual([])
   })
+
+  it('strips HTML from short_description into a plain-text summary', () => {
+    const p = normalizeProduct(RAW)
+    expect(p.summary).toBe('Crisp crust.')
+    expect(p.description).toBe('<p>Slow-fermented.</p>')
+  })
+
+  it('falls back to description when short_description is empty', () => {
+    const p = normalizeProduct({ ...RAW, short_description: '' })
+    expect(p.summary).toBe('Slow-fermented.')
+  })
+
+  it('decodes HTML entities', () => {
+    const p = normalizeProduct({ ...RAW, short_description: '<p>Doc&rsquo;s Crackers</p>' })
+    expect(p.summary).toBe('Doc’s Crackers')
+  })
+
+  it('returns an empty string when both descriptions are empty', () => {
+    const p = normalizeProduct({ ...RAW, short_description: '', description: '' })
+    expect(p.summary).toBe('')
+  })
 })
 
 describe('fetchProducts', () => {

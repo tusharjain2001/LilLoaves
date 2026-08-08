@@ -8,8 +8,9 @@ const product = (over = {}) => ({
   slug: 'sour-dough',
   name: 'Sour Dough',
   type: 'simple',
-  description: 'Slow-fermented.',
+  description: '<p>Slow-fermented.</p>',
   shortDescription: '',
+  summary: 'Slow-fermented.',
   price: 21.13,
   priceFormatted: '$21.13',
   inStock: true,
@@ -31,7 +32,14 @@ beforeEach(() => {
   vi.spyOn(woo, 'fetchByTagSlug').mockResolvedValue([])
   vi.spyOn(woo, 'fetchProducts').mockResolvedValue([
     product(),
-    product({ id: 16, slug: 'japanese-milk-bread', name: 'Japanese Milk Bread', inStock: false }),
+    product({
+      id: 16,
+      slug: 'japanese-milk-bread',
+      name: 'Japanese Milk Bread',
+      inStock: false,
+      description: '<p>Soft and fluffy.</p>',
+      summary: 'Soft and fluffy.',
+    }),
   ])
 })
 
@@ -61,5 +69,11 @@ describe('Menu', () => {
     renderMenu()
     await waitFor(() => expect(screen.getByText('Japanese Milk Bread')).toBeTruthy())
     expect(screen.getByText(/sold out/i)).toBeTruthy()
+  })
+
+  it('renders the plain-text description, not raw HTML tags', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Slow-fermented.')).toBeTruthy())
+    expect(screen.queryByText(/<p/)).toBeNull()
   })
 })

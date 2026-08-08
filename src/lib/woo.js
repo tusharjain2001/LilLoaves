@@ -16,6 +16,16 @@ export function clearCache() {
   memory.clear()
 }
 
+// WooCommerce descriptions are HTML. Card-style UI wants plain text; the
+// product page wants the raw HTML (dangerouslySetInnerHTML), so this stays a
+// separate field rather than mutating `description`. DOMParser (not a regex)
+// so entities like &rsquo; decode correctly and `>` in prose isn't mistaken
+// for a tag.
+function toPlainText(html) {
+  if (!html) return ''
+  return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim()
+}
+
 function cacheKey(path, params) {
   return `woo:${path}?${new URLSearchParams(params).toString()}`
 }
@@ -41,6 +51,7 @@ export function normalizeProduct(raw) {
     type: raw.type,
     description: raw.description ?? '',
     shortDescription: raw.short_description ?? '',
+    summary: toPlainText(raw.short_description || raw.description),
     price: minorToMajor(raw.prices.price, raw.prices.currency_minor_unit),
     priceFormatted: formatPrice(raw.prices),
     inStock: raw.is_in_stock,

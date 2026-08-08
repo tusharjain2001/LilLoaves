@@ -369,7 +369,7 @@ export default function Menu() {
               activeItems.map((p) => {
                 const item = {
                   name: p.name,
-                  desc: p.shortDescription || p.description,
+                  desc: p.summary,
                   price: p.priceFormatted,
                   img: p.images[0]?.src,
                   inStock: p.inStock,
