@@ -55,12 +55,18 @@ function setCache(res, seconds, staleSeconds) {
 }
 
 export default async function handler(req, res) {
+  const endpoint = String(req.query.endpoint ?? '')
+
+  // The only POST-capable endpoint. Anything else (including POST to a GET
+  // endpoint) falls through to the GET-only guard below and gets a 405.
+  if (req.method === 'POST' && endpoint === 'quote') {
+    return handleQuote(req, res)
+  }
+
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET')
     return res.status(405).json({ error: 'Method not allowed' })
   }
-
-  const endpoint = String(req.query.endpoint ?? '')
 
   if (!ALLOWED_ENDPOINTS.has(endpoint)) {
     return res.status(404).json({ error: 'Unknown endpoint' })
@@ -97,6 +103,49 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('store proxy fetch failed', error)
     setCache(res, 10, 0)
+    return res.status(502).json({ error: 'Upstream unreachable' })
+  }
+}
+
+/**
+ * `/quote` returns a live cart total, so it must never be cached anywhere
+ * (CDN, browser, or otherwise) and it carries a customer's postcode in the
+ * body — never logged, unlike the GET paths above which log fetch errors
+ * only (no body to leak).
+ *
+ * It lives on a different upstream namespace (`lilloaves/v1`, a custom
+ * bridge plugin) than the GET paths (`wc/store/v1`, WooCommerce's own Store
+ * API) and requires a shared secret the GET paths don't need.
+ */
+async function handleQuote(req, res) {
+  res.setHeader('Cache-Control', 'no-store')
+
+  const base = process.env.WP_STORE_URL
+  if (!base) return res.status(500).json({ error: 'WP_STORE_URL is not set' })
+
+  const secret = process.env.LL_BRIDGE_SECRET
+  if (!secret) return res.status(500).json({ error: 'LL_BRIDGE_SECRET is not set' })
+
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+
+  const headers = { 'Content-Type': 'application/json', 'X-LL-Secret': secret }
+  if (clientIp) headers['X-LL-Client'] = clientIp
+
+  try {
+    const response = await fetch(`${base}/wp-json/lilloaves/v1/quote`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(req.body),
+      // Same fail-fast budget as the GET paths.
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!response.ok) {
+      return res.status(502).json({ error: 'Upstream error', status: response.status })
+    }
+    const data = await response.json()
+    return res.status(200).json(data)
+  } catch (error) {
+    console.error('store proxy fetch failed', error)
     return res.status(502).json({ error: 'Upstream unreachable' })
   }
 }
