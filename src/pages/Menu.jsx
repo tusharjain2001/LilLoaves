@@ -2,17 +2,16 @@ import { Fragment, useEffect, useState } from "react";
 import CategoryStrip from "../components/CategoryStrip.jsx";
 import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
 import FaqSection from "../components/FaqSection.jsx";
-import { fetchCategories, fetchProducts, fetchFeatured } from "../lib/woo.js";
+import {
+  fetchCategories,
+  fetchProducts,
+  fetchFeatured,
+  fetchByTagSlug,
+} from "../lib/woo.js";
 import flowerYellow from "../assets/shared/flower-yellow.svg";
 import blobButton from "../assets/menu/blob-button.svg";
 import blobSpecials from "../assets/menu/blob-specials.svg";
 import lunchboxIconsSprite from "../assets/menu/lunchbox-icons-sprite.png";
-import lunchboxSourdough from "../assets/menu/lunchbox-sourdough.jpg";
-import lunchboxJapaneseMilk from "../assets/menu/lunchbox-japanese-milk.jpg";
-import lunchboxChiefsCrackers from "../assets/menu/lunchbox-chiefs-crackers.jpg";
-import lunchboxDocsCrackers from "../assets/menu/lunchbox-docs-crackers.jpg";
-import lunchboxCookies from "../assets/menu/lunchbox-cookies.jpg";
-import lunchboxMuffins from "../assets/menu/lunchbox-muffins.jpg";
 import lunchboxArrowLeft from "../assets/menu/lunchbox-arrow-left.svg";
 import lunchboxArrowRight from "../assets/menu/lunchbox-arrow-right.svg";
 import iconRoundPlus from "../assets/menu/icon-round-plus.svg";
@@ -107,23 +106,6 @@ const LUNCHBOX_INSIDE = [
   },
 ];
 
-/* nameW is Figma's own text-box width for each label, which is what makes all
-   but "Soudough" break over two lines. */
-const BREAD_OPTIONS = [
-  { name: "Soudough", img: lunchboxSourdough, nameW: 169.56 },
-  { name: "Japanese Milk Bread", img: lunchboxJapaneseMilk, nameW: 140 },
-];
-
-const CRACKER_OPTIONS = [
-  { name: "Chief’s Crackers (5oz)", img: lunchboxChiefsCrackers, nameW: 160 },
-  { name: "Doc’s Crackers (5oz)", img: lunchboxDocsCrackers, nameW: 147 },
-];
-
-const DESSERT_OPTIONS = [
-  { name: "Cookies (Pack of 6)", img: lunchboxCookies, nameW: 109 },
-  { name: "Muffins (Pack of 4)", img: lunchboxMuffins, nameW: 108 },
-];
-
 function BreadCard({ item, qty, onAdd, onInc, onDec }) {
   return (
     <div className="w-full max-w-[370px] rounded-[13px] border-[0.8px] border-shell p-[6px] pb-[13px] lg:w-[348px] lg:rounded-[13.22px] lg:p-[6.37px] lg:pb-[12.74px]">
@@ -212,10 +194,7 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
                     alt={opt.name}
                     className="h-[100px] w-full rounded-[10px] object-cover lg:h-[134px] lg:rounded-[15.87px]"
                   />
-                  <p
-                    style={{ "--name-w": `${opt.nameW}px` }}
-                    className="text-center font-parkinsans text-[13px] text-cocoa lg:w-[var(--name-w)] lg:text-[19.83px] lg:leading-[28px]"
-                  >
+                  <p className="text-center font-parkinsans text-[13px] text-cocoa lg:text-[19.83px] lg:leading-[28px]">
                     {opt.name}
                   </p>
                 </div>
@@ -245,6 +224,7 @@ export default function Menu() {
   );
   const [selectedDessert, setSelectedDessert] = useState("Muffins (Pack of 4)");
   const [lunchboxQty, setLunchboxQty] = useState(1);
+  const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [], dessert: [] });
 
   const setQty = (name, next) =>
     setQuantities((prev) => ({ ...prev, [name]: Math.max(0, next) }));
@@ -266,6 +246,26 @@ export default function Menu() {
         );
       },
     );
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchByTagSlug("lunchbox-bread"),
+      fetchByTagSlug("lunchbox-cracker"),
+      fetchByTagSlug("lunchbox-dessert"),
+    ]).then(([bread, cracker, dessert]) => {
+      if (!active) return;
+      const toOption = (p) => ({ name: p.name, img: p.images[0]?.src ?? "" });
+      setLunchbox({
+        bread: bread.map(toOption),
+        cracker: cracker.map(toOption),
+        dessert: dessert.map(toOption),
+      });
+    });
     return () => {
       active = false;
     };
@@ -488,21 +488,21 @@ export default function Menu() {
                 <LunchboxGroup
                   step={1}
                   title="CHoose your Bread"
-                  options={BREAD_OPTIONS}
+                  options={lunchbox.bread}
                   selected={selectedBread}
                   onSelect={setSelectedBread}
                 />
                 <LunchboxGroup
                   step={2}
                   title="CHoose your Crackers"
-                  options={CRACKER_OPTIONS}
+                  options={lunchbox.cracker}
                   selected={selectedCracker}
                   onSelect={setSelectedCracker}
                 />
                 <LunchboxGroup
                   step={3}
                   title="CHoose your Dessert"
-                  options={DESSERT_OPTIONS}
+                  options={lunchbox.dessert}
                   selected={selectedDessert}
                   onSelect={setSelectedDessert}
                 />

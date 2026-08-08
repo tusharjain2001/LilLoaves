@@ -77,3 +77,24 @@ describe('Menu', () => {
     expect(screen.queryByText(/<p/)).toBeNull()
   })
 })
+
+describe('Menu lunch box', () => {
+  it('builds each column from its tag', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread'
+        ? [product(), product({ id: 16, slug: 'japanese-milk-bread', name: 'Japanese Milk Bread' })]
+        : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-bread'))
+    expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-cracker')
+    expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-dessert')
+  })
+
+  it('renders no options for a tag with no products yet', async () => {
+    woo.fetchByTagSlug.mockResolvedValue([])
+    renderMenu()
+    await waitFor(() => expect(woo.fetchByTagSlug).toHaveBeenCalled())
+    expect(screen.queryByText('Chief’s Crackers (5oz)')).toBeNull()
+  })
+})
