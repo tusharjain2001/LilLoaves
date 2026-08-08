@@ -55,8 +55,16 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(upstream, {
       headers: { Accept: 'application/json' },
+      // A hanging upstream during a WordPress.com throttle storm must fail
+      // fast into the 502 path rather than pinning the function until
+      // Vercel's own platform timeout.
+      signal: AbortSignal.timeout(5000),
     })
     if (!response.ok) {
+      // Still cacheable: during a 429 storm this is the exact case the
+      // proxy exists for, and an uncached 502 fans out a fresh invocation
+      // at the throttled origin on every single page load.
+      res.setHeader('Cache-Control', 'public, s-maxage=10')
       return res.status(502).json({ error: 'Upstream error', status: response.status })
     }
     const data = await response.json()
@@ -64,6 +72,7 @@ export default async function handler(req, res) {
     return res.status(200).json(data)
   } catch (error) {
     console.error('store proxy fetch failed', error)
+    res.setHeader('Cache-Control', 'public, s-maxage=10')
     return res.status(502).json({ error: 'Upstream unreachable' })
   }
 }

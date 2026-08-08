@@ -87,4 +87,28 @@ describe('store proxy', () => {
     expect(consoleSpy).toHaveBeenCalledWith('store proxy fetch failed', expect.any(Error))
     consoleSpy.mockRestore()
   })
+
+  it('caches a throttled 502 so a 429 storm does not fan out on every retry', async () => {
+    global.fetch.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    expect(res.headers['cache-control']).toBe('public, s-maxage=10')
+  })
+
+  it('caches a 502 from an unreachable upstream too', async () => {
+    global.fetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = mockRes()
+    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    expect(res.headers['cache-control']).toBe('public, s-maxage=10')
+    consoleSpy.mockRestore()
+  })
+
+  it('applies a fetch timeout so a hanging upstream fails fast into the 502 path', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => [] })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { path: ['products'] } }, res)
+    const options = global.fetch.mock.calls[0][1]
+    expect(options.signal).toBeInstanceOf(AbortSignal)
+  })
 })
