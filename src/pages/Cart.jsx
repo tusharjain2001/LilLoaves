@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import OrderHero from "../components/OrderHero.jsx";
-import productBlueberryMuffin from "../assets/cart/product-blueberry-muffin.png";
-import productChocolateMuffin from "../assets/cart/product-chocolate-muffin.png";
-import productMilkBread from "../assets/cart/product-milk-bread.png";
+import { useCart } from "../context/CartContext.jsx";
+import { fetchQuote } from "../lib/quote.js";
 import iconBin from "../assets/cart/icon-bin.svg";
 import iconMinus from "../assets/cart/icon-minus.svg";
 import iconChevronDown from "../assets/cart/icon-chevron-down.svg";
@@ -11,33 +10,19 @@ import bgPickupScallop from "../assets/cart/bg-pickup-scallop.svg";
 import iconChevronLeft from "../assets/cart/icon-chevron-left.svg";
 import iconChevronRight from "../assets/cart/icon-chevron-right.svg";
 
-const INITIAL_CART_ITEMS = [
-  {
-    id: "blueberry-muffin",
-    name: "Blueberry Muffin",
-    price: 21.13,
-    img: productBlueberryMuffin,
-  },
-  {
-    id: "chocolate-muffin",
-    name: "Chocolate Muffin",
-    price: 21.13,
-    img: productChocolateMuffin,
-    desktopOnly: true,
-  },
-  {
-    id: "japanese-milk-bread",
-    name: "Japanese Milk Bread",
-    price: 21.13,
-    img: productMilkBread,
-  },
-];
-
-const SUMMARY_ROWS = [
-  { key: "subtotal", label: "Subtotal", value: "$40" },
-  { key: "shipping", label: "Shipping", value: "$5" },
-  { key: "discount", label: "Discount", value: "$6" },
-];
+// fetchQuote's own short-circuit for an empty cart ({ ok: true, all totals
+// "" }) is what this mirrors before any quote has landed — never a hardcoded
+// $0.00, since a real currency object may not even be known yet.
+const EMPTY_QUOTE = {
+  ok: true,
+  lines: [],
+  subtotalFormatted: "",
+  deliveryFormatted: "",
+  discountFormatted: "",
+  taxFormatted: "",
+  totalFormatted: "",
+  errors: [],
+};
 
 const CONTACT_FIELDS = [
   { key: "email", label: "Email Address", tone: "latte", type: "email" },
@@ -106,27 +91,73 @@ const INPUT_CLASSES =
   "h-[38px] w-full rounded-[6px] border border-[#e9dccf] bg-[#fdfcf8] px-[12px] font-parkinsans text-[13px] text-cocoa outline-none focus:border-[#d8cbbe] lg:h-[60px] lg:rounded-[10px] lg:px-[20px] lg:text-[18px]";
 
 export default function Cart() {
+  const cart = useCart();
   const [mode, setMode] = useState("delivery");
-  const [cartItems, setCartItems] = useState(INITIAL_CART_ITEMS);
   const [saveInfo, setSaveInfo] = useState(false);
   const [promoCode, setPromoCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [pickupTab, setPickupTab] = useState("date");
+  const [deliveryFields, setDeliveryFields] = useState({});
+  const [pickupFields, setPickupFields] = useState({});
+  const [quote, setQuote] = useState(EMPTY_QUOTE);
 
-  const increment = (id) =>
-    setCartItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, qty: (it.qty ?? 1) + 1 } : it))
-    );
+  const updateDeliveryField = (key) => (e) =>
+    setDeliveryFields((prev) => ({ ...prev, [key]: e.target.value }));
+  const updatePickupField = (key) => (e) =>
+    setPickupFields((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const decrement = (id) =>
-    setCartItems((prev) =>
-      prev.map((it) =>
-        it.id === id ? { ...it, qty: Math.max(1, (it.qty ?? 1) - 1) } : it
-      )
-    );
+  const increment = (line) => cart.setQty(line.id, line.qty + 1);
+  // The stepper never removes a line at zero - that's what the bin icon is
+  // for - so decrementing clamps at 1 instead of letting setQty(0) drop it.
+  const decrement = (line) => cart.setQty(line.id, Math.max(1, line.qty - 1));
 
-  const removeItem = (id) =>
-    setCartItems((prev) => prev.filter((it) => it.id !== id));
+  const postcode = deliveryFields.zip ?? "";
+  // A string key of "id:qty" pairs, not `cart.lines` itself: syncSnapshot
+  // below calls setLines on every quote, which produces a new array
+  // reference even when nothing priced actually changed. Depending on the
+  // array would re-quote forever against a rate-limited endpoint.
+  const linesKey = cart.lines.map((l) => `${l.id}:${l.qty}`).join(",");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetchQuote({
+        lines: cart.lines,
+        fulfilment: mode,
+        postcode,
+        coupon: appliedCoupon,
+        signal: controller.signal,
+      }).then((result) => {
+        // A newer request may have already superseded this one - its
+        // cleanup below aborted this controller, so a late-arriving
+        // response here must not overwrite a fresher total.
+        if (controller.signal.aborted) return;
+        setQuote(result);
+        if (result.ok) {
+          result.lines.forEach((line) =>
+            cart.syncSnapshot(line.id, line.unitFormatted)
+          );
+        }
+      });
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linesKey, mode, postcode, appliedCoupon]);
+
+  const quoteLineTotals = new Map(
+    quote.lines.map((l) => [l.id, l.totalFormatted])
+  );
+  const summaryRows = [
+    { key: "subtotal", label: "Subtotal", value: quote.subtotalFormatted },
+    { key: "shipping", label: "Shipping", value: quote.deliveryFormatted },
+    { key: "discount", label: "Discount", value: quote.discountFormatted },
+  ];
+  const checkoutDisabled = cart.isEmpty || quote.errors.length > 0;
 
   return (
     <main className="w-full bg-cream">
@@ -166,83 +197,87 @@ export default function Cart() {
             {/* Cart Items panel */}
             <div className="flex w-full flex-col gap-[12px] rounded-[10px] border border-[#d8cbbe] bg-[#f7f5f1] p-[12px] lg:gap-[19px] lg:rounded-[16px] lg:p-[16px]">
               <div className="flex h-[38px] items-center justify-between rounded-[7px] bg-[#d8cbbe] px-[13px] font-parkinsans text-[16px] font-medium text-cocoa lg:h-[61px] lg:rounded-[16px] lg:px-[30px] lg:text-[20px]">
-                <p>Cart Items ({cartItems.length})</p>
+                <p>Cart Items ({cart.count})</p>
                 <button
                   type="button"
-                  onClick={() => setCartItems([])}
+                  onClick={() => cart.clear()}
                   className="cursor-pointer font-parkinsans text-[14px] underline lg:text-[20px]"
                 >
                   Clear Cart
                 </button>
               </div>
 
-              {cartItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={`w-full items-center gap-[15px] lg:gap-[17px] ${
-                    item.desktopOnly ? "hidden lg:flex" : "flex"
-                  }`}
-                >
-                  <img
-                    src={item.img}
-                    alt={item.name}
-                    className="h-[147px] w-[177px] shrink-0 rounded-[3px] object-cover lg:h-[122px] lg:w-[148px] lg:rounded-[8px]"
-                  />
-                  <div className="flex flex-1 flex-col items-start gap-[13px] lg:flex-row lg:items-center lg:justify-between lg:gap-[67px]">
-                    <div className="flex flex-col gap-[13px] lg:flex-row lg:items-center lg:gap-[84px]">
-                      <div className="flex flex-col gap-[2px] lg:gap-[3px]">
-                        <p className="font-parkinsans text-[16px] text-cocoa lg:text-[24px]">
-                          {item.name}
-                        </p>
-                        <p className="font-parkinsans text-[20px] text-cocoa">
-                          ${item.price.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="flex w-[80px] shrink-0 items-center justify-center gap-[17px] rounded-full border-[1.3px] border-taupe/30 px-[10px] py-[5px] font-parkinsans font-semibold text-taupe/80 lg:w-[124px] lg:gap-[27px] lg:border-2 lg:px-[15px] lg:py-[8px]">
-                        <button
-                          type="button"
-                          aria-label={`Decrease ${item.name} quantity`}
-                          onClick={() => decrement(item.id)}
-                          className="flex cursor-pointer items-center justify-center"
-                        >
-                          <img
-                            src={iconMinus}
-                            alt=""
-                            className="h-[10px] w-[8px] lg:hidden"
-                          />
-                          <span className="hidden text-[20px] lg:inline">
-                            &minus;
+              {cart.isEmpty ? (
+                <p className="py-[12px] text-center font-parkinsans text-[14px] text-cocoa lg:text-[18px]">
+                  Your cart is empty.
+                </p>
+              ) : (
+                cart.lines.map((line) => (
+                  <div
+                    key={line.id}
+                    className="flex w-full items-center gap-[15px] lg:gap-[17px]"
+                  >
+                    <img
+                      src={line.image || undefined}
+                      alt={line.name}
+                      className="h-[147px] w-[177px] shrink-0 rounded-[3px] object-cover lg:h-[122px] lg:w-[148px] lg:rounded-[8px]"
+                    />
+                    <div className="flex flex-1 flex-col items-start gap-[13px] lg:flex-row lg:items-center lg:justify-between lg:gap-[67px]">
+                      <div className="flex flex-col gap-[13px] lg:flex-row lg:items-center lg:gap-[84px]">
+                        <div className="flex flex-col gap-[2px] lg:gap-[3px]">
+                          <p className="font-parkinsans text-[16px] text-cocoa lg:text-[24px]">
+                            {line.name}
+                          </p>
+                          <p className="font-parkinsans text-[20px] text-cocoa">
+                            {line.priceFormatted}
+                          </p>
+                        </div>
+                        <div className="flex w-[80px] shrink-0 items-center justify-center gap-[17px] rounded-full border-[1.3px] border-taupe/30 px-[10px] py-[5px] font-parkinsans font-semibold text-taupe/80 lg:w-[124px] lg:gap-[27px] lg:border-2 lg:px-[15px] lg:py-[8px]">
+                          <button
+                            type="button"
+                            aria-label={`Decrease ${line.name} quantity`}
+                            onClick={() => decrement(line)}
+                            className="flex cursor-pointer items-center justify-center"
+                          >
+                            <img
+                              src={iconMinus}
+                              alt=""
+                              className="h-[10px] w-[8px] lg:hidden"
+                            />
+                            <span className="hidden text-[20px] lg:inline">
+                              &minus;
+                            </span>
+                          </button>
+                          <span className="text-[15px] lg:text-[20px]">
+                            {line.qty}
                           </span>
-                        </button>
-                        <span className="text-[15px] lg:text-[20px]">
-                          {item.qty ?? 1}
-                        </span>
+                          <button
+                            type="button"
+                            aria-label={`Increase ${line.name} quantity`}
+                            onClick={() => increment(line)}
+                            className="cursor-pointer text-[14px] lg:text-[20px]"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <div className="hidden items-center gap-[35px] lg:flex">
+                        <p className="font-parkinsans text-[24px] text-cocoa">
+                          {quoteLineTotals.get(line.id) ?? ""}
+                        </p>
                         <button
                           type="button"
-                          aria-label={`Increase ${item.name} quantity`}
-                          onClick={() => increment(item.id)}
-                          className="cursor-pointer text-[14px] lg:text-[20px]"
+                          aria-label={`Remove ${line.name} from cart`}
+                          onClick={() => cart.remove(line.id)}
+                          className="cursor-pointer"
                         >
-                          +
+                          <img src={iconBin} alt="" className="size-[30px]" />
                         </button>
                       </div>
-                    </div>
-                    <div className="hidden items-center gap-[35px] lg:flex">
-                      <p className="font-parkinsans text-[24px] text-cocoa">
-                        ${(item.price * (item.qty ?? 1)).toFixed(2)}
-                      </p>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${item.name} from cart`}
-                        onClick={() => removeItem(item.id)}
-                        className="cursor-pointer"
-                      >
-                        <img src={iconBin} alt="" className="size-[30px]" />
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             {/* Delivery Information panel */}
@@ -263,7 +298,13 @@ export default function Cart() {
                         className="flex min-w-0 flex-1 flex-col gap-[1px] lg:gap-[2px]"
                       >
                         <FieldLabel label={field.label} tone={field.tone} />
-                        <input type={field.type} className={INPUT_CLASSES} />
+                        <input
+                          type={field.type}
+                          name={field.key}
+                          value={deliveryFields[field.key] ?? ""}
+                          onChange={updateDeliveryField(field.key)}
+                          className={INPUT_CLASSES}
+                        />
                       </div>
                     ))}
                   </div>
@@ -292,7 +333,9 @@ export default function Cart() {
                             {field.isSelect ? (
                               <div className="relative w-full">
                                 <select
-                                  defaultValue=""
+                                  name={field.key}
+                                  value={deliveryFields[field.key] ?? ""}
+                                  onChange={updateDeliveryField(field.key)}
                                   className={`appearance-none ${INPUT_CLASSES}`}
                                 >
                                   <option value="" hidden></option>
@@ -309,7 +352,13 @@ export default function Cart() {
                                 />
                               </div>
                             ) : (
-                              <input type="text" className={INPUT_CLASSES} />
+                              <input
+                                type="text"
+                                name={field.key}
+                                value={deliveryFields[field.key] ?? ""}
+                                onChange={updateDeliveryField(field.key)}
+                                className={INPUT_CLASSES}
+                              />
                             )}
                           </div>
                         ))}
@@ -355,35 +404,47 @@ export default function Cart() {
                   <p className="font-ligema text-[13.3px] uppercase text-cocoa lg:text-[17.1px]">
                     Order Summary
                   </p>
-                  <div className="flex w-full flex-col gap-[18px]">
-                    <div className="h-px w-full bg-[#d9d9d9]" />
-                    <div className="flex w-full items-center justify-between font-parkinsans text-cocoa">
-                      <p className="text-[16px]">Items</p>
-                      <p className="text-[20px]">{cartItems.length}</p>
-                    </div>
-                    {SUMMARY_ROWS.map((row) => (
-                      <div
-                        key={row.key}
-                        className="flex w-full items-center justify-between font-parkinsans text-cocoa"
-                      >
-                        <p className="text-[16px]">{row.label}</p>
-                        <p className="text-[20px]">{row.value}</p>
+                  {!cart.isEmpty && (
+                    <div className="flex w-full flex-col gap-[18px]">
+                      <div className="h-px w-full bg-[#d9d9d9]" />
+                      <div className="flex w-full items-center justify-between font-parkinsans text-cocoa">
+                        <p className="text-[16px]">Items</p>
+                        <p className="text-[20px]">{cart.count}</p>
                       </div>
-                    ))}
-                    <div className="h-px w-full bg-[#d9d9d9]" />
+                      {summaryRows.map((row) => (
+                        <div
+                          key={row.key}
+                          className="flex w-full items-center justify-between font-parkinsans text-cocoa"
+                        >
+                          <p className="text-[16px]">{row.label}</p>
+                          <p className="text-[20px]">{row.value}</p>
+                        </div>
+                      ))}
+                      <div className="h-px w-full bg-[#d9d9d9]" />
+                    </div>
+                  )}
+                </div>
+                {!cart.isEmpty && (
+                  <div className="flex w-full items-center justify-between font-parkinsans font-medium text-cocoa">
+                    <p className="text-[20px]">Total</p>
+                    <p className="text-[24px]">{quote.totalFormatted}</p>
                   </div>
-                </div>
-                <div className="flex w-full items-center justify-between font-parkinsans font-medium text-cocoa">
-                  <p className="text-[20px]">Total</p>
-                  <p className="text-[24px]">$39</p>
-                </div>
+                )}
               </div>
-              <button
-                type="button"
-                className="w-full cursor-pointer rounded-[100px] bg-cocoa p-[10px] font-parkinsans text-[16px] text-white"
-              >
-                Proceed to Checkout
-              </button>
+              <div className="flex w-full flex-col gap-[12px]">
+                {quote.errors.length > 0 && (
+                  <p role="alert" className="font-parkinsans text-[13px] text-[#c80000]">
+                    {quote.errors.join(" ")}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={checkoutDisabled}
+                  className="w-full cursor-pointer rounded-[100px] bg-cocoa p-[10px] font-parkinsans text-[16px] text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Proceed to Checkout
+                </button>
+              </div>
             </div>
 
             <div className="flex h-[75px] w-full items-center justify-center rounded-[12px] border border-[#d8cbbe] bg-[#f7f5f1] lg:h-[85px] lg:rounded-[16px]">
@@ -396,6 +457,7 @@ export default function Cart() {
               />
               <button
                 type="button"
+                onClick={() => setAppliedCoupon(promoCode)}
                 className="h-[39px] shrink-0 cursor-pointer rounded-r-[12px] bg-clay px-[14px] font-parkinsans text-[13px] font-medium text-white lg:h-[44px] lg:rounded-r-[16px] lg:px-[10px] lg:text-[16px]"
               >
                 Apply Coupon
@@ -444,7 +506,13 @@ export default function Cart() {
                     <label className="font-parkinsans text-[12px] text-latte">
                       {field.label} {field.required && <Asterisk />}
                     </label>
-                    <input type="text" className={INPUT_CLASSES} />
+                    <input
+                      type="text"
+                      name={field.key}
+                      value={pickupFields[field.key] ?? ""}
+                      onChange={updatePickupField(field.key)}
+                      className={INPUT_CLASSES}
+                    />
                   </div>
                 ) : null
               )}
@@ -457,7 +525,13 @@ export default function Cart() {
                     <label className="font-parkinsans text-[12px] text-latte">
                       {field.label} {field.required && <Asterisk />}
                     </label>
-                    <input type="text" className={INPUT_CLASSES} />
+                    <input
+                      type="text"
+                      name={field.key}
+                      value={pickupFields[field.key] ?? ""}
+                      onChange={updatePickupField(field.key)}
+                      className={INPUT_CLASSES}
+                    />
                   </div>
                 ))}
               </div>
