@@ -36,6 +36,13 @@ const CHECKERBOARD_BG = {
   backgroundPosition: "calc(50% - 690px) 0",
 };
 
+/* Same checkerboard at the 402 canvas's 20.1px cell, two rows tall. */
+const CHECKERBOARD_BG_MOBILE = {
+  backgroundImage: "repeating-conic-gradient(#e5c5bc 0 25%, transparent 0 50%)",
+  backgroundSize: "40.2px 40.2px",
+  backgroundPosition: "calc(50% - 180.9px) 0",
+};
+
 export default function SeasonalSpecials({
   specials = [],
   className = "",
@@ -49,45 +56,46 @@ export default function SeasonalSpecials({
 
   return (
     <section
-      className={`relative w-full overflow-hidden bg-cream px-[16px] py-[60px] lg:h-[841px] lg:py-0 lg:pt-[75px] ${className}`}
+      className={`relative w-full overflow-hidden bg-cream px-[16px] pb-[101.06px] pt-[80px] lg:h-[841px] lg:py-0 lg:pt-[75px] ${className}`}
     >
       <div className="pointer-events-none absolute inset-0" style={GINGHAM_BG} />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[30px] lg:bottom-[1px] lg:h-[60px]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[40.2px] lg:hidden"
+        style={CHECKERBOARD_BG_MOBILE}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-[1px] hidden h-[60px] lg:block"
         style={CHECKERBOARD_BG}
       />
 
-      <div className="relative mx-auto flex w-full max-w-[1082px] flex-col items-center gap-[47px] lg:gap-[80px]">
-        <div className="flex flex-col items-center gap-[33px] lg:gap-[56px]">
+      <div className="relative mx-auto flex w-full max-w-[1082px] flex-col items-center gap-[47.01px] lg:gap-[80px]">
+        <div className="flex flex-col items-center gap-[32.9px] lg:gap-[56px]">
           {/* Title lockup: Figma centres the text+blob pair, not the text.
               Blob is painted first so the wordmark sits on top of it. On desktop
               the two words are two faces - Parkinsans and Rochester - each
               placed absolutely inside the 299.77x94.8 group. */}
-          <div className="relative lg:h-[94.8px] lg:w-[299.77px]">
+          <div className="relative h-[62.62px] w-[198px] lg:h-[94.8px] lg:w-[299.77px]">
             <img
               src={blobSpecials}
               alt=""
-              className="absolute left-[100px] top-0 h-[97px] w-[61px] -rotate-90 lg:left-[149.77px] lg:h-[94.8px] lg:w-[150px] lg:rotate-0"
+              className="absolute left-[98.93px] top-0 h-[62.62px] w-[99.08px] lg:left-[149.77px] lg:h-[94.8px] lg:w-[150px]"
             />
-            <p className="relative font-display text-[18.1px] text-cocoa lg:hidden">
-              SEASONAL Specials
-            </p>
-            <p className="absolute left-0 top-[28.8px] hidden font-parkinsans text-[33.6px] uppercase leading-[47px] tracking-[-1.68px] text-cocoa lg:block">
+            <p className="absolute left-0 top-[19.02px] font-parkinsans text-[22.19px] uppercase leading-[31px] tracking-[-1.11px] text-cocoa lg:left-0 lg:top-[28.8px] lg:text-[33.6px] lg:leading-[47px] lg:tracking-[-1.68px]">
               Seasonal
             </p>
-            <p className="absolute left-[165.83px] top-[19.2px] hidden font-rochester text-[43.2px] leading-[56px] text-cocoa lg:block">
+            <p className="absolute left-[109.53px] top-[12.68px] font-rochester text-[28.53px] leading-[37px] text-cocoa lg:left-[165.83px] lg:top-[19.2px] lg:text-[43.2px] lg:leading-[56px]">
               specials
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-[12px] lg:flex lg:gap-[16.92px]">
+          <div className="grid grid-cols-2 gap-[11.75px] lg:flex lg:gap-[16.92px]">
             {specials.map(({ name, price, img }) => (
               <div
                 key={name}
-                className={`relative w-[179px] lg:w-[257.81px] ${
+                className={`relative w-[179.12px] lg:w-[257.81px] ${
                   withPriceTab
                     ? "h-[258px] lg:h-[371.95px]"
-                    : "h-[229px] lg:h-[330.4px]"
+                    : "h-[229.56px] lg:h-[330.4px]"
                 }`}
               >
                 {withPriceTab ? (
@@ -97,14 +105,14 @@ export default function SeasonalSpecials({
                     className="absolute inset-0 h-full w-full -scale-y-100"
                   />
                 ) : (
-                  <div className="absolute inset-0 rounded-[10.4px] bg-white lg:rounded-[15.02px]" />
+                  <div className="absolute inset-0 rounded-[10.43px] bg-white lg:rounded-[15.02px]" />
                 )}
                 <img
                   src={img}
                   alt={name}
-                  className="absolute left-[6px] top-[6px] h-[197px] w-[167px] rounded-[4px] object-cover lg:left-[8.46px] lg:top-[8.46px] lg:h-[284.15px] lg:w-[240.18px] lg:rounded-[5.5px]"
+                  className="absolute left-[5.88px] top-[5.88px] h-[197.43px] w-[166.87px] rounded-[3.83px] object-cover lg:left-[8.46px] lg:top-[8.46px] lg:h-[284.15px] lg:w-[240.18px] lg:rounded-[5.5px]"
                 />
-                <p className="absolute left-1/2 top-[208px] -translate-x-1/2 whitespace-nowrap font-parkinsans text-[12px] text-cocoa lg:top-[299.38px] lg:text-[16.91px] lg:leading-[24px]">
+                <p className="absolute left-1/2 top-[208px] -translate-x-1/2 whitespace-nowrap font-parkinsans text-[11.75px] leading-[16px] text-cocoa lg:top-[299.38px] lg:text-[16.91px] lg:leading-[24px]">
                   {name}
                 </p>
                 {withPriceTab && (
@@ -126,7 +134,7 @@ export default function SeasonalSpecials({
 
         <button
           type="button"
-          className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[28px] py-[6px] font-parkinsans text-[12px] text-white lg:px-[48px] lg:py-[10px] lg:text-[16px] lg:leading-[22px]"
+          className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[28.2px] py-[5.88px] font-parkinsans text-[11.75px] text-white lg:px-[48px] lg:py-[10px] lg:text-[16px] lg:leading-[22px]"
         >
           {ctaLabel}
         </button>

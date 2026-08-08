@@ -27,19 +27,20 @@ function FaqRow({ item, isOpen, onToggle }) {
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-start justify-between gap-[8px] text-left lg:gap-[12px]"
+        className="flex w-full items-start justify-between gap-[8.34px] text-left lg:gap-[12px]"
       >
         <div
-          className={`flex flex-1 flex-col gap-[8px] py-[17px] lg:gap-[12px] lg:py-[24px] ${
-            /* Figma indents the collapsed rows by 10px; the open one sits flush. */
-            isOpen ? "" : "lg:pl-[10px]"
+          className={`flex flex-1 flex-col gap-[8.34px] py-[16.69px] lg:gap-[12px] lg:py-[24px] ${
+            /* Figma indents the collapsed rows - 6.95px on mobile, 10px on
+               desktop; the open one sits flush. */
+            isOpen ? "" : "pl-[6.95px] lg:pl-[10px]"
           }`}
         >
-          <p className="font-parkinsans text-[17px] capitalize tracking-[-0.17px] text-cocoa lg:text-[20px] lg:leading-[22.9px] lg:tracking-[-0.2px]">
+          <p className="font-parkinsans text-[16.69px] capitalize leading-[15.92px] tracking-[-0.167px] text-cocoa lg:text-[20px] lg:leading-[22.9px] lg:tracking-[-0.2px]">
             {item.q}
           </p>
           {isOpen && item.a && (
-            <p className="font-parkinsans text-[14px] capitalize text-cocoa lg:w-[892px] lg:text-[16px] lg:leading-[22px]">
+            <p className="font-parkinsans text-[13.86px] capitalize leading-[19.4px] text-cocoa lg:w-[892px] lg:text-[16px] lg:leading-[22px]">
               {item.a}
             </p>
           )}
@@ -47,7 +48,7 @@ function FaqRow({ item, isOpen, onToggle }) {
         <img
           src={isOpen ? iconCross : iconPlus}
           alt=""
-          className="size-[49px] shrink-0 lg:size-[71px]"
+          className="size-[49.37px] shrink-0 lg:size-[71px]"
         />
       </button>
     </div>
@@ -59,11 +60,11 @@ export default function FaqSection() {
 
   return (
     <section className="w-full bg-linen px-[16px] py-[60px] lg:h-[798px] lg:px-[70px] lg:py-0 lg:pt-[83px]">
-      <div className="mx-auto flex w-full max-w-[1302px] flex-col items-start gap-[22px] lg:gap-[31px]">
-        <p className="font-parkinsans text-[19px] text-cocoa lg:text-[28px] lg:leading-[39px]">
+      <div className="mx-auto flex w-full max-w-[1302px] flex-col items-start gap-[21.56px] lg:gap-[31px]">
+        <p className="font-parkinsans text-[19.47px] leading-[27px] text-cocoa lg:text-[28px] lg:leading-[39px]">
           Frequently asked questions
         </p>
-        <div className="flex w-full flex-col gap-[16px]">
+        <div className="flex w-full flex-col gap-[11.13px] lg:gap-[16px]">
           {FAQS.map((item, i) => (
             <FaqRow
               key={item.q}

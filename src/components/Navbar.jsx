@@ -14,6 +14,19 @@ const NAV_LINKS = [
   { label: "Contact Us", to: "/contact" },
 ];
 
+/* The mobile dropdown (Figma "Dropdown", 283:17136) is its own list, not
+   NAV_LINKS: it opens with Home, which the desktop bar deliberately omits (the
+   logo is the home link there), and it shortens "Contact Us" to "Contact".
+   Labels are lower-cased where the design relies on CSS capitalize. */
+const MOBILE_NAV_LINKS = [
+  { label: "Home", to: "/" },
+  { label: "About us", to: "/about" },
+  { label: "Menu", to: "/menu" },
+  { label: "Inner Crust Club", to: null },
+  { label: "Gallery", to: "/gallery" },
+  { label: "contact", to: "/contact" },
+];
+
 /* Striped bakery background: #fcf7ea stripes over #faf3e0 base.
    80px period on mobile, 111px on desktop - identical in PageHero/OrderHero
    so stacked sections tile seamlessly. */
@@ -115,14 +128,17 @@ export default function Navbar() {
         {open && (
           <div className="absolute left-[16px] top-[80px] z-50 w-[261px] rounded-[8px] bg-cream px-[16px] py-[24px] lg:hidden">
             <nav className="flex w-full flex-col">
-              {NAV_LINKS.map(({ label, to }) =>
+              {MOBILE_NAV_LINKS.map(({ label, to }) =>
                 to ? (
                   <NavLink
                     key={label}
                     to={to}
+                    /* Without `end`, "/" is a prefix of every path and Home
+                       would render active on every page. */
+                    end={to === "/"}
                     onClick={() => setOpen(false)}
                     className={({ isActive }) =>
-                      `px-[32px] py-[8px] font-dm text-[24px] font-medium capitalize text-espresso ${
+                      `px-[32px] py-[8px] font-dm text-[20px] font-medium capitalize leading-[26px] text-espresso ${
                         isActive ? "rounded-[8px] bg-petal" : ""
                       }`
                     }
@@ -132,7 +148,7 @@ export default function Navbar() {
                 ) : (
                   <span
                     key={label}
-                    className="cursor-default px-[32px] py-[8px] font-dm text-[24px] font-medium capitalize text-espresso"
+                    className="cursor-default px-[32px] py-[8px] font-dm text-[20px] font-medium capitalize leading-[26px] text-espresso"
                   >
                     {label}
                   </span>
