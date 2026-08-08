@@ -8,13 +8,13 @@ const ITEMS = [
 
 describe('SeasonalSpecials', () => {
   it('renders the items it is given', () => {
-    render(<SeasonalSpecials items={ITEMS} />)
+    render(<SeasonalSpecials specials={ITEMS} />)
     expect(screen.getByText('Danish Pastries')).toBeTruthy()
     expect(screen.getByText('Croissants')).toBeTruthy()
   })
 
   it('renders nothing when there are no specials', () => {
-    const { container } = render(<SeasonalSpecials items={[]} />)
+    const { container } = render(<SeasonalSpecials specials={[]} />)
     expect(container.textContent).not.toContain('Danish')
   })
 })

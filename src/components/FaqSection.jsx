@@ -29,15 +29,17 @@ function FaqRow({ item, isOpen, onToggle }) {
         onClick={onToggle}
         className="flex w-full items-start justify-between gap-[8px] text-left lg:gap-[12px]"
       >
-        <div className="flex flex-1 flex-col gap-[8px] py-[17px] lg:gap-[12px] lg:py-[24px]">
-          <p className="font-dm text-[17px] capitalize tracking-[-0.17px] text-cocoa lg:text-[20px] lg:leading-[23px] lg:tracking-[-0.2px]">
+        <div
+          className={`flex flex-1 flex-col gap-[8px] py-[17px] lg:gap-[12px] lg:py-[24px] ${
+            /* Figma indents the collapsed rows by 10px; the open one sits flush. */
+            isOpen ? "" : "lg:pl-[10px]"
+          }`}
+        >
+          <p className="font-parkinsans text-[17px] capitalize tracking-[-0.17px] text-cocoa lg:text-[20px] lg:leading-[22.9px] lg:tracking-[-0.2px]">
             {item.q}
           </p>
           {isOpen && item.a && (
-            /* Figma sets this in a 892px box where Neulis Sans runs to two
-               lines; DM Sans is narrower, so the box is tightened to keep the
-               same two-line break (and the row's 125px height). */
-            <p className="font-dm text-[14px] capitalize text-cocoa lg:w-[800px] lg:text-[16px] lg:leading-[21px]">
+            <p className="font-parkinsans text-[14px] capitalize text-cocoa lg:w-[892px] lg:text-[16px] lg:leading-[22px]">
               {item.a}
             </p>
           )}
@@ -56,7 +58,7 @@ export default function FaqSection() {
   const [openFaq, setOpenFaq] = useState(0);
 
   return (
-    <section className="w-full bg-linen px-[16px] py-[60px] lg:h-[798px] lg:px-[70px] lg:py-0 lg:pt-[84px]">
+    <section className="w-full bg-linen px-[16px] py-[60px] lg:h-[798px] lg:px-[70px] lg:py-0 lg:pt-[83px]">
       <div className="mx-auto flex w-full max-w-[1302px] flex-col items-start gap-[22px] lg:gap-[31px]">
         <p className="font-parkinsans text-[19px] text-cocoa lg:text-[28px] lg:leading-[39px]">
           Frequently asked questions

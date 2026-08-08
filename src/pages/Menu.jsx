@@ -340,7 +340,7 @@ export default function Menu() {
 
       {/* Figma runs the specials backdrop up under the last 7px of the
           category strip. */}
-      <SeasonalSpecials items={specials} className="lg:-mt-[7px]" />
+      <SeasonalSpecials specials={specials} className="lg:-mt-[7px]" />
 
       {/* OUR MENU */}
       <section className="w-full bg-cream px-[16px] py-[60px] lg:h-[1049px] lg:px-0 lg:py-0 lg:pt-[124.24px]">
