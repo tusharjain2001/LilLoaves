@@ -7,6 +7,7 @@ import {
   fetchProducts,
   fetchFeatured,
   fetchByTagSlug,
+  fetchProductBySlug,
 } from "../lib/woo.js";
 import PLACEHOLDER_PRODUCT_IMAGE from "../lib/placeholderImage.js";
 import flowerYellow from "../assets/shared/flower-yellow.svg";
@@ -224,27 +225,32 @@ export default function Menu() {
   const [selectedDessert, setSelectedDessert] = useState("");
   const [lunchboxQty, setLunchboxQty] = useState(1);
   const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [], dessert: [] });
+  const [lunchBoxProduct, setLunchBoxProduct] = useState(null);
 
   const setQty = (name, next) =>
     setQuantities((prev) => ({ ...prev, [name]: Math.max(0, next) }));
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchCategories(), fetchProducts(), fetchFeatured()]).then(
-      ([cats, prods, feat]) => {
-        if (!active) return;
-        setCategories(cats);
-        setProducts(prods);
-        setActiveCategory((current) => current ?? cats[0]?.slug ?? null);
-        setSpecials(
-          feat.slice(0, 4).map((p) => ({
-            name: p.name,
-            price: p.priceFormatted,
-            img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
-          })),
-        );
-      },
-    );
+    Promise.all([
+      fetchCategories(),
+      fetchProducts(),
+      fetchFeatured(),
+      fetchProductBySlug("lunch-box"),
+    ]).then(([cats, prods, feat, lunchBox]) => {
+      if (!active) return;
+      setCategories(cats);
+      setProducts(prods);
+      setActiveCategory((current) => current ?? cats[0]?.slug ?? null);
+      setSpecials(
+        feat.slice(0, 4).map((p) => ({
+          name: p.name,
+          price: p.priceFormatted,
+          img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
+        })),
+      );
+      setLunchBoxProduct(lunchBox);
+    });
     return () => {
       active = false;
     };
@@ -519,7 +525,7 @@ export default function Menu() {
           <div className="flex w-full flex-col items-start gap-[16px] lg:h-[56px] lg:w-[1286px] lg:flex-row lg:items-center lg:gap-[33px]">
             <div className="grid place-items-center rounded-[16px] bg-[#cc8a7a] px-[16px] py-[8px] lg:h-[55px] lg:w-[123px] lg:px-0 lg:py-0">
               <p className="font-parkinsans text-[22px] text-white lg:text-[28px] lg:leading-[39px]">
-                $33.50
+                {lunchBoxProduct?.priceFormatted}
               </p>
             </div>
             <p className="font-parkinsans text-[16px] text-cocoa lg:w-[723.47px] lg:text-[20px] lg:leading-[28px]">

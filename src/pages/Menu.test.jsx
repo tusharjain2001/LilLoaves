@@ -30,6 +30,7 @@ beforeEach(() => {
   ])
   vi.spyOn(woo, 'fetchFeatured').mockResolvedValue([])
   vi.spyOn(woo, 'fetchByTagSlug').mockResolvedValue([])
+  vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue(null)
   vi.spyOn(woo, 'fetchProducts').mockResolvedValue([
     product(),
     product({
@@ -123,5 +124,24 @@ describe('Menu lunch box', () => {
     expect(screen.getByText('CHoose your Dessert')).toBeTruthy()
     // Only the bread column has an option to select; crackers/dessert have none.
     expect(screen.getAllByAltText('Selected').length).toBe(1)
+  })
+})
+
+describe('Menu lunch box price', () => {
+  it('renders the live Lunch Box price instead of a hardcoded number', async () => {
+    woo.fetchProductBySlug.mockResolvedValue(
+      product({ id: 15, slug: 'lunch-box', name: 'Lunch Box', priceFormatted: '$39.00', categories: [] }),
+    )
+    renderMenu()
+    await waitFor(() => expect(woo.fetchProductBySlug).toHaveBeenCalledWith('lunch-box'))
+    await waitFor(() => expect(screen.getByText('$39.00')).toBeTruthy())
+    expect(screen.queryByText('$33.50')).toBeNull()
+  })
+
+  it('renders nothing rather than a stale number when the Lunch Box product is missing', async () => {
+    woo.fetchProductBySlug.mockResolvedValue(null)
+    renderMenu()
+    await waitFor(() => expect(woo.fetchProductBySlug).toHaveBeenCalledWith('lunch-box'))
+    expect(screen.queryByText('$33.50')).toBeNull()
   })
 })
