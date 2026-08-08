@@ -28,6 +28,11 @@ describe('minorToMajor', () => {
     expect(minorToMajor(null, 2)).toBe(0)
     expect(minorToMajor('abc', 2)).toBe(0)
   })
+
+  it('handles negative amounts', () => {
+    expect(minorToMajor('-2113', 2)).toBe(-21.13)
+    expect(minorToMajor('-500', 0)).toBe(-500)
+  })
 })
 
 describe('formatPrice', () => {
@@ -51,5 +56,14 @@ describe('formatPrice', () => {
   it('honours a suffix currency', () => {
     const kr = { ...USD, currency_prefix: '', currency_suffix: ' kr', currency_decimal_separator: ',' }
     expect(formatPrice({ ...kr, price: '2113' })).toBe('21,13 kr')
+  })
+
+  it('formats zero-decimal currencies without fractional part', () => {
+    expect(formatPrice({ ...USD, currency_minor_unit: 0, price: '500' })).toBe('$500')
+    expect(formatPrice({ ...USD, currency_minor_unit: 0, price: '123456' })).toBe('$123,456')
+  })
+
+  it('formats negative prices with sign', () => {
+    expect(formatPrice({ ...USD, price: '-2113' })).toBe('-$21.13')
   })
 })
