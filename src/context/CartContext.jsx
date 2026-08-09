@@ -85,6 +85,13 @@ export function CartProvider({ children }) {
           : prev.map((l) => (lineKey(l.id, l.options) === key ? { ...l, qty } : l))
       })
 
+    // ponytail: matches by bare id, not lineKey - deliberately, not a
+    // leftover. This refreshes every line sharing a product id, including
+    // every options-variant of it, because price never varies by option
+    // and quote.js never round-trips options in the first place (there is
+    // no per-variant price to sync even if this wanted to be stricter). If
+    // either assumption changes, thread `options` through and match via
+    // lineKey the way add/setQty/remove do.
     const syncSnapshot = (id, priceFormatted) =>
       setLines((prev) =>
         prev.map((l) => (l.id === id ? { ...l, priceFormatted } : l)),

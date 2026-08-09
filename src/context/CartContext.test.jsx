@@ -169,6 +169,14 @@ describe('CartContext line options (e.g. Lunch Box picks)', () => {
     expect(cart.lines[0].options.bread).toBe('Japanese Milk Bread')
   })
 
+  it('syncSnapshot refreshes every line sharing a product id regardless of options - price never varies by option', () => {
+    renderCart()
+    act(() => cart.add(LUNCH_BOX, 1, { bread: 'Sour Dough' }))
+    act(() => cart.add(LUNCH_BOX, 1, { bread: 'Japanese Milk Bread' }))
+    act(() => cart.syncSnapshot(15, '$42.00'))
+    expect(cart.lines.every((l) => l.priceFormatted === '$42.00')).toBe(true)
+  })
+
   it('setQty and remove without an options argument still target the plain (no-options) line by id, unchanged from before', () => {
     renderCart()
     act(() => cart.add(PRODUCT, 5))

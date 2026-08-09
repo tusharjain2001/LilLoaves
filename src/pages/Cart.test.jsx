@@ -13,6 +13,14 @@ function seedCart(lines) {
 
 const MUFFIN = { id: 1, qty: 2, name: 'Blueberry Muffin', image: 'blueberry.png', priceFormatted: '$21.13' }
 const BREAD = { id: 2, qty: 1, name: 'Japanese Milk Bread', image: 'bread.png', priceFormatted: '$18.00' }
+const LUNCH_BOX = {
+  id: 15,
+  qty: 1,
+  name: 'Lunch Box',
+  image: '',
+  priceFormatted: '$39.00',
+  options: { bread: 'Sour Dough', cracker: '', dessert: '' },
+}
 
 function makeQuote(overrides = {}) {
   return {
@@ -112,6 +120,67 @@ describe('Cart items', () => {
 
     await waitFor(() => expect(screen.queryByText('Blueberry Muffin')).toBeNull())
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY))).toEqual([])
+  })
+})
+
+describe('Cart line with options (e.g. a Lunch Box)', () => {
+  // Regression coverage for the exact gap that let a Lunch Box's stepper/bin
+  // controls go dead: Cart.jsx's increment/decrement/remove must pass
+  // line.options through, or they target a key (bare id) that matches no
+  // line once that line actually has options (lineKey(15, {...}) !== 15).
+  it('increment, decrement and remove all target the specific (id, options) line', async () => {
+    seedCart([LUNCH_BOX])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(
+      makeQuote({
+        lines: [{ id: 15, qty: 1, totalFormatted: '$39.00', unitFormatted: '$39.00' }],
+        subtotalFormatted: '$39.00',
+        totalFormatted: '$39.00',
+      }),
+    )
+    renderCart()
+
+    fireEvent.click(screen.getByLabelText('Increase Lunch Box quantity'))
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15).qty).toBe(2)
+    })
+
+    fireEvent.click(screen.getByLabelText('Decrease Lunch Box quantity'))
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15).qty).toBe(1)
+    })
+
+    fireEvent.click(screen.getByLabelText('Remove Lunch Box from cart'))
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15)).toBeUndefined()
+    })
+  })
+
+  it('shows the chosen options under the product name/price, muted and subordinate', async () => {
+    seedCart([{ ...LUNCH_BOX, options: { bread: 'Sour Dough', cracker: "Chief's Crackers", dessert: 'Cookies' } }])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart()
+
+    expect(screen.getByText("Sour Dough · Chief's Crackers · Cookies")).toBeTruthy()
+  })
+
+  it('omits any option whose column had nothing selected, without breaking', async () => {
+    seedCart([LUNCH_BOX]) // cracker/dessert are '' - today's real catalogue state
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart()
+
+    expect(screen.getByText('Sour Dough')).toBeTruthy()
+  })
+
+  it('renders no extra row (and no layout change) for a line without options', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart()
+
+    const nameEl = screen.getByText('Blueberry Muffin')
+    expect(nameEl.parentElement.querySelectorAll('p')).toHaveLength(2)
   })
 })
 

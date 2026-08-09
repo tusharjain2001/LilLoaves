@@ -127,10 +127,13 @@ export default function Cart() {
   const updatePickupField = (key) => (e) =>
     setPickupFields((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const increment = (line) => cart.setQty(line.id, line.qty + 1);
+  // Must pass line.options through: a line with options is keyed by
+  // (id, options) in CartContext, not bare id, so omitting it here would
+  // target a key that matches no line for e.g. a Lunch Box.
+  const increment = (line) => cart.setQty(line.id, line.qty + 1, line.options);
   // The stepper never removes a line at zero - that's what the bin icon is
   // for - so decrementing clamps at 1 instead of letting setQty(0) drop it.
-  const decrement = (line) => cart.setQty(line.id, Math.max(1, line.qty - 1));
+  const decrement = (line) => cart.setQty(line.id, Math.max(1, line.qty - 1), line.options);
 
   const postcode = deliveryFields.zip ?? "";
   // A string key of "id:qty" pairs, not `cart.lines` itself: syncSnapshot
@@ -382,6 +385,11 @@ export default function Cart() {
                           <p className="font-parkinsans text-[20px] text-cocoa">
                             {line.priceFormatted}
                           </p>
+                          {line.options && (
+                            <p className={`font-parkinsans text-[12px] ${LABEL_TONE.muted}`}>
+                              {Object.values(line.options).filter(Boolean).join(" · ")}
+                            </p>
+                          )}
                         </div>
                         <div className="flex w-[80px] shrink-0 items-center justify-center gap-[17px] rounded-full border-[1.3px] border-taupe/30 px-[10px] py-[5px] font-parkinsans font-semibold text-taupe/80 lg:w-[124px] lg:gap-[27px] lg:border-2 lg:px-[15px] lg:py-[8px]">
                           <button
@@ -419,7 +427,7 @@ export default function Cart() {
                         <button
                           type="button"
                           aria-label={`Remove ${line.name} from cart`}
-                          onClick={() => cart.remove(line.id)}
+                          onClick={() => cart.remove(line.id, line.options)}
                           className="cursor-pointer"
                         >
                           <img src={iconBin} alt="" className="size-[30px]" />
