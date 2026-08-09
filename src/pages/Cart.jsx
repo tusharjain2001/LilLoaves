@@ -96,6 +96,14 @@ function FieldLabel({ label, tone, tight }) {
   );
 }
 
+/* A Lunch Box's chosen bread/cracker/dessert, as one line of text. Returns ""
+   when nothing is chosen, so the caller can skip the row entirely rather than
+   render an empty paragraph. */
+function optionSummary(options) {
+  if (!options) return "";
+  return Object.values(options).filter(Boolean).join(" · ");
+}
+
 const INPUT_CLASSES =
   "h-[38px] w-full rounded-[6px] border border-[#e9dccf] bg-[#fdfcf8] px-[12px] font-parkinsans text-[13px] text-cocoa outline-none focus:border-[#d8cbbe] lg:h-[60px] lg:rounded-[10px] lg:px-[20px] lg:text-[18px]";
 
@@ -368,7 +376,7 @@ export default function Cart() {
               ) : (
                 cart.lines.map((line) => (
                   <div
-                    key={line.id}
+                    key={`${line.id}:${line.options ? Object.values(line.options).join('|') : ''}`}
                     className="flex w-full items-center gap-[15px] lg:gap-[17px]"
                   >
                     <img
@@ -385,9 +393,9 @@ export default function Cart() {
                           <p className="font-parkinsans text-[20px] text-cocoa">
                             {line.priceFormatted}
                           </p>
-                          {line.options && (
+                          {optionSummary(line.options) && (
                             <p className={`font-parkinsans text-[12px] ${LABEL_TONE.muted}`}>
-                              {Object.values(line.options).filter(Boolean).join(" · ")}
+                              {optionSummary(line.options)}
                             </p>
                           )}
                         </div>
