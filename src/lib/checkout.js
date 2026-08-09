@@ -16,6 +16,20 @@
 
 const HANDOFF_ACTION = 'll_handoff'
 
+/**
+ * Vite bakes VITE_ variables in at build time. If VITE_WP_CHECKOUT_URL is not
+ * set in the deploy environment, template interpolation yields the literal
+ * string "undefined" and the browser resolves "undefined/wp-admin/admin-post.php"
+ * against our own origin — the customer lands on a 405 with no idea why.
+ * That shipped once. Fail here instead, so the Cart can say something useful
+ * and the cart survives.
+ */
+export function checkoutUrl() {
+  const base = import.meta.env.VITE_WP_CHECKOUT_URL
+  if (!base || base === 'undefined') return null
+  return `${base.replace(/\/$/, '')}/wp-admin/admin-post.php`
+}
+
 /** "Ada Marie Lovelace" -> { firstName: "Ada", lastName: "Marie Lovelace" } */
 export function splitName(fullName = '') {
   const trimmed = (fullName ?? '').trim()
@@ -57,6 +71,9 @@ export function submitCheckout({
   pickupDate,
   pickupSlot,
 }) {
+  const action = checkoutUrl()
+  if (!action) return false
+
   const { firstName, lastName } = splitName(fullName)
 
   const fields = {
@@ -92,7 +109,7 @@ export function submitCheckout({
 
   const form = document.createElement('form')
   form.method = 'POST'
-  form.action = `${import.meta.env.VITE_WP_CHECKOUT_URL}/wp-admin/admin-post.php`
+  form.action = action
   form.style.display = 'none'
 
   for (const [name, value] of Object.entries(fields)) {
@@ -105,4 +122,5 @@ export function submitCheckout({
 
   document.body.appendChild(form)
   form.submit()
+  return true
 }

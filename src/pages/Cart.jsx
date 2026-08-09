@@ -60,6 +60,11 @@ const CHECKOUT_ERROR_MESSAGES = {
   origin: "We couldn't verify that request. Please try checking out again.",
   throttled: "Too many attempts. Please wait a moment and try again.",
   coupon: "That coupon code didn't apply. Remove it or try a different code.",
+  // Not a server redirect code: set locally when the build is missing
+  // VITE_WP_CHECKOUT_URL, so the customer sees something honest instead of
+  // being navigated to a broken page.
+  misconfigured:
+    "Checkout isn't available right now. Your cart is safe — please try again shortly.",
 };
 
 const LABEL_TONE = {
@@ -104,7 +109,9 @@ const INPUT_CLASSES =
 export default function Cart() {
   const cart = useCart();
   const [params] = useSearchParams();
-  const checkoutErrorMessage = CHECKOUT_ERROR_MESSAGES[params.get("error")];
+  const [localError, setCheckoutError] = useState(null);
+  const checkoutErrorMessage =
+    CHECKOUT_ERROR_MESSAGES[localError ?? params.get("error")];
   const [mode, setMode] = useState("delivery");
   const [saveInfo, setSaveInfo] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -186,7 +193,7 @@ export default function Cart() {
   const handleCheckout = () => {
     setSubmitting(true);
     const isPickup = mode === "pickup";
-    submitCheckout({
+    const sent = submitCheckout({
       lines: cart.lines,
       fulfilment: mode,
       token: checkoutToken,
@@ -206,6 +213,15 @@ export default function Cart() {
       pickupDate: effectiveDate ?? "",
       pickupSlot: effectiveSlot ?? "",
     });
+
+    // submitCheckout returns false when VITE_WP_CHECKOUT_URL is missing from
+    // the build. Without this the form's action became the literal string
+    // "undefined" and the customer was navigated to a 405 on our own domain,
+    // losing the page with no explanation. Keep them on the cart instead.
+    if (!sent) {
+      setSubmitting(false);
+      setCheckoutError("misconfigured");
+    }
   };
 
   useEffect(() => {

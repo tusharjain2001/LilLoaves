@@ -331,7 +331,7 @@ describe('Proceed to Checkout', () => {
   it('disables the button synchronously on click, before the form is built', async () => {
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
-    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    vi.spyOn(checkoutLib, 'submitCheckout').mockReturnValue(true)
     renderCart()
 
     const button = () => screen.getByText('Proceed to Checkout').closest('button')
@@ -345,7 +345,7 @@ describe('Proceed to Checkout', () => {
   it('submits the memoized token, cart lines (ids/qty only) and delivery contact fields', async () => {
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
-    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    vi.spyOn(checkoutLib, 'submitCheckout').mockReturnValue(true)
     const { container } = renderCart()
 
     const button = () => screen.getByText('Proceed to Checkout').closest('button')
@@ -369,7 +369,7 @@ describe('Proceed to Checkout', () => {
   it('submits pickup contact fields and the machine-value store/date/slot, not address fields, in pickup mode', async () => {
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
-    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    vi.spyOn(checkoutLib, 'submitCheckout').mockReturnValue(true)
     const { container } = renderCart()
 
     fireEvent.click(screen.getByText('Pickup Cart'))
@@ -411,7 +411,7 @@ describe('Proceed to Checkout', () => {
     // through rather than, say, Math.random() or Date.now() in the handler.
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
-    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    vi.spyOn(checkoutLib, 'submitCheckout').mockReturnValue(true)
     renderCart()
 
     const button = () => screen.getByText('Proceed to Checkout').closest('button')
@@ -470,7 +470,7 @@ describe('Delivery/pickup blocks are mutually exclusive in the DOM (not just CSS
   it('pickup mode renders the reused order summary and a working, non-disabled checkout button alongside the pickup fields once quoted', async () => {
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
-    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    vi.spyOn(checkoutLib, 'submitCheckout').mockReturnValue(true)
     const { container } = renderCart()
 
     fireEvent.click(screen.getByText('Pickup Cart'))
@@ -491,7 +491,7 @@ describe('Pickup date/time scheduling', () => {
   it('defaults to the first available date and slot, so checkout is enabled with one tap and no picks', async () => {
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
-    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    vi.spyOn(checkoutLib, 'submitCheckout').mockReturnValue(true)
     const { container } = renderCart()
 
     fireEvent.click(screen.getByText('Pickup Cart'))
@@ -554,7 +554,7 @@ describe('Pickup date/time scheduling', () => {
   it('delivery checkout still works when pickup is unavailable (empty stores)', async () => {
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
-    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    vi.spyOn(checkoutLib, 'submitCheckout').mockReturnValue(true)
     pickupLib.fetchPickupConfig.mockResolvedValue({ ok: true, stores: [] })
     renderCart()
 

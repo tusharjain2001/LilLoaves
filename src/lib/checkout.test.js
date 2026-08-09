@@ -1,4 +1,4 @@
-import { splitName, buildCheckoutToken, submitCheckout } from './checkout.js'
+import { splitName, buildCheckoutToken, submitCheckout, checkoutUrl } from './checkout.js'
 
 /**
  * submitCheckout does a top-level form POST straight to WordPress, not a
@@ -183,5 +183,43 @@ describe('splitName', () => {
   it('handles empty or missing input without throwing', () => {
     expect(splitName('')).toEqual({ firstName: '', lastName: '' })
     expect(splitName()).toEqual({ firstName: '', lastName: '' })
+  })
+})
+
+describe('checkoutUrl', () => {
+  const original = import.meta.env.VITE_WP_CHECKOUT_URL
+
+  afterEach(() => {
+    import.meta.env.VITE_WP_CHECKOUT_URL = original
+  })
+
+  it('builds the handoff URL from the configured origin', () => {
+    import.meta.env.VITE_WP_CHECKOUT_URL = 'https://shop.example.com'
+    expect(checkoutUrl()).toBe('https://shop.example.com/wp-admin/admin-post.php')
+  })
+
+  it('tolerates a trailing slash rather than doubling it', () => {
+    import.meta.env.VITE_WP_CHECKOUT_URL = 'https://shop.example.com/'
+    expect(checkoutUrl()).toBe('https://shop.example.com/wp-admin/admin-post.php')
+  })
+
+  it('returns null when the variable is missing from the build', () => {
+    import.meta.env.VITE_WP_CHECKOUT_URL = ''
+    expect(checkoutUrl()).toBeNull()
+  })
+
+  // Vite interpolates an unset VITE_ var into the literal string "undefined".
+  // That shipped once and navigated customers to /undefined/wp-admin/admin-post.php.
+  it('returns null for the literal string "undefined"', () => {
+    import.meta.env.VITE_WP_CHECKOUT_URL = 'undefined'
+    expect(checkoutUrl()).toBeNull()
+  })
+
+  it('does not submit a form when the URL is unusable', () => {
+    import.meta.env.VITE_WP_CHECKOUT_URL = ''
+    const before = document.querySelectorAll('form').length
+    const sent = submitCheckout({ lines: [{ id: 13, qty: 1 }], fulfilment: 'pickup', token: 't' })
+    expect(sent).toBe(false)
+    expect(document.querySelectorAll('form').length).toBe(before)
   })
 })
