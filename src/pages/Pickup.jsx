@@ -1,26 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import OrderHero from "../components/OrderHero.jsx";
+import { fetchPickupConfig, slotValue, pickupDayCopy } from "../lib/pickup.js";
 import waveRose from "../assets/pickup/wave-rose.svg";
 import iconLocation from "../assets/pickup/icon-location.svg";
 import arrowLeft from "../assets/pickup/arrow-left.svg";
 import arrowRight from "../assets/pickup/arrow-right.svg";
-
-const PICKUP_DATES = ["2 Aug", "9 Aug", "16 Aug", "23 Aug"];
-
-/* Copied verbatim from the Figma "Select Time" content, including the
-   second row's "2:00 AM" / "3:00 AM" labels - the source design lists
-   these as-is (likely a content typo upstream) so they are reproduced
-   faithfully rather than silently "corrected" to PM. */
-const PICKUP_TIMES = [
-  "10:00 AM",
-  "11:00 AM",
-  "12:00 PM",
-  "1:00 PM",
-  "2:00 AM",
-  "3:00 AM",
-  "4:00 PM",
-  "5:00 PM",
-];
 
 const SELECT_TABS = [
   { key: "date", label: "Pick Up Date" },
@@ -44,8 +28,34 @@ function Asterisk() {
 export default function Pickup() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [activeTab, setActiveTab] = useState("date");
-  const [selectedDate, setSelectedDate] = useState("9 Aug");
+  const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
+  // null means "hasn't landed yet". Same WooCommerce > Fulfilment config
+  // Cart.jsx reads, via the same lib/pickup.js module, so this page can
+  // never show a date/time the cart wouldn't also offer.
+  const [pickupConfig, setPickupConfig] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchPickupConfig({ signal: controller.signal }).then((config) => {
+      if (controller.signal.aborted) return;
+      setPickupConfig(config);
+    });
+    return () => controller.abort();
+  }, []);
+
+  // ponytail: only the first configured store is ever offered - see the
+  // matching comment in Cart.jsx. No Figma design for a multi-store picker,
+  // and the live endpoint returns exactly one store today.
+  const pickupStore = pickupConfig?.stores?.[0] ?? null;
+  const pickupDates = pickupStore?.dates ?? [];
+  const pickupSlots = pickupStore?.slots ?? [];
+  const pickupAvailable = pickupDates.length > 0 && pickupSlots.length > 0;
+  // Defaults to the first available date/slot, derived at render time (not
+  // a setState-in-effect) so a real pick always wins once made.
+  const effectiveDate = selectedDate ?? (pickupAvailable ? pickupDates[0].date : null);
+  const effectiveSlot = selectedTime ?? (pickupAvailable ? slotValue(pickupSlots[0]) : null);
+  const effectiveDateLabel = pickupDates.find((d) => d.date === effectiveDate)?.label ?? "";
 
   const update = (key) => (e) => {
     const value = e.target.value;
@@ -78,7 +88,7 @@ export default function Pickup() {
               className="size-[34px] shrink-0"
             />
             <span className="whitespace-nowrap font-parkinsans text-[28px] text-cocoa">
-              Orange County Store
+              {pickupStore ? pickupStore.name : "Unavailable"}
             </span>
           </div>
         </div>
@@ -155,25 +165,31 @@ export default function Pickup() {
           <h2 className="text-center font-ligema text-[19px] uppercase text-cocoa lg:text-[30.4px]">
             please select
           </h2>
-          <div className="flex w-full items-center gap-[15px] lg:gap-[24px]">
-            {SELECT_TABS.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActiveTab(key)}
-                className={`flex-1 cursor-pointer whitespace-nowrap rounded-full bg-[#eaebe7] px-[20px] py-[5px] font-parkinsans text-[15px] text-[#2e2017] transition-colors lg:px-[32px] lg:py-[8px] lg:text-[16px] ${
-                  activeTab === key
-                    ? "border-2 border-[#969985]"
-                    : "border-2 border-transparent"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {pickupAvailable && (
+            <div className="flex w-full items-center gap-[15px] lg:gap-[24px]">
+              {SELECT_TABS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key)}
+                  className={`flex-1 cursor-pointer whitespace-nowrap rounded-full bg-[#eaebe7] px-[20px] py-[5px] font-parkinsans text-[15px] text-[#2e2017] transition-colors lg:px-[32px] lg:py-[8px] lg:text-[16px] ${
+                    activeTab === key
+                      ? "border-2 border-[#969985]"
+                      : "border-2 border-transparent"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {activeTab === "date" ? (
+        {!pickupAvailable ? (
+          <p className="mt-[32px] text-center font-parkinsans text-[14px] text-cocoa lg:mt-[56px] lg:text-[20px]">
+            Pickup is not available right now. Please choose delivery instead.
+          </p>
+        ) : activeTab === "date" ? (
           <div className="mt-[32px] flex flex-col items-center gap-[24px] lg:mt-[56px] lg:gap-[36px]">
             <div className="flex items-center gap-[16px] lg:gap-[24px]">
               <button
@@ -203,21 +219,21 @@ export default function Pickup() {
               </button>
             </div>
             <p className="text-center font-parkinsans text-[13px] text-cocoa lg:text-[20px]">
-              Choose a Sunday to pick up your order
+              {pickupDayCopy(pickupDates)}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-[9px] lg:gap-[14px]">
-              {PICKUP_DATES.map((date) => (
+              {pickupDates.map((d) => (
                 <button
-                  key={date}
+                  key={d.date}
                   type="button"
-                  onClick={() => setSelectedDate(date)}
+                  onClick={() => setSelectedDate(d.date)}
                   className={`${PILL_CLASSES} ${
-                    selectedDate === date
+                    effectiveDate === d.date
                       ? "bg-taupe text-white"
                       : "bg-[#d8cbbe] text-cocoa"
                   }`}
                 >
-                  {date}
+                  {d.label}
                 </button>
               ))}
             </div>
@@ -225,7 +241,7 @@ export default function Pickup() {
         ) : (
           <div className="mt-[32px] flex flex-col items-center gap-[24px] lg:mt-[56px] lg:gap-[36px]">
             <p className="whitespace-nowrap font-parkinsans text-[25px] uppercase text-cocoa lg:text-[40px]">
-              {selectedDate}
+              {effectiveDateLabel}
             </p>
             <div className="flex flex-col items-center gap-[4px] text-center lg:gap-[8px]">
               <p className="font-parkinsans text-[17px] text-cocoa lg:text-[28px]">
@@ -236,20 +252,23 @@ export default function Pickup() {
               </p>
             </div>
             <div className="grid grid-cols-4 gap-[9px] lg:gap-[14px]">
-              {PICKUP_TIMES.map((time) => (
-                <button
-                  key={time}
-                  type="button"
-                  onClick={() => setSelectedTime(time)}
-                  className={`${PILL_CLASSES} ${
-                    selectedTime === time
-                      ? "bg-taupe text-white"
-                      : "bg-[#d8cbbe] text-cocoa"
-                  }`}
-                >
-                  {time}
-                </button>
-              ))}
+              {pickupSlots.map((s) => {
+                const value = slotValue(s);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSelectedTime(value)}
+                    className={`${PILL_CLASSES} ${
+                      effectiveSlot === value
+                        ? "bg-taupe text-white"
+                        : "bg-[#d8cbbe] text-cocoa"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
