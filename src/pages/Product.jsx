@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { fetchProductBySlug } from "../lib/woo.js";
+import { useCart } from "../context/CartContext.jsx";
 import iconBack from "../assets/shared/icon-back.svg";
 import productMain from "../assets/product/product-main.png";
 import productThumb1 from "../assets/product/product-thumb-1.jpg";
@@ -60,6 +61,8 @@ const RELATED_ITEMS = [
 
 export default function Product() {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const cart = useCart();
   const [product, setProduct] = useState(undefined);
 
   useEffect(() => {
@@ -204,12 +207,17 @@ export default function Product() {
                     <>
                       <button
                         type="button"
+                        onClick={() => cart.add(product, 1)}
                         className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
                       >
                         Add to Cart
                       </button>
                       <button
                         type="button"
+                        onClick={() => {
+                          cart.add(product, 1);
+                          navigate("/cart");
+                        }}
                         className="flex-1 cursor-pointer whitespace-nowrap rounded-full border border-cocoa px-[30px] py-[6px] font-parkinsans text-[13px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
                       >
                         Buy Now

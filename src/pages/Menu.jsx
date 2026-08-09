@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import CategoryStrip from "../components/CategoryStrip.jsx";
 import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
 import FaqSection from "../components/FaqSection.jsx";
+import { useCart } from "../context/CartContext.jsx";
 import {
   fetchCategories,
   fetchProducts,
@@ -215,11 +216,11 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
 }
 
 export default function Menu() {
+  const cart = useCart();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [specials, setSpecials] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
-  const [quantities, setQuantities] = useState({});
   const [selectedBread, setSelectedBread] = useState("");
   const [selectedCracker, setSelectedCracker] = useState("");
   const [selectedDessert, setSelectedDessert] = useState("");
@@ -230,9 +231,6 @@ export default function Menu() {
   // (both show zero visible products), so every visitor would see "More
   // treats coming soon!" flash before the real catalogue lands.
   const [loading, setLoading] = useState(true);
-
-  const setQty = (name, next) =>
-    setQuantities((prev) => ({ ...prev, [name]: Math.max(0, next) }));
 
   useEffect(() => {
     let active = true;
@@ -390,14 +388,15 @@ export default function Menu() {
                   img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
                   inStock: p.inStock,
                 };
+                const qty = cart.lines.find((l) => l.id === p.id)?.qty ?? 0;
                 return (
                   <BreadCard
                     key={p.id}
                     item={item}
-                    qty={quantities[item.name] ?? 0}
-                    onAdd={() => setQty(item.name, 1)}
-                    onInc={() => setQty(item.name, (quantities[item.name] ?? 0) + 1)}
-                    onDec={() => setQty(item.name, (quantities[item.name] ?? 0) - 1)}
+                    qty={qty}
+                    onAdd={() => cart.add(p, 1)}
+                    onInc={() => cart.setQty(p.id, qty + 1)}
+                    onDec={() => cart.setQty(p.id, qty - 1)}
                   />
                 );
               })

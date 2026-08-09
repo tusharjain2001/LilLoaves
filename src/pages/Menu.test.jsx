@@ -1,7 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Menu from './Menu.jsx'
+import { CartProvider } from '../context/CartContext.jsx'
 import * as woo from '../lib/woo.js'
+
+const STORAGE_KEY = 'lilloaves:cart'
 
 const product = (over = {}) => ({
   id: 13,
@@ -24,6 +27,7 @@ const product = (over = {}) => ({
 })
 
 beforeEach(() => {
+  localStorage.clear()
   vi.spyOn(woo, 'fetchCategories').mockResolvedValue([
     { id: 1372, name: 'Breads', slug: 'breads', count: 2 },
     { id: 1373, name: 'Muffins', slug: 'muffins', count: 1 },
@@ -46,7 +50,14 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks())
 
-const renderMenu = () => render(<MemoryRouter><Menu /></MemoryRouter>)
+const renderMenu = () =>
+  render(
+    <MemoryRouter>
+      <CartProvider>
+        <Menu />
+      </CartProvider>
+    </MemoryRouter>,
+  )
 
 describe('Menu', () => {
   it('renders a tab per category returned by the API', async () => {
@@ -103,6 +114,76 @@ describe('Menu', () => {
   })
 })
 
+// The Lunch Box "Price / cart bar" also renders its own unconditional Add to
+// Cart / +/- controls, so every card-level assertion below is scoped with
+// within() to the specific BreadCard rather than querying the whole screen.
+describe('Menu cart', () => {
+  it('adds a product to the cart when Add to Cart is clicked', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    const card = screen.getByText('Sour Dough').parentElement.parentElement
+
+    fireEvent.click(within(card).getByText('Add to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toEqual([
+        { id: 13, qty: 1, name: 'Sour Dough', image: 'a.jpg', priceFormatted: '$21.13' },
+      ])
+    })
+  })
+
+  it('increments the same line instead of duplicating when clicked again', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    const card = screen.getByText('Sour Dough').parentElement.parentElement
+
+    fireEvent.click(within(card).getByText('Add to Cart'))
+    await waitFor(() => expect(within(card).getByText('1')).toBeTruthy())
+    fireEvent.click(within(card).getByRole('button', { name: '+' }))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toHaveLength(1)
+      expect(stored[0].qty).toBe(2)
+    })
+  })
+
+  it('cannot add an out-of-stock product from the menu card', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Japanese Milk Bread')).toBeTruthy())
+
+    const soldOutRow = screen.getByText(/sold out/i).parentElement
+    expect(soldOutRow.querySelector('button')).toBeNull()
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+      expect(stored.find((l) => l.id === 16)).toBeUndefined()
+    })
+  })
+
+  it('keeps two products with the same name as distinct cart lines', async () => {
+    woo.fetchProducts.mockResolvedValue([
+      product({ id: 20, name: 'Sourdough Loaf' }),
+      product({ id: 21, name: 'Sourdough Loaf' }),
+    ])
+    renderMenu()
+    await waitFor(() => expect(screen.getAllByText('Sourdough Loaf')).toHaveLength(2))
+
+    const cards = screen
+      .getAllByText('Sourdough Loaf')
+      .map((el) => el.parentElement.parentElement)
+    fireEvent.click(within(cards[0]).getByText('Add to Cart'))
+    fireEvent.click(within(cards[1]).getByText('Add to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.map((l) => l.id).sort()).toEqual([20, 21])
+      expect(stored.every((l) => l.qty === 1)).toBe(true)
+    })
+  })
+})
+
 describe('Menu lunch box', () => {
   it('builds each column from its tag', async () => {
     woo.fetchByTagSlug.mockImplementation(async (slug) =>
@@ -137,10 +218,13 @@ describe('Menu lunch box', () => {
       slug === 'lunchbox-bread' ? [product()] : [],
     )
     renderMenu()
-    await waitFor(() => expect(screen.getByText('CHoose your Crackers')).toBeTruthy())
+    expect(screen.getByText('CHoose your Crackers')).toBeTruthy()
     expect(screen.getByText('CHoose your Dessert')).toBeTruthy()
-    // Only the bread column has an option to select; crackers/dessert have none.
-    expect(screen.getAllByAltText('Selected').length).toBe(1)
+    // Only the bread column has an option to select; crackers/dessert have
+    // none. "CHoose your Crackers" renders synchronously on first paint
+    // regardless of the tag fetch, so it is not a reliable proxy for "the
+    // async selection has landed" - wait on the actual selected marker.
+    await waitFor(() => expect(screen.getAllByAltText('Selected')).toHaveLength(1))
   })
 })
 

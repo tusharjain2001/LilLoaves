@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Menu from './Menu.jsx'
+import { CartProvider } from '../context/CartContext.jsx'
 import { clearCache } from '../lib/woo.js'
 
 // Integration-style: does not mock `../lib/woo.js` itself, only the network.
@@ -16,7 +17,9 @@ describe('Menu fallback when the proxy and its cache both fail', () => {
   it('renders the committed snapshot products instead of "more treats coming soon"', async () => {
     render(
       <MemoryRouter>
-        <Menu />
+        <CartProvider>
+          <Menu />
+        </CartProvider>
       </MemoryRouter>,
     )
     await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
@@ -29,7 +32,9 @@ describe('Menu fallback when the proxy and its cache both fail', () => {
     // no specials rather than falsely feature all four products.
     render(
       <MemoryRouter>
-        <Menu />
+        <CartProvider>
+          <Menu />
+        </CartProvider>
       </MemoryRouter>,
     )
     await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())

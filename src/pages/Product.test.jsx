@@ -1,7 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Product from './Product.jsx'
+import { CartProvider } from '../context/CartContext.jsx'
 import * as woo from '../lib/woo.js'
+
+const STORAGE_KEY = 'lilloaves:cart'
 
 const PRODUCT = {
   id: 13,
@@ -26,12 +29,16 @@ const PRODUCT = {
 const renderAt = (path) =>
   render(
     <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/product/:slug" element={<Product />} />
-      </Routes>
+      <CartProvider>
+        <Routes>
+          <Route path="/product/:slug" element={<Product />} />
+          <Route path="/cart" element={<p>CART PAGE</p>} />
+        </Routes>
+      </CartProvider>
     </MemoryRouter>,
   )
 
+beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 
 describe('Product', () => {
@@ -58,6 +65,11 @@ describe('Product', () => {
     await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
     expect(screen.getByText('Sold out')).toBeTruthy()
     expect(screen.queryByText('Buy Now')).toBeNull()
+
+    // No purchase control exists to click, so this can only ever no-op - that
+    // absence, not a click handler's behaviour, is what keeps it out of the cart.
+    fireEvent.click(screen.getByText('Sold out'))
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')).toEqual([])
   })
 
   it('offers the purchase actions when the product is in stock', async () => {
@@ -90,6 +102,40 @@ describe('Product', () => {
     await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
     expect(screen.getByText('$18.00')).toBeTruthy()
     expect(container.querySelector('.line-through')?.textContent).toBe('$21.13')
+  })
+})
+
+describe('Product cart', () => {
+  it('adds one to the cart when Add to Cart is clicked', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue(PRODUCT)
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    // "Add to Cart" also appears in the unrelated RELATED_ITEMS tiles, so
+    // scope to the main purchase row (shared parent of Add to Cart / Buy Now).
+    const purchaseRow = screen.getByText('Buy Now').parentElement
+
+    fireEvent.click(within(purchaseRow).getByText('Add to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toEqual([
+        { id: 13, qty: 1, name: 'Sour Dough', image: 'a.jpg', priceFormatted: '$21.13' },
+      ])
+    })
+  })
+
+  it('Buy Now adds one to the cart and navigates to /cart', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue(PRODUCT)
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('Buy Now'))
+
+    await waitFor(() => expect(screen.getByText('CART PAGE')).toBeTruthy())
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    expect(stored).toEqual([
+      { id: 13, qty: 1, name: 'Sour Dough', image: 'a.jpg', priceFormatted: '$21.13' },
+    ])
   })
 })
 
