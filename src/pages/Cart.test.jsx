@@ -4,6 +4,7 @@ import { CartProvider } from '../context/CartContext.jsx'
 import Cart from './Cart.jsx'
 import * as quoteLib from '../lib/quote.js'
 import * as checkoutLib from '../lib/checkout.js'
+import * as pickupLib from '../lib/pickup.js'
 
 const STORAGE_KEY = 'lilloaves:cart'
 
@@ -21,6 +22,21 @@ const LUNCH_BOX = {
   priceFormatted: '$39.00',
   options: { bread: 'Sour Dough', cracker: '', dessert: '' },
 }
+
+const PICKUP_STORE = {
+  id: 'orange-county-store',
+  name: 'Orange County Store',
+  address: '1234 Example Ave, Orange County, CA',
+  slots: [
+    { start: '14:00', end: '14:30', label: '2:00 PM - 2:30 PM' },
+    { start: '14:30', end: '15:00', label: '2:30 PM - 3:00 PM' },
+  ],
+  dates: [
+    { date: '2026-08-09', weekday: 'Sunday', label: '9 Aug' },
+    { date: '2026-08-16', weekday: 'Sunday', label: '16 Aug' },
+  ],
+}
+const PICKUP_CONFIG = { ok: true, stores: [PICKUP_STORE] }
 
 function makeQuote(overrides = {}) {
   return {
@@ -47,6 +63,11 @@ const renderCart = (route = '/cart') =>
 
 beforeEach(() => {
   localStorage.clear()
+  // Every render of Cart now fetches pickup config on mount, delivery mode
+  // included - default it to a real, working single-store shape so tests
+  // that don't care about pickup scheduling aren't forced to mock it too.
+  // Tests below that do care override this per-test.
+  vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue(PICKUP_CONFIG)
 })
 
 afterEach(() => {
@@ -208,6 +229,10 @@ describe('Before the first quote lands', () => {
     // fetchQuote is never even called yet - this is the window the bug lived in.
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockImplementation(() => new Promise(() => {}))
+    // This test's whole point is a synchronous, pre-microtask-flush
+    // assertion (see below) - the pickup-config fetch's own mocked promise
+    // resolving mid-test would fight that, so it's left pending here too.
+    pickupLib.fetchPickupConfig.mockReturnValue(new Promise(() => {}))
     renderCart()
 
     expect(quoteLib.fetchQuote).not.toHaveBeenCalled()
@@ -341,7 +366,7 @@ describe('Proceed to Checkout', () => {
     expect(args.token.length).toBeGreaterThan(0)
   })
 
-  it('submits pickup contact and store/date fields, not address fields, in pickup mode', async () => {
+  it('submits pickup contact fields and the machine-value store/date/slot, not address fields, in pickup mode', async () => {
     seedCart([MUFFIN])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
     vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
@@ -354,7 +379,13 @@ describe('Proceed to Checkout', () => {
     fireEvent.change(container.querySelector('input[name="pickupPhone"]'), {
       target: { value: '5551234567' },
     })
-    fireEvent.click(screen.getByText('9 Aug'))
+
+    // Real dates/slots land asynchronously from fetchPickupConfig - pick a
+    // non-default date and, after switching tabs, a non-default slot, to
+    // prove both pickers actually drive what gets submitted.
+    fireEvent.click(await screen.findByText('16 Aug'))
+    fireEvent.click(screen.getByText('Pick Up Time'))
+    fireEvent.click(await screen.findByText('2:30 PM - 3:00 PM'))
 
     const button = () => screen.getByText('Proceed to Checkout').closest('button')
     await waitFor(() => expect(button().disabled).toBe(false))
@@ -364,8 +395,13 @@ describe('Proceed to Checkout', () => {
     expect(args.fulfilment).toBe('pickup')
     expect(args.fullName).toBe('Ada Lovelace')
     expect(args.phone).toBe('5551234567')
-    expect(args.pickupStore).toBe('Orange County Store')
-    expect(args.pickupDate).toBe('9 Aug')
+    // The store's id/slug (what the backend's ll_find_store() resolves
+    // first), never the display name.
+    expect(args.pickupStore).toBe('orange-county-store')
+    // The date's ISO value, never its "16 Aug" display label.
+    expect(args.pickupDate).toBe('2026-08-16')
+    // "{start}-{end}", the exact string ll_pickup_slot_valid() checks.
+    expect(args.pickupSlot).toBe('14:30-15:00')
   })
 
   it('recomputes the token from cart state (buildCheckoutToken), not a fresh value per click', async () => {
@@ -411,6 +447,11 @@ describe('Delivery/pickup blocks are mutually exclusive in the DOM (not just CSS
 
     expect(container.querySelector('input[name="address1"]')).toBeNull()
     expect(container.querySelector('input[name="customerName"]')).not.toBeNull()
+
+    // Flushes the pickup-config fetch effect before the test (and its
+    // implicit unmount) ends, so that state update isn't left dangling
+    // outside act().
+    await screen.findByText('Orange County Store')
   })
 
   it('there is exactly one Proceed to Checkout button on the page, in either mode', async () => {
@@ -423,6 +464,7 @@ describe('Delivery/pickup blocks are mutually exclusive in the DOM (not just CSS
     fireEvent.click(screen.getByText('Pickup Cart'))
 
     expect(screen.getAllByText('Proceed to Checkout')).toHaveLength(1)
+    await screen.findByText('Orange County Store')
   })
 
   it('pickup mode renders the reused order summary and a working, non-disabled checkout button alongside the pickup fields once quoted', async () => {
@@ -442,6 +484,97 @@ describe('Delivery/pickup blocks are mutually exclusive in the DOM (not just CSS
 
     expect(checkoutLib.submitCheckout).toHaveBeenCalledTimes(1)
     expect(checkoutLib.submitCheckout.mock.calls[0][0].fulfilment).toBe('pickup')
+  })
+})
+
+describe('Pickup date/time scheduling', () => {
+  it('defaults to the first available date and slot, so checkout is enabled with one tap and no picks', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    const { container } = renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+    fireEvent.change(container.querySelector('input[name="customerName"]'), {
+      target: { value: 'Ada Lovelace' },
+    })
+    fireEvent.change(container.querySelector('input[name="pickupPhone"]'), {
+      target: { value: '5551234567' },
+    })
+
+    const button = () => screen.getByText('Proceed to Checkout').closest('button')
+    await waitFor(() => expect(button().disabled).toBe(false))
+    fireEvent.click(button())
+
+    const args = checkoutLib.submitCheckout.mock.calls[0][0]
+    expect(args.pickupStore).toBe('orange-county-store')
+    expect(args.pickupDate).toBe('2026-08-09')
+    expect(args.pickupSlot).toBe('14:00-14:30')
+  })
+
+  it('keeps checkout disabled in pickup mode while pickup config is still loading', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    pickupLib.fetchPickupConfig.mockReturnValue(new Promise(() => {}))
+    renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy())
+
+    expect(screen.getByText('Proceed to Checkout').closest('button').disabled).toBe(true)
+  })
+
+  it('shows pickup as unavailable and keeps checkout disabled when the owner has configured no stores', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    pickupLib.fetchPickupConfig.mockResolvedValue({ ok: true, stores: [] })
+    renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+
+    expect(await screen.findByText(/not available/i)).toBeTruthy()
+    expect(screen.getByText('Proceed to Checkout').closest('button').disabled).toBe(true)
+  })
+
+  it('a configured store with no dates does not break the page and stays unavailable', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    pickupLib.fetchPickupConfig.mockResolvedValue({
+      ok: true,
+      stores: [{ ...PICKUP_STORE, dates: [] }],
+    })
+    renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+
+    expect(await screen.findByText(/not available/i)).toBeTruthy()
+    expect(screen.getByText('Proceed to Checkout').closest('button').disabled).toBe(true)
+  })
+
+  it('delivery checkout still works when pickup is unavailable (empty stores)', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    pickupLib.fetchPickupConfig.mockResolvedValue({ ok: true, stores: [] })
+    renderCart()
+
+    const button = () => screen.getByText('Proceed to Checkout').closest('button')
+    await waitFor(() => expect(button().disabled).toBe(false))
+    fireEvent.click(button())
+
+    expect(checkoutLib.submitCheckout).toHaveBeenCalledTimes(1)
+    expect(checkoutLib.submitCheckout.mock.calls[0][0].fulfilment).toBe('delivery')
+  })
+
+  it('shows the real store name from config, not a store picker, when there is exactly one store', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+
+    expect(await screen.findByText('Orange County Store')).toBeTruthy()
+    expect(screen.queryByRole('combobox')).toBeNull()
   })
 })
 
@@ -469,6 +602,10 @@ describe('Checkout error banner', () => {
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
     renderCart('/cart')
 
+    // Flushes the pickup-config fetch effect before the test (and its
+    // implicit unmount) ends, so that state update isn't left dangling
+    // outside act().
+    await screen.findByText(/cart is empty/i)
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })

@@ -4,6 +4,7 @@ import OrderHero from "../components/OrderHero.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { fetchQuote } from "../lib/quote.js";
 import { buildCheckoutToken, submitCheckout } from "../lib/checkout.js";
+import { fetchPickupConfig, slotValue, pickupDayCopy } from "../lib/pickup.js";
 import iconBin from "../assets/cart/icon-bin.svg";
 import iconMinus from "../assets/cart/icon-minus.svg";
 import iconChevronDown from "../assets/cart/icon-chevron-down.svg";
@@ -49,13 +50,6 @@ const PICKUP_CONTACT_FIELDS = [
   { key: "pickupEmail", label: "Email Address(Optional)", required: false },
   { key: "pickupPhone", label: "Phone Number", required: true },
 ];
-
-const PICKUP_DATES = ["2 Aug", "9 Aug", "16 Aug", "23 Aug"];
-
-// The mobile pickup section (below) only ever shows this one location as
-// static text - there is no store selector yet, so this mirrors that same
-// string rather than inventing a second source of truth for it.
-const PICKUP_STORE_NAME = "Orange County Store";
 
 // Task 7's handoff redirects a failed checkout back to /cart?error=<code>.
 // Every code it can send is listed here so none of them render silently.
@@ -116,7 +110,13 @@ export default function Cart() {
   const [promoCode, setPromoCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [pickupTab, setPickupTab] = useState("date");
+  // null means "hasn't landed yet" - the store/dates/slots the bakery owner
+  // configured under WooCommerce > Fulfilment. Fetched once on mount, not
+  // gated on pickup mode being active, so switching to Pickup Cart never has
+  // to wait on a fresh request.
+  const [pickupConfig, setPickupConfig] = useState(null);
   const [deliveryFields, setDeliveryFields] = useState({});
   const [pickupFields, setPickupFields] = useState({});
   // Closes the human double-click: flipped synchronously inside the click
@@ -129,6 +129,21 @@ export default function Cart() {
   // but only this flag decides whether the block below is even trustworthy.
   const [quote, setQuote] = useState(null);
   const hasQuoted = quote !== null;
+
+  // ponytail: only the first configured store is ever offered - there is no
+  // Figma design for a multi-store picker, and the live endpoint returns
+  // exactly one store today. Revisit with a real picker if the bakery owner
+  // ever configures a second location under WooCommerce > Fulfilment.
+  const pickupStore = pickupConfig?.stores?.[0] ?? null;
+  const pickupDates = pickupStore?.dates ?? [];
+  const pickupSlots = pickupStore?.slots ?? [];
+  const pickupAvailable = pickupDates.length > 0 && pickupSlots.length > 0;
+  // Defaults to the first available date/slot so the common path is one tap
+  // - derived at render time, not synced via a setState-in-effect, so a
+  // customer's own pick (once selectedDate/selectedSlot is non-null) always
+  // wins over the default.
+  const effectiveDate = selectedDate ?? (pickupAvailable ? pickupDates[0].date : null);
+  const effectiveSlot = selectedSlot ?? (pickupAvailable ? slotValue(pickupSlots[0]) : null);
 
   const updateDeliveryField = (key) => (e) =>
     setDeliveryFields((prev) => ({ ...prev, [key]: e.target.value }));
@@ -184,13 +199,23 @@ export default function Cart() {
       city: deliveryFields.city,
       state: deliveryFields.state,
       postcode: deliveryFields.zip,
-      pickupStore: PICKUP_STORE_NAME,
-      pickupDate: selectedDate ?? "",
-      // No time-slot picker exists in this plan yet (pickup scheduling is a
-      // later plan's scope) - sent empty rather than invented.
-      pickupSlot: "",
+      // The store's id/slug and the date's/slot's machine values - what
+      // ll_find_store()/ll_pickup_slot_valid() in the backend bridge plugin
+      // actually validate against, never a display label.
+      pickupStore: pickupStore?.id ?? "",
+      pickupDate: effectiveDate ?? "",
+      pickupSlot: effectiveSlot ?? "",
     });
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchPickupConfig({ signal: controller.signal }).then((config) => {
+      if (controller.signal.aborted) return;
+      setPickupConfig(config);
+    });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -233,7 +258,12 @@ export default function Cart() {
     { key: "shipping", label: "Shipping", value: quote?.deliveryFormatted || PENDING },
     { key: "discount", label: "Discount", value: quote?.discountFormatted || PENDING },
   ];
-  const checkoutDisabled = cart.isEmpty || !hasQuoted || quote.errors.length > 0;
+  // Pickup mode must not be submittable without a date and a slot chosen -
+  // same principle as the quote-error/empty-cart guards already here.
+  // Irrelevant, and always true, outside pickup mode.
+  const pickupReady =
+    mode !== "pickup" || (pickupAvailable && Boolean(effectiveDate) && Boolean(effectiveSlot));
+  const checkoutDisabled = cart.isEmpty || !hasQuoted || quote.errors.length > 0 || !pickupReady;
 
   // The order summary + coupon + Proceed to Checkout markup, defined once so
   // delivery and pickup mode share the exact same JSX rather than each
@@ -592,7 +622,7 @@ export default function Cart() {
             <div className="flex items-center gap-[8px] rounded-[11px] border border-[rgba(204,138,122,0.39)] bg-[#f4e7e3] px-[10px] py-[10px]">
               <img src={iconLocationPin} alt="" className="size-[24px]" />
               <p className="font-parkinsans text-[16px] text-cocoa">
-                Orange County Store
+                {pickupStore ? pickupStore.name : "Unavailable"}
               </p>
             </div>
           </div>
@@ -655,65 +685,100 @@ export default function Cart() {
               <p className="font-ligema text-[12.8px] uppercase text-cocoa">
                 Please Select
               </p>
-              <div className="flex items-center gap-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setPickupTab("date")}
-                  className={`cursor-pointer whitespace-nowrap rounded-full border px-[14px] py-[5px] font-parkinsans text-[13px] text-[#2e2017] ${
-                    pickupTab === "date"
-                      ? "border-[#969985] bg-[#eaebe7]"
-                      : "border-transparent bg-[#eaebe7]"
-                  }`}
-                >
-                  Pick Up Date
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPickupTab("time")}
-                  className={`cursor-pointer whitespace-nowrap rounded-full border px-[14px] py-[5px] font-parkinsans text-[13px] text-[#2e2017] ${
-                    pickupTab === "time"
-                      ? "border-[#969985] bg-[#eaebe7]"
-                      : "border-transparent bg-[#eaebe7]"
-                  }`}
-                >
-                  Pick Up Time
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-[6px]">
-              <button type="button" aria-label="Previous month" className="cursor-pointer">
-                <img src={iconChevronLeft} alt="" className="h-[14px] w-[12px]" />
-              </button>
-              <p className="font-parkinsans text-[17px] uppercase text-cocoa">
-                August 2026
-              </p>
-              <button type="button" aria-label="Next month" className="cursor-pointer">
-                <img src={iconChevronRight} alt="" className="h-[14px] w-[12px]" />
-              </button>
-            </div>
-
-            <div className="flex flex-col items-center gap-[15px] px-[16px]">
-              <p className="text-center font-parkinsans text-[14px] text-cocoa">
-                Choose a Sunday to pick up your order
-              </p>
-              <div className="flex gap-[6px]">
-                {PICKUP_DATES.map((date) => (
+              {pickupAvailable && (
+                <div className="flex items-center gap-[10px]">
                   <button
-                    key={date}
                     type="button"
-                    onClick={() => setSelectedDate(date)}
-                    className={`cursor-pointer whitespace-nowrap rounded-[9px] px-[10px] py-[5px] font-parkinsans text-[12px] ${
-                      selectedDate === date
-                        ? "bg-cocoa text-white"
-                        : "bg-[#d8cbbe] text-cocoa"
+                    onClick={() => setPickupTab("date")}
+                    className={`cursor-pointer whitespace-nowrap rounded-full border px-[14px] py-[5px] font-parkinsans text-[13px] text-[#2e2017] ${
+                      pickupTab === "date"
+                        ? "border-[#969985] bg-[#eaebe7]"
+                        : "border-transparent bg-[#eaebe7]"
                     }`}
                   >
-                    {date}
+                    Pick Up Date
                   </button>
-                ))}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setPickupTab("time")}
+                    className={`cursor-pointer whitespace-nowrap rounded-full border px-[14px] py-[5px] font-parkinsans text-[13px] text-[#2e2017] ${
+                      pickupTab === "time"
+                        ? "border-[#969985] bg-[#eaebe7]"
+                        : "border-transparent bg-[#eaebe7]"
+                    }`}
+                  >
+                    Pick Up Time
+                  </button>
+                </div>
+              )}
             </div>
+
+            {!pickupAvailable ? (
+              <p className="px-[16px] text-center font-parkinsans text-[14px] text-cocoa">
+                Pickup is not available right now. Please choose delivery instead.
+              </p>
+            ) : pickupTab === "date" ? (
+              <>
+                <div className="flex items-center gap-[6px]">
+                  <button type="button" aria-label="Previous month" className="cursor-pointer">
+                    <img src={iconChevronLeft} alt="" className="h-[14px] w-[12px]" />
+                  </button>
+                  <p className="font-parkinsans text-[17px] uppercase text-cocoa">
+                    August 2026
+                  </p>
+                  <button type="button" aria-label="Next month" className="cursor-pointer">
+                    <img src={iconChevronRight} alt="" className="h-[14px] w-[12px]" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col items-center gap-[15px] px-[16px]">
+                  <p className="text-center font-parkinsans text-[14px] text-cocoa">
+                    {pickupDayCopy(pickupDates)}
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-[6px]">
+                    {pickupDates.map((d) => (
+                      <button
+                        key={d.date}
+                        type="button"
+                        onClick={() => setSelectedDate(d.date)}
+                        className={`cursor-pointer whitespace-nowrap rounded-[9px] px-[10px] py-[5px] font-parkinsans text-[12px] ${
+                          effectiveDate === d.date
+                            ? "bg-cocoa text-white"
+                            : "bg-[#d8cbbe] text-cocoa"
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-[15px] px-[16px]">
+                <p className="text-center font-parkinsans text-[14px] text-cocoa">
+                  Choose a time to pick up your order
+                </p>
+                <div className="flex flex-wrap justify-center gap-[6px]">
+                  {pickupSlots.map((s) => {
+                    const value = slotValue(s);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setSelectedSlot(value)}
+                        className={`cursor-pointer whitespace-nowrap rounded-[9px] px-[10px] py-[5px] font-parkinsans text-[12px] ${
+                          effectiveSlot === value
+                            ? "bg-cocoa text-white"
+                            : "bg-[#d8cbbe] text-cocoa"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* order summary + coupon - reused from delivery mode; this is the
