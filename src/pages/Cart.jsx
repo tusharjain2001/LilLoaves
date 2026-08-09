@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import OrderHero from "../components/OrderHero.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { fetchQuote } from "../lib/quote.js";
+import { buildCheckoutToken, submitCheckout } from "../lib/checkout.js";
 import iconBin from "../assets/cart/icon-bin.svg";
 import iconMinus from "../assets/cart/icon-minus.svg";
 import iconChevronDown from "../assets/cart/icon-chevron-down.svg";
@@ -50,6 +52,22 @@ const PICKUP_CONTACT_FIELDS = [
 
 const PICKUP_DATES = ["2 Aug", "9 Aug", "16 Aug", "23 Aug"];
 
+// The mobile pickup section (below) only ever shows this one location as
+// static text - there is no store selector yet, so this mirrors that same
+// string rather than inventing a second source of truth for it.
+const PICKUP_STORE_NAME = "Orange County Store";
+
+// Task 7's handoff redirects a failed checkout back to /cart?error=<code>.
+// Every code it can send is listed here so none of them render silently.
+const CHECKOUT_ERROR_MESSAGES = {
+  out_of_area: "Sorry, we don't deliver to that postcode yet. Try pickup, or a different address.",
+  below_minimum: "Your order is below the delivery minimum. Add a few more items to check out.",
+  unavailable: "Checkout is temporarily unavailable. Please try again in a moment.",
+  origin: "We couldn't verify that request. Please try checking out again.",
+  throttled: "Too many attempts. Please wait a moment and try again.",
+  coupon: "That coupon code didn't apply. Remove it or try a different code.",
+};
+
 const LABEL_TONE = {
   latte: "text-latte",
   muted: "text-[#949494]",
@@ -83,6 +101,8 @@ const INPUT_CLASSES =
 
 export default function Cart() {
   const cart = useCart();
+  const [params] = useSearchParams();
+  const checkoutErrorMessage = CHECKOUT_ERROR_MESSAGES[params.get("error")];
   const [mode, setMode] = useState("delivery");
   const [saveInfo, setSaveInfo] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -91,6 +111,11 @@ export default function Cart() {
   const [pickupTab, setPickupTab] = useState("date");
   const [deliveryFields, setDeliveryFields] = useState({});
   const [pickupFields, setPickupFields] = useState({});
+  // Closes the human double-click: flipped synchronously inside the click
+  // handler, before the form is even built, so a second click before
+  // navigation completes hits a disabled button rather than racing the
+  // first submission.
+  const [submitting, setSubmitting] = useState(false);
   // null means "no quote has landed yet" - distinct from a real quote that
   // happens to have blank totals (a failed fetch). Both render as PENDING,
   // but only this flag decides whether the block below is even trustworthy.
@@ -113,6 +138,48 @@ export default function Cart() {
   // reference even when nothing priced actually changed. Depending on the
   // array would re-quote forever against a rate-limited endpoint.
   const linesKey = cart.lines.map((l) => `${l.id}:${l.qty}`).join(",");
+
+  // Derived once per cart state, not once per click - both clicks of a
+  // double-click on an unchanged cart must carry the same token, or the
+  // server's "have I seen this token" guard never fires. Same dependency
+  // list as the quote effect below, for the same reason: depending on
+  // `cart.lines` itself would change on every quote (syncSnapshot creates a
+  // new array), producing a fresh token on every render.
+  const checkoutToken = useMemo(
+    () =>
+      buildCheckoutToken({
+        lines: cart.lines,
+        fulfilment: mode,
+        postcode,
+        coupon: appliedCoupon,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [linesKey, mode, postcode, appliedCoupon],
+  );
+
+  const handleCheckout = () => {
+    setSubmitting(true);
+    const isPickup = mode === "pickup";
+    submitCheckout({
+      lines: cart.lines,
+      fulfilment: mode,
+      token: checkoutToken,
+      coupon: appliedCoupon,
+      email: isPickup ? pickupFields.pickupEmail : deliveryFields.email,
+      phone: isPickup ? pickupFields.pickupPhone : deliveryFields.phone,
+      fullName: isPickup ? pickupFields.customerName : deliveryFields.fullName,
+      address1: deliveryFields.address1,
+      address2: deliveryFields.address2,
+      city: deliveryFields.city,
+      state: deliveryFields.state,
+      postcode: deliveryFields.zip,
+      pickupStore: PICKUP_STORE_NAME,
+      pickupDate: selectedDate ?? "",
+      // No time-slot picker exists in this plan yet (pickup scheduling is a
+      // later plan's scope) - sent empty rather than invented.
+      pickupSlot: "",
+    });
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -160,6 +227,15 @@ export default function Cart() {
   return (
     <main className="w-full bg-cream">
       <OrderHero mode={mode} step={mode === "delivery" ? 1 : null} />
+
+      {checkoutErrorMessage && (
+        <p
+          role="alert"
+          className="mx-auto w-full max-w-[1440px] px-[16px] pt-[16px] text-center font-parkinsans text-[13px] text-[#c80000] lg:px-[72px] lg:text-[16px]"
+        >
+          {checkoutErrorMessage}
+        </p>
+      )}
 
       {/* mobile-only switcher between the two designed Cart states (Delivery / Pickup) */}
       <div className="mx-auto flex w-full max-w-[1440px] justify-center gap-[8px] px-[16px] pt-[24px] lg:hidden">
@@ -437,7 +513,8 @@ export default function Cart() {
                 )}
                 <button
                   type="button"
-                  disabled={checkoutDisabled}
+                  onClick={handleCheckout}
+                  disabled={checkoutDisabled || submitting}
                   className="w-full cursor-pointer rounded-[100px] bg-cocoa p-[10px] font-parkinsans text-[16px] text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Proceed to Checkout

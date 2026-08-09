@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { CartProvider } from '../context/CartContext.jsx'
 import Cart from './Cart.jsx'
 import * as quoteLib from '../lib/quote.js'
+import * as checkoutLib from '../lib/checkout.js'
 
 const STORAGE_KEY = 'lilloaves:cart'
 
@@ -27,9 +28,9 @@ function makeQuote(overrides = {}) {
   }
 }
 
-const renderCart = () =>
+const renderCart = (route = '/cart') =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[route]}>
       <CartProvider>
         <Cart />
       </CartProvider>
@@ -229,5 +230,124 @@ describe('Contact and address form', () => {
     // Controlled inputs stay put across an unrelated re-render (e.g. a quote landing).
     await waitFor(() => expect(quoteLib.fetchQuote).toHaveBeenCalled())
     expect(email.value).toBe('baker@example.com')
+  })
+})
+
+describe('Proceed to Checkout', () => {
+  it('disables the button synchronously on click, before the form is built', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    renderCart()
+
+    const button = () => screen.getByText('Proceed to Checkout').closest('button')
+    await waitFor(() => expect(button().disabled).toBe(false))
+
+    fireEvent.click(button())
+
+    expect(button().disabled).toBe(true)
+  })
+
+  it('submits the memoized token, cart lines (ids/qty only) and delivery contact fields', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    const { container } = renderCart()
+
+    const button = () => screen.getByText('Proceed to Checkout').closest('button')
+    await waitFor(() => expect(button().disabled).toBe(false))
+
+    fireEvent.change(container.querySelector('input[name="email"]'), { target: { value: 'ada@example.com' } })
+    fireEvent.change(container.querySelector('input[name="fullName"]'), { target: { value: 'Ada Lovelace' } })
+
+    fireEvent.click(button())
+
+    expect(checkoutLib.submitCheckout).toHaveBeenCalledTimes(1)
+    const args = checkoutLib.submitCheckout.mock.calls[0][0]
+    expect(args.fulfilment).toBe('delivery')
+    expect(args.lines.map((l) => ({ id: l.id, qty: l.qty }))).toEqual([{ id: 1, qty: 2 }])
+    expect(args.email).toBe('ada@example.com')
+    expect(args.fullName).toBe('Ada Lovelace')
+    expect(typeof args.token).toBe('string')
+    expect(args.token.length).toBeGreaterThan(0)
+  })
+
+  it('submits pickup contact and store/date fields, not address fields, in pickup mode', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    const { container } = renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+    fireEvent.change(container.querySelector('input[name="customerName"]'), {
+      target: { value: 'Ada Lovelace' },
+    })
+    fireEvent.change(container.querySelector('input[name="pickupPhone"]'), {
+      target: { value: '5551234567' },
+    })
+    fireEvent.click(screen.getByText('9 Aug'))
+
+    const button = () => screen.getByText('Proceed to Checkout').closest('button')
+    await waitFor(() => expect(button().disabled).toBe(false))
+    fireEvent.click(button())
+
+    const args = checkoutLib.submitCheckout.mock.calls[0][0]
+    expect(args.fulfilment).toBe('pickup')
+    expect(args.fullName).toBe('Ada Lovelace')
+    expect(args.phone).toBe('5551234567')
+    expect(args.pickupStore).toBe('Orange County Store')
+    expect(args.pickupDate).toBe('9 Aug')
+  })
+
+  it('recomputes the token from cart state (buildCheckoutToken), not a fresh value per click', async () => {
+    // The token itself must be a pure function of {lines, fulfilment,
+    // postcode, coupon} - see checkout.test.js for exhaustive same/changed
+    // coverage. Here: confirm Cart.jsx actually passes the memoized value
+    // through rather than, say, Math.random() or Date.now() in the handler.
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    renderCart()
+
+    const button = () => screen.getByText('Proceed to Checkout').closest('button')
+    await waitFor(() => expect(button().disabled).toBe(false))
+    fireEvent.click(button())
+
+    const sentToken = checkoutLib.submitCheckout.mock.calls[0][0].token
+    const expectedToken = checkoutLib.buildCheckoutToken({
+      lines: [{ id: 1, qty: 2 }],
+      fulfilment: 'delivery',
+      postcode: '',
+      coupon: '',
+    })
+    expect(sentToken).toBe(expectedToken)
+  })
+})
+
+describe('Checkout error banner', () => {
+  it('renders a message for every documented ?error= code', async () => {
+    const cases = {
+      out_of_area: /deliver to that postcode/i,
+      below_minimum: /delivery minimum/i,
+      unavailable: /temporarily unavailable/i,
+      origin: /couldn't verify/i,
+      throttled: /too many attempts/i,
+      coupon: /coupon code/i,
+    }
+
+    for (const [code, expected] of Object.entries(cases)) {
+      vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+      const { unmount } = renderCart(`/cart?error=${code}`)
+      expect((await screen.findByRole('alert')).textContent).toMatch(expected)
+      unmount()
+      vi.restoreAllMocks()
+    }
+  })
+
+  it('renders no error banner when there is no ?error= param', async () => {
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart('/cart')
+
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })
