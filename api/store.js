@@ -63,6 +63,15 @@ export default async function handler(req, res) {
     return handleQuote(req, res)
   }
 
+  // Also lives on the lilloaves/v1 namespace, like /quote, but is GET and
+  // public (no secret) - a store's name, address and generated slot list
+  // isn't sensitive, and the client needs it before it has ever formed a
+  // cart. Handled before the wc/store/v1 allowlist below since it isn't on
+  // that namespace at all.
+  if (req.method === 'GET' && endpoint === 'pickup') {
+    return handlePickup(req, res)
+  }
+
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET')
     return res.status(405).json({ error: 'Method not allowed' })
@@ -146,6 +155,35 @@ async function handleQuote(req, res) {
     return res.status(200).json(data)
   } catch (error) {
     console.error('store proxy fetch failed', error)
+    return res.status(502).json({ error: 'Upstream unreachable' })
+  }
+}
+
+/**
+ * Stores/collection dates/time slots from WooCommerce > Fulfilment. Read-only
+ * and identical for every customer, so it's cached at the edge exactly like
+ * the GET paths above - unlike /quote, which is a live per-cart total and
+ * must never be cached.
+ */
+async function handlePickup(req, res) {
+  const base = process.env.WP_STORE_URL
+  if (!base) return res.status(500).json({ error: 'WP_STORE_URL is not set' })
+
+  try {
+    const response = await fetch(`${base}/wp-json/lilloaves/v1/pickup`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!response.ok) {
+      setCache(res, 10, 0)
+      return res.status(502).json({ error: 'Upstream error', status: response.status })
+    }
+    const data = await response.json()
+    setCache(res, 60, 600)
+    return res.status(200).json(data)
+  } catch (error) {
+    console.error('store proxy fetch failed', error)
+    setCache(res, 10, 0)
     return res.status(502).json({ error: 'Upstream unreachable' })
   }
 }

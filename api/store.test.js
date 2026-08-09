@@ -219,3 +219,67 @@ describe('POST /quote', () => {
     expect(options.signal).toBeInstanceOf(AbortSignal)
   })
 })
+
+describe('GET /pickup', () => {
+  const pickupBody = { stores: [{ id: 'orange-county-store', name: 'Orange County Store' }] }
+
+  it('forwards to the lilloaves/v1 namespace, not wc/store/v1', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => pickupBody })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'pickup' }, headers: {} }, res)
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://wp.example.com/wp-json/lilloaves/v1/pickup',
+      expect.anything(),
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toEqual(pickupBody)
+  })
+
+  it('does not require or send a shared secret - the endpoint is public', async () => {
+    delete process.env.LL_BRIDGE_SECRET
+    global.fetch.mockResolvedValue({ ok: true, json: async () => pickupBody })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'pickup' }, headers: {} }, res)
+
+    expect(res.statusCode).toBe(200)
+    const options = global.fetch.mock.calls[0][1]
+    expect(options.headers?.['X-LL-Secret']).toBeUndefined()
+  })
+
+  it('caches it at the edge like the other read-only endpoints', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => pickupBody })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'pickup' }, headers: {} }, res)
+
+    expect(res.headers['vercel-cdn-cache-control']).toBe(
+      'public, s-maxage=60, stale-while-revalidate=600',
+    )
+  })
+
+  it('rejects POST to /pickup', async () => {
+    const res = mockRes()
+    await handler({ method: 'POST', query: { endpoint: 'pickup' }, headers: {}, body: {} }, res)
+
+    expect(res.statusCode).toBe(405)
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('returns 502 when upstream is unreachable', async () => {
+    global.fetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'pickup' }, headers: {} }, res)
+
+    expect(res.statusCode).toBe(502)
+    consoleSpy.mockRestore()
+  })
+
+  it('returns 502 when upstream errors', async () => {
+    global.fetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'pickup' }, headers: {} }, res)
+
+    expect(res.statusCode).toBe(502)
+  })
+})
