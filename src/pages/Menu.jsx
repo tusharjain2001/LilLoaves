@@ -557,6 +557,15 @@ export default function Menu() {
               </div>
               <button
                 type="button"
+                aria-label="Add Lunch Box to Cart"
+                onClick={() => {
+                  if (!lunchBoxProduct) return;
+                  cart.add(lunchBoxProduct, lunchboxQty, {
+                    bread: selectedBread,
+                    cracker: selectedCracker,
+                    dessert: selectedDessert,
+                  });
+                }}
                 className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[24px] py-[16px] font-parkinsans text-[16px] text-white lg:grid lg:h-[54px] lg:w-[170.53px] lg:place-items-center lg:rounded-[96.35px] lg:px-0 lg:py-0"
               >
                 Add to Cart

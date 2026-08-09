@@ -246,3 +246,77 @@ describe('Menu lunch box price', () => {
     expect(screen.queryByText('$33.50')).toBeNull()
   })
 })
+
+describe('Menu lunch box add to cart', () => {
+  const LUNCH_BOX_PRODUCT = product({
+    id: 15,
+    slug: 'lunch-box',
+    name: 'Lunch Box',
+    priceFormatted: '$39.00',
+    categories: [],
+  })
+
+  it('adds product 15 to the cart carrying the selected bread/cracker/dessert options', async () => {
+    woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread'
+        ? [product(), product({ id: 16, slug: 'japanese-milk-bread', name: 'Japanese Milk Bread' })]
+        : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByAltText('Selected')).toBeTruthy())
+
+    fireEvent.click(screen.getByLabelText('Add Lunch Box to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      const line = stored.find((l) => l.id === 15)
+      expect(line).toBeTruthy()
+      expect(line.qty).toBe(1)
+      expect(line.options).toEqual({ bread: 'Sour Dough', cracker: '', dessert: '' })
+    })
+  })
+
+  it('respects the lunch box quantity stepper when adding', async () => {
+    woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
+    renderMenu()
+    await waitFor(() => expect(woo.fetchProductBySlug).toHaveBeenCalledWith('lunch-box'))
+
+    fireEvent.click(screen.getByText('+'))
+    fireEvent.click(screen.getByLabelText('Add Lunch Box to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15).qty).toBe(2)
+    })
+  })
+
+  it('adds without crashing when the cracker and dessert columns have no options available yet', async () => {
+    // Default beforeEach mocks fetchByTagSlug to resolve [] for every tag,
+    // so bread/cracker/dessert all have no selection - this is today's real
+    // catalogue state (only lunchbox-bread is tagged).
+    woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
+    renderMenu()
+    await waitFor(() => expect(woo.fetchProductBySlug).toHaveBeenCalledWith('lunch-box'))
+
+    fireEvent.click(screen.getByLabelText('Add Lunch Box to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15).options).toEqual({ bread: '', cracker: '', dessert: '' })
+    })
+  })
+
+  it('does nothing when clicked before the Lunch Box product has loaded', async () => {
+    woo.fetchProductBySlug.mockResolvedValue(null)
+    renderMenu()
+    await waitFor(() => expect(woo.fetchProductBySlug).toHaveBeenCalledWith('lunch-box'))
+
+    fireEvent.click(screen.getByLabelText('Add Lunch Box to Cart'))
+
+    // CartProvider persists its (empty) initial state on mount regardless,
+    // so assert on cart contents rather than localStorage presence.
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+    expect(stored.find((l) => l.id === 15)).toBeUndefined()
+  })
+})
