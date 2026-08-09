@@ -214,3 +214,33 @@ describe('fetchProductBySlug', () => {
     expect(await fetchProductBySlug('definitely-not-a-real-product')).toBeNull()
   })
 })
+
+describe('HTML-encoded names from WooCommerce', () => {
+  // WooCommerce encodes apostrophes as &#8217;. React renders text literally,
+  // so an undecoded name shows the raw entity on the page. The bakery types
+  // apostrophes constantly — "Doc's Crackers", "Chief's Crackers".
+  it('decodes an apostrophe in a product name', () => {
+    const p = normalizeProduct({ ...RAW, name: 'Doc&#8217;s Crackers (5oz)' })
+    expect(p.name).toBe('Doc’s Crackers (5oz)')
+  })
+
+  it('decodes an ampersand', () => {
+    const p = normalizeProduct({ ...RAW, name: 'Bread &amp; Butter' })
+    expect(p.name).toBe('Bread & Butter')
+  })
+
+  it('decodes category and tag names too', () => {
+    const p = normalizeProduct({
+      ...RAW,
+      categories: [{ id: 1, name: 'Doc&#8217;s Picks', slug: 'docs-picks' }],
+      tags: [{ id: 2, name: 'Chief&#8217;s', slug: 'chiefs' }],
+    })
+    expect(p.categories[0].name).toBe('Doc’s Picks')
+    expect(p.tags[0].name).toBe('Chief’s')
+  })
+
+  it('leaves a plain name untouched', () => {
+    const p = normalizeProduct({ ...RAW, name: 'Sour Dough' })
+    expect(p.name).toBe('Sour Dough')
+  })
+})

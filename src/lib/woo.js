@@ -26,6 +26,18 @@ function toPlainText(html) {
   return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim()
 }
 
+/**
+ * WooCommerce returns product and term names HTML-encoded — an apostrophe
+ * arrives as `&#8217;`, so "Doc's Crackers" comes through as
+ * "Doc&#8217;s Crackers". React renders text literally, so that entity would
+ * appear on the page exactly as written. The bakery types apostrophes
+ * constantly, so decode once here at the boundary rather than in each
+ * component.
+ */
+function decodeName(value) {
+  return toPlainText(value ?? '')
+}
+
 function cacheKey(path, params) {
   return `woo:${path}?${new URLSearchParams(params).toString()}`
 }
@@ -47,7 +59,7 @@ export function normalizeProduct(raw) {
   return {
     id: raw.id,
     slug: raw.slug,
-    name: raw.name,
+    name: decodeName(raw.name),
     type: raw.type,
     description: raw.description ?? '',
     shortDescription: raw.short_description ?? '',
@@ -69,10 +81,10 @@ export function normalizeProduct(raw) {
     })),
     categories: (raw.categories ?? []).map((c) => ({
       id: c.id,
-      name: c.name,
+      name: decodeName(c.name),
       slug: c.slug,
     })),
-    tags: (raw.tags ?? []).map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
+    tags: (raw.tags ?? []).map((t) => ({ id: t.id, name: decodeName(t.name), slug: t.slug })),
   }
 }
 
@@ -97,7 +109,7 @@ export async function fetchProducts(params = {}) {
 export async function fetchCategories() {
   try {
     const raw = await get('products/categories', { per_page: 100 })
-    return raw.map((c) => ({ id: c.id, name: c.name, slug: c.slug, count: c.count }))
+    return raw.map((c) => ({ id: c.id, name: decodeName(c.name), slug: c.slug, count: c.count }))
   } catch {
     // Derive categories from the snapshot so the menu tabs still render
     // during an outage instead of leaving activeCategory stuck at null.
@@ -106,7 +118,7 @@ export async function fetchCategories() {
       for (const c of raw.categories ?? []) {
         const existing = bySlug.get(c.slug)
         if (existing) existing.count += 1
-        else bySlug.set(c.slug, { id: c.id, name: c.name, slug: c.slug, count: 1 })
+        else bySlug.set(c.slug, { id: c.id, name: decodeName(c.name), slug: c.slug, count: 1 })
       }
     }
     return [...bySlug.values()]
