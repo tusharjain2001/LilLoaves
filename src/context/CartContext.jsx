@@ -16,6 +16,15 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 const STORAGE_KEY = 'lilloaves:cart'
 const CartContext = createContext(null)
 
+// Two lines of the same product id are the same line only if their options
+// also match (e.g. two Lunch Boxes with different bread/cracker/dessert
+// picks must stay separate). `Object.keys(...).sort()` as the JSON.stringify
+// replacer pins key order so two equal-but-differently-ordered option
+// objects still hash the same.
+function lineKey(id, options) {
+  return options ? `${id}:${JSON.stringify(options, Object.keys(options).sort())}` : id
+}
+
 function isValidLine(line) {
   return (
     line &&
@@ -48,11 +57,12 @@ export function CartProvider({ children }) {
   }, [lines])
 
   const value = useMemo(() => {
-    const add = (product, qty = 1) =>
+    const add = (product, qty = 1, options) =>
       setLines((prev) => {
-        const existing = prev.find((l) => l.id === product.id)
+        const key = lineKey(product.id, options)
+        const existing = prev.find((l) => lineKey(l.id, l.options) === key)
         if (existing) {
-          return prev.map((l) => (l.id === product.id ? { ...l, qty: l.qty + qty } : l))
+          return prev.map((l) => (lineKey(l.id, l.options) === key ? { ...l, qty: l.qty + qty } : l))
         }
         return [
           ...prev,
@@ -62,21 +72,28 @@ export function CartProvider({ children }) {
             name: product.name,
             image: product.images?.[0]?.src ?? '',
             priceFormatted: product.priceFormatted,
+            ...(options ? { options } : {}),
           },
         ]
       })
 
-    const setQty = (id, qty) =>
-      setLines((prev) =>
-        qty <= 0 ? prev.filter((l) => l.id !== id) : prev.map((l) => (l.id === id ? { ...l, qty } : l)),
-      )
+    const setQty = (id, qty, options) =>
+      setLines((prev) => {
+        const key = lineKey(id, options)
+        return qty <= 0
+          ? prev.filter((l) => lineKey(l.id, l.options) !== key)
+          : prev.map((l) => (lineKey(l.id, l.options) === key ? { ...l, qty } : l))
+      })
 
     const syncSnapshot = (id, priceFormatted) =>
       setLines((prev) =>
         prev.map((l) => (l.id === id ? { ...l, priceFormatted } : l)),
       )
 
-    const remove = (id) => setLines((prev) => prev.filter((l) => l.id !== id))
+    const remove = (id, options) => {
+      const key = lineKey(id, options)
+      setLines((prev) => prev.filter((l) => lineKey(l.id, l.options) !== key))
+    }
     const clear = () => setLines([])
     const count = lines.reduce((sum, l) => sum + l.qty, 0)
 
