@@ -224,6 +224,81 @@ export default function Cart() {
   ];
   const checkoutDisabled = cart.isEmpty || !hasQuoted || quote.errors.length > 0;
 
+  // The order summary + coupon + Proceed to Checkout markup, defined once so
+  // delivery and pickup mode share the exact same JSX rather than each
+  // owning a competing copy of the checkout button. Only one of the two mode
+  // blocks below is ever mounted at a time, so this only ever renders once.
+  const orderSummaryColumn = (
+    <div className="flex flex-col gap-[16px] lg:gap-[24px]">
+      <div className="flex w-full flex-col gap-[64px] rounded-[16px] border border-[#d8cbbe] bg-[#f7f5f1] px-[20px] py-[24px] lg:px-[28px] lg:py-[39px]">
+        <div className="flex w-full flex-col gap-[8px]">
+          <div className="flex w-full flex-col gap-[24px]">
+            <p className="font-ligema text-[13.3px] uppercase text-cocoa lg:text-[17.1px]">
+              Order Summary
+            </p>
+            {!cart.isEmpty && (
+              <div className="flex w-full flex-col gap-[18px]">
+                <div className="h-px w-full bg-[#d9d9d9]" />
+                <div className="flex w-full items-center justify-between font-parkinsans text-cocoa">
+                  <p className="text-[16px]">Items</p>
+                  <p className="text-[20px]">{cart.count}</p>
+                </div>
+                {summaryRows.map((row) => (
+                  <div
+                    key={row.key}
+                    className="flex w-full items-center justify-between font-parkinsans text-cocoa"
+                  >
+                    <p className="text-[16px]">{row.label}</p>
+                    <p className="text-[20px]">{row.value}</p>
+                  </div>
+                ))}
+                <div className="h-px w-full bg-[#d9d9d9]" />
+              </div>
+            )}
+          </div>
+          {!cart.isEmpty && (
+            <div className="flex w-full items-center justify-between font-parkinsans font-medium text-cocoa">
+              <p className="text-[20px]">Total</p>
+              <p className="text-[24px]">{quote?.totalFormatted || PENDING}</p>
+            </div>
+          )}
+        </div>
+        <div className="flex w-full flex-col gap-[12px]">
+          {hasQuoted && quote.errors.length > 0 && (
+            <p role="alert" className="font-parkinsans text-[13px] text-[#c80000]">
+              {quote.errors.join(" ")}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleCheckout}
+            disabled={checkoutDisabled || submitting}
+            className="w-full cursor-pointer rounded-[100px] bg-cocoa p-[10px] font-parkinsans text-[16px] text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Proceed to Checkout
+          </button>
+        </div>
+      </div>
+
+      <div className="flex h-[75px] w-full items-center justify-center rounded-[12px] border border-[#d8cbbe] bg-[#f7f5f1] lg:h-[85px] lg:rounded-[16px]">
+        <input
+          type="text"
+          value={promoCode}
+          onChange={(e) => setPromoCode(e.target.value)}
+          placeholder="Enter Coupon Code"
+          className="h-[39px] flex-1 rounded-l-[12px] border-y border-l border-[#e3e3e3] bg-[#fbfbf8] px-[10px] font-parkinsans text-[13px] text-clay outline-none lg:h-[44px] lg:rounded-l-[16px] lg:px-[10px] lg:text-[16px]"
+        />
+        <button
+          type="button"
+          onClick={() => setAppliedCoupon(promoCode)}
+          className="h-[39px] shrink-0 cursor-pointer rounded-r-[12px] bg-clay px-[14px] font-parkinsans text-[13px] font-medium text-white lg:h-[44px] lg:rounded-r-[16px] lg:px-[10px] lg:text-[16px]"
+        >
+          Apply Coupon
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <main className="w-full bg-cream">
       <OrderHero mode={mode} step={mode === "delivery" ? 1 : null} />
@@ -259,12 +334,14 @@ export default function Cart() {
         </button>
       </div>
 
-      {/* ===================== DELIVERY STATE ===================== */}
-      <div
-        className={`mx-auto w-full max-w-[1440px] px-[16px] pb-[40px] pt-[16px] lg:px-[72px] lg:pb-[96px] lg:pt-[64px] ${
-          mode === "pickup" ? "hidden lg:block" : "block"
-        }`}
-      >
+      {/* ===================== DELIVERY STATE =====================
+          Mounted only in delivery mode - real conditional rendering, not a
+          CSS class, so pickup mode never carries this (and its checkout
+          button) into the DOM at any breakpoint. Classes below are
+          unchanged from before: this is exactly what rendered when
+          mode === "delivery" previously. */}
+      {mode === "delivery" && (
+      <div className="mx-auto w-full max-w-[1440px] px-[16px] pb-[40px] pt-[16px] lg:px-[72px] lg:pb-[96px] lg:pt-[64px]">
         <div className="flex flex-col gap-[16px] lg:grid lg:grid-cols-[857fr_420fr] lg:items-start lg:gap-x-[16px]">
           {/* column 1: cart items + delivery information */}
           <div className="flex flex-col gap-[16px] lg:gap-[24px]">
@@ -471,83 +548,20 @@ export default function Cart() {
           </div>
 
           {/* column 2: order summary + coupon */}
-          <div className="flex flex-col gap-[16px] lg:gap-[24px]">
-            <div className="flex w-full flex-col gap-[64px] rounded-[16px] border border-[#d8cbbe] bg-[#f7f5f1] px-[20px] py-[24px] lg:px-[28px] lg:py-[39px]">
-              <div className="flex w-full flex-col gap-[8px]">
-                <div className="flex w-full flex-col gap-[24px]">
-                  <p className="font-ligema text-[13.3px] uppercase text-cocoa lg:text-[17.1px]">
-                    Order Summary
-                  </p>
-                  {!cart.isEmpty && (
-                    <div className="flex w-full flex-col gap-[18px]">
-                      <div className="h-px w-full bg-[#d9d9d9]" />
-                      <div className="flex w-full items-center justify-between font-parkinsans text-cocoa">
-                        <p className="text-[16px]">Items</p>
-                        <p className="text-[20px]">{cart.count}</p>
-                      </div>
-                      {summaryRows.map((row) => (
-                        <div
-                          key={row.key}
-                          className="flex w-full items-center justify-between font-parkinsans text-cocoa"
-                        >
-                          <p className="text-[16px]">{row.label}</p>
-                          <p className="text-[20px]">{row.value}</p>
-                        </div>
-                      ))}
-                      <div className="h-px w-full bg-[#d9d9d9]" />
-                    </div>
-                  )}
-                </div>
-                {!cart.isEmpty && (
-                  <div className="flex w-full items-center justify-between font-parkinsans font-medium text-cocoa">
-                    <p className="text-[20px]">Total</p>
-                    <p className="text-[24px]">{quote?.totalFormatted || PENDING}</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex w-full flex-col gap-[12px]">
-                {hasQuoted && quote.errors.length > 0 && (
-                  <p role="alert" className="font-parkinsans text-[13px] text-[#c80000]">
-                    {quote.errors.join(" ")}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={handleCheckout}
-                  disabled={checkoutDisabled || submitting}
-                  className="w-full cursor-pointer rounded-[100px] bg-cocoa p-[10px] font-parkinsans text-[16px] text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Proceed to Checkout
-                </button>
-              </div>
-            </div>
-
-            <div className="flex h-[75px] w-full items-center justify-center rounded-[12px] border border-[#d8cbbe] bg-[#f7f5f1] lg:h-[85px] lg:rounded-[16px]">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                placeholder="Enter Coupon Code"
-                className="h-[39px] flex-1 rounded-l-[12px] border-y border-l border-[#e3e3e3] bg-[#fbfbf8] px-[10px] font-parkinsans text-[13px] text-clay outline-none lg:h-[44px] lg:rounded-l-[16px] lg:px-[10px] lg:text-[16px]"
-              />
-              <button
-                type="button"
-                onClick={() => setAppliedCoupon(promoCode)}
-                className="h-[39px] shrink-0 cursor-pointer rounded-r-[12px] bg-clay px-[14px] font-parkinsans text-[13px] font-medium text-white lg:h-[44px] lg:rounded-r-[16px] lg:px-[10px] lg:text-[16px]"
-              >
-                Apply Coupon
-              </button>
-            </div>
-          </div>
+          {orderSummaryColumn}
         </div>
       </div>
+      )}
 
-      {/* ===================== PICKUP STATE (mobile only design) ===================== */}
-      <div
-        className={`w-full lg:hidden ${
-          mode === "pickup" ? "flex flex-col" : "hidden"
-        }`}
-      >
+      {/* ===================== PICKUP STATE =====================
+          Same real-conditional-mount treatment as delivery above, and no
+          longer forced lg:hidden - Figma never drew a desktop pickup layout,
+          so this mobile-designed content is reused as-is at the lg
+          breakpoint (the sanctioned exception) rather than leaving desktop
+          pickup customers with the delivery form. The reused order summary
+          + checkout button below is what makes checkout reachable here. */}
+      {mode === "pickup" && (
+      <div className="flex w-full flex-col lg:mx-auto lg:max-w-[600px]">
         {/* Pick up from <store> */}
         <section className="relative w-full overflow-hidden bg-rose py-[26px]">
           <img
@@ -685,8 +699,13 @@ export default function Cart() {
               </div>
             </div>
           </div>
+
+          {/* order summary + coupon - reused from delivery mode; this is the
+              only Proceed to Checkout button rendered while mode is pickup */}
+          {orderSummaryColumn}
         </div>
       </div>
+      )}
     </main>
   );
 }

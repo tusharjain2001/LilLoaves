@@ -324,6 +324,58 @@ describe('Proceed to Checkout', () => {
   })
 })
 
+describe('Delivery/pickup blocks are mutually exclusive in the DOM (not just CSS-hidden)', () => {
+  // Both mode blocks used to be permanently mounted with only Tailwind
+  // breakpoint classes toggling visibility - which is invisible to jsdom and
+  // is exactly why a mobile customer choosing pickup could not check out
+  // (the only Proceed to Checkout button lived in the CSS-hidden delivery
+  // block). These assert real conditional mounting instead.
+  it('delivery mode does not mount pickup-only fields, and pickup mode does not mount delivery-only fields', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    const { container } = renderCart()
+
+    expect(container.querySelector('input[name="customerName"]')).toBeNull()
+    expect(container.querySelector('input[name="address1"]')).not.toBeNull()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+
+    expect(container.querySelector('input[name="address1"]')).toBeNull()
+    expect(container.querySelector('input[name="customerName"]')).not.toBeNull()
+  })
+
+  it('there is exactly one Proceed to Checkout button on the page, in either mode', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart()
+
+    expect(screen.getAllByText('Proceed to Checkout')).toHaveLength(1)
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+
+    expect(screen.getAllByText('Proceed to Checkout')).toHaveLength(1)
+  })
+
+  it('pickup mode renders the reused order summary and a working, non-disabled checkout button alongside the pickup fields once quoted', async () => {
+    seedCart([MUFFIN])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    vi.spyOn(checkoutLib, 'submitCheckout').mockImplementation(() => {})
+    const { container } = renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+
+    expect(container.querySelector('input[name="customerName"]')).not.toBeNull()
+    expect(screen.getByText('Order Summary')).toBeTruthy()
+
+    const button = () => screen.getByText('Proceed to Checkout').closest('button')
+    await waitFor(() => expect(button().disabled).toBe(false))
+    fireEvent.click(button())
+
+    expect(checkoutLib.submitCheckout).toHaveBeenCalledTimes(1)
+    expect(checkoutLib.submitCheckout.mock.calls[0][0].fulfilment).toBe('pickup')
+  })
+})
+
 describe('Checkout error banner', () => {
   it('renders a message for every documented ?error= code', async () => {
     const cases = {
