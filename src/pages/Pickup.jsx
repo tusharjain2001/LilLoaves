@@ -19,6 +19,15 @@ const FIELD_CLASSES =
 const PILL_CLASSES =
   "w-[74px] shrink-0 whitespace-nowrap rounded-[10px] px-[10px] py-[5px] font-parkinsans text-[12px] transition-colors lg:w-[119px] lg:rounded-[16px] lg:px-[16px] lg:py-[8px] lg:text-[20px]";
 
+// Same pill look as PILL_CLASSES (identical radius/padding/font/colour
+// tokens - nothing new invented), minus the fixed width: that width was
+// sized in Figma for a short date like "9 Aug", and a real slot label like
+// "2:00 PM - 2:30 PM" (the backend always sends a start-end range, never a
+// single time) doesn't fit an 119px pill. Sized to its own content instead,
+// same as the equivalent slot pills on Cart.jsx.
+const SLOT_PILL_CLASSES =
+  "whitespace-nowrap rounded-[10px] px-[10px] py-[5px] font-parkinsans text-[12px] transition-colors lg:rounded-[16px] lg:px-[16px] lg:py-[8px] lg:text-[20px]";
+
 const INITIAL_FORM = { name: "", email: "", phone: "" };
 
 function Asterisk() {
@@ -251,7 +260,7 @@ export default function Pickup() {
                 Times are displayed in the store&rsquo;s local timezone.
               </p>
             </div>
-            <div className="grid grid-cols-4 gap-[9px] lg:gap-[14px]">
+            <div className="flex flex-wrap items-center justify-center gap-[9px] lg:gap-[14px]">
               {pickupSlots.map((s) => {
                 const value = slotValue(s);
                 return (
@@ -259,7 +268,7 @@ export default function Pickup() {
                     key={value}
                     type="button"
                     onClick={() => setSelectedTime(value)}
-                    className={`${PILL_CLASSES} ${
+                    className={`${SLOT_PILL_CLASSES} ${
                       effectiveSlot === value
                         ? "bg-taupe text-white"
                         : "bg-[#d8cbbe] text-cocoa"
