@@ -120,6 +120,26 @@ describe('submitCheckout', () => {
     const payload = [...form.querySelectorAll('input')].map((i) => i.value).join(' ')
     expect(payload).not.toMatch(/Sour Dough|a\.jpg|21\.13/)
   })
+
+  it('carries a line-level options object (e.g. Lunch Box picks) in the items payload', () => {
+    const linesWithOptions = [
+      {
+        id: 15,
+        qty: 1,
+        name: 'Lunch Box',
+        priceFormatted: '$39.00',
+        options: { bread: 'Sour Dough', cracker: '', dessert: '' },
+      },
+      { id: 13, qty: 2, name: 'Sour Dough', image: 'a.jpg', priceFormatted: '$21.13' },
+    ]
+    submitCheckout({ ...DELIVERY_ARGS, lines: linesWithOptions })
+    const form = getForm()
+
+    expect(JSON.parse(fieldValue(form, 'items'))).toEqual([
+      { id: 15, qty: 1, options: { bread: 'Sour Dough', cracker: '', dessert: '' } },
+      { id: 13, qty: 2 },
+    ])
+  })
 })
 
 describe('buildCheckoutToken', () => {

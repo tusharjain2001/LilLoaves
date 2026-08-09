@@ -61,7 +61,13 @@ export function submitCheckout({
 
   const fields = {
     action: HANDOFF_ACTION,
-    items: JSON.stringify(lines.map((l) => ({ id: l.id, qty: l.qty }))),
+    // The WordPress handler (ll_handoff()) currently reads only `id` and
+    // `qty` per item and will silently ignore `options` until it's taught to
+    // store it as order line-item meta - it is sent anyway so that follow-up
+    // work has real data to read.
+    items: JSON.stringify(
+      lines.map((l) => (l.options ? { id: l.id, qty: l.qty, options: l.options } : { id: l.id, qty: l.qty })),
+    ),
     fulfilment,
     token,
     coupon: coupon || '',
