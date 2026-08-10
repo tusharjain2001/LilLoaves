@@ -281,6 +281,103 @@ export default function Cart() {
     mode !== "pickup" || (pickupAvailable && Boolean(effectiveDate) && Boolean(effectiveSlot));
   const checkoutDisabled = cart.isEmpty || !hasQuoted || quote.errors.length > 0 || !pickupReady;
 
+  // The Cart Items panel (line items, quantity steppers, remove bin),
+  // defined once so delivery and pickup mode share the exact same JSX -
+  // same precedent as orderSummaryColumn below. Without this, a collection
+  // customer saw a total but never what they were buying, and couldn't
+  // change a quantity or remove anything without switching to delivery mode.
+  const cartItemsPanel = (
+    <div className="flex w-full flex-col gap-[12px] rounded-[10px] border border-[#d8cbbe] bg-[#f7f5f1] p-[12px] lg:gap-[19px] lg:rounded-[16px] lg:p-[16px]">
+      <div className="flex h-[38px] items-center justify-between rounded-[7px] bg-[#d8cbbe] px-[13px] font-parkinsans text-[16px] font-medium text-cocoa lg:h-[61px] lg:rounded-[16px] lg:px-[30px] lg:text-[20px]">
+        <p>Cart Items ({cart.count})</p>
+        <button
+          type="button"
+          onClick={() => cart.clear()}
+          className="cursor-pointer font-parkinsans text-[14px] underline lg:text-[20px]"
+        >
+          Clear Cart
+        </button>
+      </div>
+
+      {cart.isEmpty ? (
+        <p className="py-[12px] text-center font-parkinsans text-[14px] text-cocoa lg:text-[18px]">
+          Your cart is empty.
+        </p>
+      ) : (
+        cart.lines.map((line) => (
+          <div
+            key={`${line.id}:${line.options ? Object.values(line.options).join('|') : ''}`}
+            className="flex w-full items-center gap-[15px] lg:gap-[17px]"
+          >
+            <img
+              src={line.image || undefined}
+              alt={line.name}
+              className="h-[147px] w-[177px] shrink-0 rounded-[3px] object-cover lg:h-[122px] lg:w-[148px] lg:rounded-[8px]"
+            />
+            <div className="flex flex-1 flex-col items-start gap-[13px] lg:flex-row lg:items-center lg:justify-between lg:gap-[67px]">
+              <div className="flex flex-col gap-[13px] lg:flex-row lg:items-center lg:gap-[84px]">
+                <div className="flex flex-col gap-[2px] lg:gap-[3px]">
+                  <p className="font-parkinsans text-[16px] text-cocoa lg:text-[24px]">
+                    {line.name}
+                  </p>
+                  <p className="font-parkinsans text-[20px] text-cocoa">
+                    {line.priceFormatted}
+                  </p>
+                  {optionSummary(line.options) && (
+                    <p className={`font-parkinsans text-[12px] ${LABEL_TONE.muted}`}>
+                      {optionSummary(line.options)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex w-[80px] shrink-0 items-center justify-center gap-[17px] rounded-full border-[1.3px] border-taupe/30 px-[10px] py-[5px] font-parkinsans font-semibold text-taupe/80 lg:w-[124px] lg:gap-[27px] lg:border-2 lg:px-[15px] lg:py-[8px]">
+                  <button
+                    type="button"
+                    aria-label={`Decrease ${line.name} quantity`}
+                    onClick={() => decrement(line)}
+                    className="flex cursor-pointer items-center justify-center"
+                  >
+                    <img
+                      src={iconMinus}
+                      alt=""
+                      className="h-[10px] w-[8px] lg:hidden"
+                    />
+                    <span className="hidden text-[20px] lg:inline">
+                      &minus;
+                    </span>
+                  </button>
+                  <span className="text-[15px] lg:text-[20px]">
+                    {line.qty}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Increase ${line.name} quantity`}
+                    onClick={() => increment(line)}
+                    className="cursor-pointer text-[14px] lg:text-[20px]"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div className="hidden items-center gap-[35px] lg:flex">
+                <p className="font-parkinsans text-[24px] text-cocoa">
+                  {quoteLineTotals.get(line.id) || PENDING}
+                </p>
+                <button
+                  type="button"
+                  aria-label={`Remove ${line.name} from cart`}
+                  onClick={() => cart.remove(line.id, line.options)}
+                  className="cursor-pointer"
+                >
+                  <img src={iconBin} alt="" className="size-[30px]" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
   // The order summary + coupon + Proceed to Checkout markup, defined once so
   // delivery and pickup mode share the exact same JSX rather than each
   // owning a competing copy of the checkout button. Only one of the two mode
@@ -402,96 +499,8 @@ export default function Cart() {
         <div className="flex flex-col gap-[16px] lg:grid lg:grid-cols-[857fr_420fr] lg:items-start lg:gap-x-[16px]">
           {/* column 1: cart items + delivery information */}
           <div className="flex flex-col gap-[16px] lg:gap-[24px]">
-            {/* Cart Items panel */}
-            <div className="flex w-full flex-col gap-[12px] rounded-[10px] border border-[#d8cbbe] bg-[#f7f5f1] p-[12px] lg:gap-[19px] lg:rounded-[16px] lg:p-[16px]">
-              <div className="flex h-[38px] items-center justify-between rounded-[7px] bg-[#d8cbbe] px-[13px] font-parkinsans text-[16px] font-medium text-cocoa lg:h-[61px] lg:rounded-[16px] lg:px-[30px] lg:text-[20px]">
-                <p>Cart Items ({cart.count})</p>
-                <button
-                  type="button"
-                  onClick={() => cart.clear()}
-                  className="cursor-pointer font-parkinsans text-[14px] underline lg:text-[20px]"
-                >
-                  Clear Cart
-                </button>
-              </div>
-
-              {cart.isEmpty ? (
-                <p className="py-[12px] text-center font-parkinsans text-[14px] text-cocoa lg:text-[18px]">
-                  Your cart is empty.
-                </p>
-              ) : (
-                cart.lines.map((line) => (
-                  <div
-                    key={`${line.id}:${line.options ? Object.values(line.options).join('|') : ''}`}
-                    className="flex w-full items-center gap-[15px] lg:gap-[17px]"
-                  >
-                    <img
-                      src={line.image || undefined}
-                      alt={line.name}
-                      className="h-[147px] w-[177px] shrink-0 rounded-[3px] object-cover lg:h-[122px] lg:w-[148px] lg:rounded-[8px]"
-                    />
-                    <div className="flex flex-1 flex-col items-start gap-[13px] lg:flex-row lg:items-center lg:justify-between lg:gap-[67px]">
-                      <div className="flex flex-col gap-[13px] lg:flex-row lg:items-center lg:gap-[84px]">
-                        <div className="flex flex-col gap-[2px] lg:gap-[3px]">
-                          <p className="font-parkinsans text-[16px] text-cocoa lg:text-[24px]">
-                            {line.name}
-                          </p>
-                          <p className="font-parkinsans text-[20px] text-cocoa">
-                            {line.priceFormatted}
-                          </p>
-                          {optionSummary(line.options) && (
-                            <p className={`font-parkinsans text-[12px] ${LABEL_TONE.muted}`}>
-                              {optionSummary(line.options)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex w-[80px] shrink-0 items-center justify-center gap-[17px] rounded-full border-[1.3px] border-taupe/30 px-[10px] py-[5px] font-parkinsans font-semibold text-taupe/80 lg:w-[124px] lg:gap-[27px] lg:border-2 lg:px-[15px] lg:py-[8px]">
-                          <button
-                            type="button"
-                            aria-label={`Decrease ${line.name} quantity`}
-                            onClick={() => decrement(line)}
-                            className="flex cursor-pointer items-center justify-center"
-                          >
-                            <img
-                              src={iconMinus}
-                              alt=""
-                              className="h-[10px] w-[8px] lg:hidden"
-                            />
-                            <span className="hidden text-[20px] lg:inline">
-                              &minus;
-                            </span>
-                          </button>
-                          <span className="text-[15px] lg:text-[20px]">
-                            {line.qty}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`Increase ${line.name} quantity`}
-                            onClick={() => increment(line)}
-                            className="cursor-pointer text-[14px] lg:text-[20px]"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                      <div className="hidden items-center gap-[35px] lg:flex">
-                        <p className="font-parkinsans text-[24px] text-cocoa">
-                          {quoteLineTotals.get(line.id) || PENDING}
-                        </p>
-                        <button
-                          type="button"
-                          aria-label={`Remove ${line.name} from cart`}
-                          onClick={() => cart.remove(line.id, line.options)}
-                          className="cursor-pointer"
-                        >
-                          <img src={iconBin} alt="" className="size-[30px]" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            {/* Cart Items panel - shared with pickup mode, see cartItemsPanel above */}
+            {cartItemsPanel}
 
             {/* Delivery Information panel */}
             <div className="flex w-full flex-col items-end gap-[20px] rounded-[10px] border border-[#d8cbbe] bg-[#f7f5f1] px-[16px] py-[16px] lg:gap-[33px] lg:rounded-[16px] lg:px-[42px] lg:py-[24px]">
@@ -645,6 +654,12 @@ export default function Cart() {
         </section>
 
         <div className="flex w-full flex-col gap-[24px] px-[16px] py-[24px]">
+          {/* Cart Items panel - shared with delivery mode, see cartItemsPanel
+              above. Shown before the contact form and date/slot picker: a
+              collection customer reasonably expects to see what they're
+              buying before choosing when to pick it up. */}
+          {cartItemsPanel}
+
           {/* Contact Information */}
           <div className="flex w-full flex-col gap-[12px] rounded-[12px] border border-[#d8cbbe] bg-[#fffffd] p-[24px]">
             <p className="font-ligema text-[12.8px] uppercase tracking-[0.7px] text-cocoa">

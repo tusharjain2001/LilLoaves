@@ -487,6 +487,47 @@ describe('Delivery/pickup blocks are mutually exclusive in the DOM (not just CSS
   })
 })
 
+describe('Pickup mode shows cart items', () => {
+  // The bug: the Cart Items panel (line items, quantity steppers, remove bin)
+  // lived only inside the delivery branch, so a collection customer saw a
+  // total but never what they were buying, and couldn't change a quantity or
+  // remove a line without switching back to delivery mode. Assert the same
+  // panel - reused, not duplicated - renders in pickup mode too, and that its
+  // controls work on a Lunch Box line (one with options), the exact case a
+  // previous round shipped broken by dropping line.options.
+  it('renders the Cart Items panel with working quantity and remove controls, including a Lunch Box line', async () => {
+    seedCart([MUFFIN, LUNCH_BOX])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(
+      makeQuote({
+        lines: [
+          { id: 1, qty: 2, totalFormatted: '$42.26', unitFormatted: '$21.13' },
+          { id: 15, qty: 1, totalFormatted: '$39.00', unitFormatted: '$39.00' },
+        ],
+      }),
+    )
+    renderCart()
+
+    fireEvent.click(screen.getByText('Pickup Cart'))
+
+    expect(screen.getByText('Blueberry Muffin')).toBeTruthy()
+    expect(screen.getByText('Cart Items (3)')).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('Increase Lunch Box quantity'))
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15).qty).toBe(2)
+    })
+
+    fireEvent.click(screen.getByLabelText('Remove Lunch Box from cart'))
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15)).toBeUndefined()
+    })
+
+    await screen.findByText('Orange County Store')
+  })
+})
+
 describe('Pickup date/time scheduling', () => {
   it('defaults to the first available date and slot, so checkout is enabled with one tap and no picks', async () => {
     seedCart([MUFFIN])
