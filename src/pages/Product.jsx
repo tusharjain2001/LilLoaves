@@ -19,17 +19,21 @@ const PLACEHOLDER_IMAGES = [productMain, productThumb1, productThumb2];
 
 const PACK_OPTIONS = ["Pack of 2", "Pack of 4"];
 
+// Placeholder copy, the same for every product. The bakery has not supplied
+// per-product ingredient or allergen text yet, and WooCommerce has no field
+// holding it - swap these strings (or key them off product.slug) once it does.
 const ACCORDION_ITEMS = [
   {
     key: "ingredients",
     label: "Ingredients",
-    content: "Organic wheat flour, water, sourdough starter, sea salt.",
+    content:
+      "Organic wheat flour, filtered water, live sourdough starter, sea salt. Naturally leavened over 24 hours and baked fresh every morning - no preservatives, no additives.",
   },
   {
     key: "allergens",
     label: "Allergens",
     content:
-      "Contains wheat and gluten. May contain traces of nuts and dairy.",
+      "Contains wheat and gluten. Baked in a kitchen that also handles milk, eggs, soy, tree nuts and sesame, so traces may be present.",
   },
 ];
 
@@ -119,76 +123,83 @@ export default function Product() {
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="flex cursor-pointer items-center gap-[9px] lg:gap-[15px]"
+            className="flex cursor-pointer items-center gap-[9.422px] lg:gap-[15px]"
           >
             <img
               src={iconBack}
               alt=""
-              className="h-[19px] w-[9px] lg:h-[30px] lg:w-[15px]"
+              className="h-[18.844px] w-[9.422px] lg:h-[30px] lg:w-[15px]"
             />
-            <span className="font-parkinsans text-[13px] text-cocoa lg:text-[20px]">
+            <span className="font-parkinsans text-[12.563px] text-cocoa lg:text-[20px]">
               Go Back
             </span>
           </button>
 
-          <div className="flex w-full flex-col items-center gap-[77px] lg:flex-row lg:items-center lg:gap-[123px]">
+          <div className="flex w-full flex-col items-center gap-[77.259px] lg:flex-row lg:items-center lg:gap-[123px]">
             {/* Gallery */}
-            <div className="flex w-full flex-col items-start gap-[17px] lg:w-[532px] lg:shrink-0 lg:gap-[27px]">
-              <div className="relative aspect-[370/234] w-full overflow-hidden rounded-[8px] bg-[#d8cbbe] lg:aspect-[531/372] lg:rounded-[13px]">
+            <div className="flex w-full flex-col items-start gap-[16.959px] lg:w-[532px] lg:shrink-0 lg:gap-[27px]">
+              <div className="relative aspect-[370/233.902] w-full overflow-hidden rounded-[8.338px] bg-shell lg:aspect-[531/372] lg:rounded-[13px]">
                 <img
                   src={GALLERY_IMAGES[galleryOrder[0]]}
                   alt={product.name}
-                  className="absolute left-[20.53%] top-[5.64%] h-[88.79%] w-[53.56%] object-contain object-bottom shadow-[0_9px_14px_rgba(0,0,0,0.25)] lg:w-[59.13%] lg:shadow-[0_15px_23px_rgba(0,0,0,0.25)]"
+                  className="absolute left-[20.53%] top-[5.639%] h-[88.788%] w-[53.56%] object-contain object-bottom shadow-[0_9.381px_14.227px_rgba(0,0,0,0.25)] lg:w-[59.13%] lg:shadow-[0_15px_23px_rgba(0,0,0,0.25)]"
                 />
               </div>
-              <div className="flex w-full gap-[15px] lg:gap-[24px]">
+              <div className="flex w-full gap-[15.075px] lg:gap-[24px]">
                 <button type="button" onClick={() => swapToHero(1)} className="flex-1 cursor-pointer">
                   <img
                     src={GALLERY_IMAGES[galleryOrder[1]]}
                     alt=""
-                    className="h-[141px] w-full rounded-[14px] object-cover lg:h-[224px] lg:rounded-[23px]"
+                    className="h-[140.7px] w-full rounded-[14.331px] object-cover lg:h-[224px] lg:rounded-[23px]"
                   />
                 </button>
                 <button type="button" onClick={() => swapToHero(2)} className="flex-1 cursor-pointer">
                   <img
                     src={GALLERY_IMAGES[galleryOrder[2]]}
                     alt=""
-                    className="h-[141px] w-full rounded-[14px] object-cover lg:h-[224px] lg:rounded-[23px]"
+                    className="h-[140.7px] w-full rounded-[14.331px] object-cover lg:h-[224px] lg:rounded-[23px]"
                   />
                 </button>
               </div>
             </div>
 
             {/* Info */}
-            <div className="flex w-full flex-col items-center gap-[32px] lg:w-[608px] lg:items-start lg:gap-[51px]">
-              <div className="flex w-full flex-col items-center gap-[32px] lg:items-start lg:gap-[56px]">
-                <div className="flex w-full flex-col items-center gap-[31px] lg:items-start lg:gap-[50px]">
-                  <div className="flex flex-col items-center gap-[11px] text-center lg:items-start lg:gap-[17px] lg:text-left">
-                    <p className="font-ligema text-[16.6px] uppercase text-cocoa lg:text-[26.6px]">
+            <div className="flex w-full flex-col items-center gap-[32.034px] lg:w-[608px] lg:items-start lg:gap-[51px]">
+              <div className="flex w-full flex-col items-center gap-[35.175px] lg:items-start lg:gap-[56px]">
+                <div className="flex w-full flex-col items-center gap-[31.406px] lg:items-start lg:gap-[50px]">
+                  <div className="flex w-full flex-col items-center gap-[10.678px] text-center lg:items-start lg:gap-[17px] lg:text-left">
+                    {/* Figma sets this in Parkinsans Medium, not the display
+                        face - 24px/-1.2px here, 40px/-2px on desktop. The
+                        --font-ligema alias also resolves to Parkinsans, but it
+                        carries the theme's 0.475x legacy downscale that only
+                        exists to stand in for the missing Ligema DEMO file, so
+                        it does not belong on a face we actually ship. The lg:
+                        values below hold desktop at what it renders today. */}
+                    <p className="font-parkinsans text-[24px] font-medium uppercase tracking-[-1.2px] text-cocoa lg:text-[26.6px] lg:font-normal lg:tracking-normal">
                       {product.name}
                     </p>
-                    <div className="flex items-center gap-[10px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
-                      <p className="text-[23px] text-cocoa lg:text-[36px]">{product.priceFormatted}</p>
+                    <div className="flex items-center gap-[10.05px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
+                      <p className="text-[22.613px] text-cocoa lg:text-[36px]">{product.priceFormatted}</p>
                       {product.onSale && (
-                        <p className="text-[20px] text-[#d8cbbe] line-through decoration-solid lg:text-[32px]">
+                        <p className="text-[20.1px] text-shell line-through decoration-solid lg:text-[32px]">
                           {product.regularPriceFormatted}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-col items-center gap-[13px] lg:items-start lg:gap-[20px]">
+                  <div className="flex w-full flex-col items-center justify-center gap-[12.563px] lg:w-auto lg:items-start lg:gap-[20px]">
                     <p
-                      className="max-w-[370px] text-center font-parkinsans text-[13px] text-[#9e8e7f] lg:max-w-none lg:text-left lg:text-[20px]"
+                      className="max-w-[370px] text-center font-parkinsans text-[12.563px] text-[#9e8e7f] lg:max-w-none lg:text-left lg:text-[20px]"
                       dangerouslySetInnerHTML={{ __html: product.description }}
                     />
                     {product.hasOptions && (
-                      <div className="flex items-center gap-[10px] lg:gap-[16px]">
+                      <div className="flex items-center justify-center gap-[10.05px] lg:gap-[16px]">
                         {PACK_OPTIONS.map((label, i) => (
                           <button
                             key={label}
                             type="button"
                             onClick={() => setSelectedPack(i)}
-                            className={`cursor-pointer whitespace-nowrap rounded-[10px] border px-[10px] py-[5px] font-parkinsans text-[13px] lg:rounded-[15px] lg:border-2 lg:px-[16px] lg:py-[8px] lg:text-[16px] ${
+                            className={`cursor-pointer whitespace-nowrap rounded-[9.682px] border-[1.256px] px-[10.05px] py-[5.025px] font-parkinsans text-[12.563px] lg:rounded-[15px] lg:border-2 lg:px-[16px] lg:py-[8px] lg:text-[16px] ${
                               selectedPack === i
                                 ? "border-taupe bg-taupe text-white"
                                 : "border-latte bg-transparent text-latte"
@@ -202,13 +213,13 @@ export default function Product() {
                   </div>
                 </div>
 
-                <div className="flex w-full items-start gap-[10px] lg:gap-[16px]">
+                <div className="flex w-full items-start gap-[10.05px] lg:gap-[16px]">
                   {product.inStock ? (
                     <>
                       <button
                         type="button"
                         onClick={() => cart.add(product, 1)}
-                        className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
+                        className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30.15px] py-[6.281px] font-parkinsans text-[12.563px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
                       >
                         Add to Cart
                       </button>
@@ -218,45 +229,52 @@ export default function Product() {
                           cart.add(product, 1);
                           navigate("/cart");
                         }}
-                        className="flex-1 cursor-pointer whitespace-nowrap rounded-full border border-cocoa px-[30px] py-[6px] font-parkinsans text-[13px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
+                        className="flex-1 cursor-pointer whitespace-nowrap rounded-full border-[1.256px] border-cocoa px-[30.15px] py-[6.281px] font-parkinsans text-[12.563px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"
                       >
                         Buy Now
                       </button>
                     </>
                   ) : (
-                    <span className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30px] py-[6px] font-parkinsans text-[13px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]">
+                    <span className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30.15px] py-[6.281px] font-parkinsans text-[12.563px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]">
                       Sold out
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex w-full flex-col items-start border-t border-[#d8cbbe]">
+              {/* Figma draws the rules as their own 1.256px (mobile) / 2px
+                  (desktop) bars with a 7.538px / 12px gap either side, which is
+                  the same box a border plus that much vertical padding gives -
+                  and keeps each panel attached to the row that opened it. */}
+              <div className="flex w-full flex-col items-start border-t-[1.256px] border-shell lg:border-t-2">
                 {ACCORDION_ITEMS.map((item) => {
                   const isOpen = openAccordion === item.key;
                   return (
                     <div
                       key={item.key}
-                      className="w-full border-b border-[#d8cbbe]"
+                      className="w-full border-b-[1.256px] border-shell lg:border-b-2"
                     >
                       <button
                         type="button"
                         onClick={() => toggleAccordion(item.key)}
-                        className="flex w-full cursor-pointer items-center justify-between py-[12px]"
+                        className="flex w-full cursor-pointer items-center justify-between py-[7.538px] lg:py-[12px]"
                       >
-                        <span className="font-parkinsans text-[13px] text-cocoa lg:text-[20px]">
+                        {/* Figma names Neulis Sans, which this project stands in
+                            for with DM Sans - the same mapping the info bar
+                            below already uses. */}
+                        <span className="font-dm text-[12.563px] text-cocoa lg:text-[20px]">
                           {item.label}
                         </span>
                         <img
                           src={iconChevronDown}
                           alt=""
-                          className={`h-[5px] w-[10px] transition-transform duration-200 lg:h-[8px] lg:w-[16px] ${
+                          className={`h-[5.025px] w-[10.05px] transition-transform duration-200 lg:h-[8px] lg:w-[16px] ${
                             isOpen ? "rotate-180" : ""
                           }`}
                         />
                       </button>
                       {isOpen && (
-                        <p className="pb-[12px] font-parkinsans text-[13px] text-[#9e8e7f] lg:text-[16px]">
+                        <p className="pb-[7.538px] font-parkinsans text-[12.563px] text-[#9e8e7f] lg:pb-[12px] lg:text-[16px]">
                           {item.content}
                         </p>
                       )}
@@ -270,12 +288,16 @@ export default function Product() {
       </section>
 
       {/* INFO BAR */}
-      <section className="w-full bg-rose px-[16px] py-[18px] lg:py-[32px]">
-        <div className="mx-auto flex w-full max-w-[1024px] items-center justify-center gap-[24px] lg:gap-[83px]">
+      {/* Figma gives this bar no side padding at either size - the pair is
+          simply centred, and the 45.832px gap is what makes it span the 402px
+          frame edge to edge. Padding here would push it into an overflow on a
+          narrow phone instead. */}
+      <section className="w-full bg-rose py-[17.67px] lg:py-[32px]">
+        <div className="mx-auto flex w-full max-w-[1024px] items-center justify-center gap-[45.832px] lg:gap-[83px]">
           {INFO_BAR.map(({ icon, label }) => (
-            <div key={label} className="flex items-center gap-[6px] lg:gap-[21px]">
-              <img src={icon} alt="" className="size-[19px] lg:size-[35px]" />
-              <p className="whitespace-nowrap font-dm text-[13px] text-cocoa lg:text-[20px]">
+            <div key={label} className="flex items-center gap-[11.596px] lg:gap-[21px]">
+              <img src={icon} alt="" className="size-[19.327px] lg:size-[35px]" />
+              <p className="whitespace-nowrap font-dm text-[13.253px] text-cocoa lg:text-[20px]">
                 {label}
               </p>
             </div>
@@ -293,29 +315,29 @@ export default function Product() {
             {RELATED_ITEMS.map(({ name, desc, price, img }) => (
               <div
                 key={name}
-                className="w-full rounded-[14px] border border-[#d8cbbe] p-[7px] pb-[13px] lg:w-[348px] lg:rounded-[13px]"
+                className="w-full rounded-[14.028px] border-[0.845px] border-shell px-[6.758px] pb-[13.516px] pt-[6.758px] lg:w-[348px] lg:rounded-[13px] lg:border lg:px-[7px] lg:pb-[13px] lg:pt-[7px]"
               >
                 <img
                   src={img}
                   alt={name}
-                  className="aspect-[6/5] w-full rounded-[13px] object-cover lg:rounded-[12px]"
+                  className="aspect-[356.484/291.438] w-full rounded-[12.868px] object-cover lg:aspect-[6/5] lg:rounded-[12px]"
                 />
-                <div className="flex flex-col items-start gap-[30px] px-[13px] pt-[13px] lg:gap-[29px]">
-                  <div className="flex flex-col items-start gap-[3px]">
-                    <p className="font-parkinsans text-[20px] font-semibold text-cocoa lg:text-[19px]">
+                <div className="flex flex-col items-start gap-[30.411px] px-[13.516px] pt-[11.826px] lg:gap-[29px] lg:px-[13px] lg:pt-[13px]">
+                  <div className="flex flex-col items-start gap-[3.379px] lg:gap-[3px]">
+                    <p className="font-parkinsans text-[20.274px] font-semibold text-cocoa lg:text-[19px]">
                       {name}
                     </p>
-                    <p className="font-parkinsans text-[13px] text-clay">
+                    <p className="font-parkinsans text-[13.516px] text-clay lg:text-[13px]">
                       {desc}
                     </p>
                   </div>
-                  <div className="flex w-full items-center justify-center gap-[30px] lg:gap-[29px]">
-                    <p className="flex-1 font-parkinsans text-[24px] text-cocoa lg:text-[22px]">
+                  <div className="flex w-full items-center justify-center gap-[30.411px] lg:gap-[29px]">
+                    <p className="flex-1 font-parkinsans text-[23.653px] text-cocoa lg:text-[22px]">
                       {price}
                     </p>
                     <button
                       type="button"
-                      className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[13px] py-[7px] font-parkinsans text-[13px] text-white"
+                      className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[13.516px] py-[6.758px] font-parkinsans text-[13.516px] text-white lg:px-[13px] lg:py-[7px] lg:text-[13px]"
                     >
                       Add to Cart
                     </button>

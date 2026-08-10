@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import Menu from './Menu.jsx'
 import { CartProvider } from '../context/CartContext.jsx'
 import * as woo from '../lib/woo.js'
@@ -181,6 +181,59 @@ describe('Menu cart', () => {
       expect(stored.map((l) => l.id).sort()).toEqual([20, 21])
       expect(stored.every((l) => l.qty === 1)).toBe(true)
     })
+  })
+})
+
+// The card is a link with the cart controls sitting on top of it, so these
+// drive the real card rather than asserting on an href: the two paths have to
+// cross, or "Add to Cart" silently navigates away instead of adding.
+function ProductStub() {
+  const { slug } = useParams()
+  return <p>PRODUCT PAGE {slug}</p>
+}
+
+const renderMenuRouted = () =>
+  render(
+    <MemoryRouter initialEntries={['/menu']}>
+      <CartProvider>
+        <Routes>
+          <Route path="/menu" element={<Menu />} />
+          <Route path="/product/:slug" element={<ProductStub />} />
+        </Routes>
+      </CartProvider>
+    </MemoryRouter>,
+  )
+
+describe('Menu product links', () => {
+  it('opens the product page for the card that was clicked', async () => {
+    renderMenuRouted()
+    await waitFor(() => expect(screen.getByText('Japanese Milk Bread')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('link', { name: 'Japanese Milk Bread' }))
+
+    await waitFor(() =>
+      expect(screen.getByText(/PRODUCT PAGE japanese-milk-bread/)).toBeTruthy(),
+    )
+  })
+
+  it('links a sold-out product to its page too', async () => {
+    renderMenuRouted()
+    await waitFor(() => expect(screen.getByText(/sold out/i)).toBeTruthy())
+    expect(screen.getByRole('link', { name: 'Japanese Milk Bread' })).toBeTruthy()
+  })
+
+  it('adds to the cart without navigating when Add to Cart is clicked', async () => {
+    renderMenuRouted()
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    const card = screen.getByText('Sour Dough').parentElement.parentElement
+
+    fireEvent.click(within(card).getByText('Add to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+      expect(stored.map((l) => l.id)).toEqual([13])
+    })
+    expect(screen.queryByText(/PRODUCT PAGE/)).toBeNull()
   })
 })
 

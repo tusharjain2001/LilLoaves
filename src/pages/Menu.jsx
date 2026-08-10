@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import CategoryStrip from "../components/CategoryStrip.jsx";
 import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
 import FaqSection from "../components/FaqSection.jsx";
@@ -111,7 +112,18 @@ const LUNCHBOX_INSIDE = [
 
 function BreadCard({ item, qty, onAdd, onInc, onDec }) {
   return (
-    <div className="w-full max-w-[370px] rounded-[13px] border-[0.8px] border-shell p-[6px] pb-[13px] lg:w-[348px] lg:rounded-[13.22px] lg:p-[6.37px] lg:pb-[12.74px]">
+    <div className="relative w-full max-w-[370px] rounded-[13px] border-[0.8px] border-shell p-[6px] pb-[13px] lg:w-[348px] lg:rounded-[13.22px] lg:p-[6.37px] lg:pb-[12.74px]">
+      {/* The whole card opens the product page. It is an overlay rather than a
+          wrapper because the cart controls are buttons, and an <a> may not
+          contain them - they sit back above it at z-20.
+          The z-10 is load-bearing: the image container below is `relative`, so
+          at z-auto it would paint over this link in tree order and swallow
+          every click on the photo. */}
+      <Link
+        to={`/product/${item.slug}`}
+        aria-label={item.name}
+        className="absolute inset-0 z-10 rounded-[13px] lg:rounded-[13.22px]"
+      />
       <div className="flex flex-col gap-[13px] lg:gap-[11.94px]">
         <div className="relative h-[220px] w-full overflow-hidden rounded-[12px] lg:h-[273.87px] lg:rounded-[12.1px]">
           <img
@@ -135,7 +147,7 @@ function BreadCard({ item, qty, onAdd, onInc, onDec }) {
               {item.desc}
             </p>
           </div>
-          <div className="flex items-center gap-[16px] lg:gap-[28.66px]">
+          <div className="relative z-20 flex items-center gap-[16px] lg:gap-[28.66px]">
             <p className="font-parkinsans text-[19px] text-cocoa lg:w-[140.52px] lg:text-[22.29px] lg:leading-[31px]">
               {item.price}
             </p>
@@ -382,6 +394,7 @@ export default function Menu() {
             ) : (
               activeItems.map((p) => {
                 const item = {
+                  slug: p.slug,
                   name: p.name,
                   desc: p.summary,
                   price: p.priceFormatted,
