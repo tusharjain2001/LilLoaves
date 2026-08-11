@@ -16,9 +16,7 @@ import productBreads from "../assets/home/product-breads.png";
 import productCookies from "../assets/home/product-cookies.png";
 import productMuffins from "../assets/home/product-muffins.png";
 import productCrackers from "../assets/home/product-crackers.png";
-import photoCorgis from "../assets/home/photo-corgis.jpg";
-import stickerSmiley from "../assets/home/sticker-smiley.svg";
-import ribbonTape from "../assets/home/ribbon-tape.svg";
+import whoAreWe from "../assets/home/whoarewe.png";
 import iconQuotes from "../assets/home/icon-quotes.svg";
 import photoTestimonial from "../assets/home/photo-testimonial.jpg";
 
@@ -322,24 +320,17 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative w-full max-w-[352.46px] shrink-0 lg:w-[415px] lg:max-w-none">
+          {/* Photo, smiley sticker and corner tape come in as one 458x540 export
+              rather than three layers. Inside it the photo sits at (0, 50) at
+              415x458 - exactly the box this column used to occupy - so the div
+              keeps that box and the image is hung off it: 458/415 = 110.36% wide,
+              pulled up 50/458.6 = 10.9% of the box's height. Both ratios are
+              unitless, so the mobile 352.46x388.41 box scales the whole group. */}
+          <div className="relative aspect-[352.46/388.41] w-full max-w-[352.46px] shrink-0 lg:aspect-auto lg:h-[458.6px] lg:w-[415px] lg:max-w-none">
             <img
-              src={photoCorgis}
+              src={whoAreWe}
               alt="Our two corgis, Doc and Chief"
-              className="aspect-[352.46/388.41] w-full rounded-[11.4px] object-cover lg:h-[458.6px] lg:w-[415px] lg:rounded-[13.4px]"
-            />
-            <img
-              src={stickerSmiley}
-              alt=""
-              className="absolute left-[21.92px] -top-[37.7px] h-[101.67px] w-[88.55px] lg:left-[35px] lg:-top-[40.7px] lg:h-[97.22px] lg:w-[84.68px]"
-            />
-            {/* Tape is a page-level vector in Figma sitting across the photo's
-                bottom-right corner; its 132.75deg rotation is baked into the
-                exported path, so it is placed by its rendered bounds. */}
-            <img
-              src={ribbonTape}
-              alt=""
-              className="absolute left-[253.5px] top-[366.8px] h-[91.2px] w-[128.6px] lg:left-[298.46px] lg:top-[432.97px] lg:h-[107.33px] lg:w-[151.43px]"
+              className="absolute left-0 top-[-10.9%] w-[110.36%] max-w-none"
             />
           </div>
         </div>

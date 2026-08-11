@@ -7,13 +7,28 @@ import iconPlus from "../assets/home/icon-plus.svg";
 const FAQS = [
   {
     q: "Do you bake everything fresh?",
-    a: "Yes! Every loaf and baked good is handcrafted in small batches using quality ingredients and traditional baking methods.",
+    a: "Yes! Every loaf and baked good is handcrafted in small batches using quality ingredients and traditional baking methods. We bake with care so everything reaches you fresh and full of flavor.",
   },
-  { q: "Do you offer seasonal specials?" },
-  { q: "How do I place an order?" },
-  { q: "Can I customize my Lunch Box Special?" },
-  { q: "Do you use preservatives?" },
-  { q: "How can I stay updated on new products?" },
+  {
+    q: "Do you offer seasonal specials?",
+    a: "Yes! We offer rotating seasonal specials throughout the year, featuring fresh and limited-time favorites. Check our menu regularly or join our mailing list to stay updated on what’s new.",
+  },
+  {
+    q: "How do I place an order?",
+    a: "Browse our menu, choose your favorite items, and add them to your cart. Once you’re ready, proceed to checkout, select your pickup or delivery option, provide your details, and complete your payment to confirm your order.",
+  },
+  {
+    q: "Can I customize my Lunch Box Special?",
+    a: "Absolutely! Our Lunch Box Special lets you choose your favorites from each category: sourdough or Japanese milk bread, a 5 oz bag of Doc’s or Chief’s crackers, and either six cookies or four muffins.",
+  },
+  {
+    q: "Do you use preservatives?",
+    a: "No! Our breads and baked goods are made without preservatives. We focus on simple, quality ingredients and traditional baking methods to make food that’s honest, wholesome, and delicious.",
+  },
+  {
+    q: "How can I stay updated on new products?",
+    a: "Follow us on social media and check our website regularly for new products and seasonal specials. You can also sign up for our email updates so you don’t miss what’s fresh from the oven.",
+  },
 ];
 
 /* Two things keep a collapsed row at Figma's 71px: the vertical padding lives on
