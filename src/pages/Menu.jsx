@@ -152,7 +152,13 @@ function BreadCard({ item, qty, onAdd, onInc, onDec }) {
               {item.price}
             </p>
             {!item.inStock ? (
-              <span className="font-parkinsans text-[13px] font-semibold text-taupe">
+              /* The other two states are a fixed 140.52px pill, which the 348px
+                 card sizes to land flush on the row's right edge. "Sold out" is
+                 half that wide, so left-packed it stopped short and broke the
+                 column the pills form down the grid - ml-auto puts its right
+                 edge back on theirs. Mobile packs its actions after the price
+                 rather than to the edge, so it keeps that. */
+              <span className="font-parkinsans text-[13px] font-semibold text-taupe lg:ml-auto">
                 Sold out
               </span>
             ) : qty > 0 ? (

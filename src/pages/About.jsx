@@ -8,6 +8,7 @@ import patternLoaf from "../assets/about/pattern-loaf.svg";
 import patternCroissant from "../assets/about/pattern-croissant.svg";
 import tributeGroup from "../assets/about/tribute-group.png";
 import tributeGroupMobile from "../assets/about/tribute-group-mobile.png";
+import quoteSectionDesktop from "../assets/about/aboutuseveryloaf.svg";
 
 /* Desktop geometry is taken verbatim from the Figma About page (node 247:7, a
    1440-wide canvas). The navbar overlays the hero there, so these are Figma's
@@ -68,13 +69,14 @@ const MEET_GINGHAM_BG = {
 /* The pull-quote backdrop is not a full-bleed checkerboard: Figma scatters
    twelve 120.08px patches of 20.01px #999c89 checks (at 0.9 opacity) plus twelve
    bread motifs (at 0.7), then repeats that whole 241.83px band twice. Positions
-   below are band-relative; BAND_TOPS places the two copies. */
-/* Patch and motif y values below are section-relative for the first band; the
-   second band is the same content shifted down by one band height. */
-const QUOTE_BAND_OFFSETS = [0, 241.83];
+   below are band-relative.
 
-/* Mobile scales the band down, so four of them are needed to cover the section
-   once it starts 69px above the top edge. */
+   Desktop no longer composes this - it ships as one 1440x483 export - so only
+   the mobile band set is built here. */
+/* Patch and motif y values below are section-relative for the first band; each
+   later band is the same content shifted down by one band height. Mobile scales
+   the band down, so four are needed to cover the section once it starts 69px
+   above the top edge. */
 const QUOTE_BAND_OFFSETS_MOBILE = [0, 241.83, 483.66, 725.49];
 
 /* [x, y, flipped] - four of the twelve patches start on an empty cell rather
@@ -283,6 +285,17 @@ export default function About() {
 
       {/* PULL QUOTE */}
       <section className="relative w-full overflow-hidden bg-[#eee2df] lg:h-[483px]">
+        {/* Desktop is a single 1440x483 export - backdrop, card, quote mark and
+            the quote itself as outlined paths. It is pinned to the canvas centre
+            the way the composed band was, so it still bleeds symmetrically below
+            1440 (the section's own #eee2df matches the export's ground above it).
+            The quote lives in alt text, since the SVG carries no real glyphs. */}
+        <img
+          src={quoteSectionDesktop}
+          alt="Every loaf tells a story of love, loss, and new beginnings."
+          className="absolute left-1/2 top-0 hidden h-[483px] w-[1440px] max-w-none -translate-x-1/2 lg:block"
+        />
+
         {/* The 402 canvas draws the same band at 0.5711 (patches 120.08 ->
             68.58, croissants 62.03 -> 35.43, loaves 97.87 -> 55.90 all carry
             that one ratio), starting 69px above the section and repeated four
@@ -290,21 +303,16 @@ export default function About() {
         <div className="pointer-events-none absolute left-1/2 top-[-69px] w-[1440px] origin-top -translate-x-1/2 scale-[0.5711] lg:hidden">
           <QuoteBands offsets={QUOTE_BAND_OFFSETS_MOBILE} />
         </div>
-        <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-[1440px] -translate-x-1/2 lg:block">
-          <QuoteBands offsets={QUOTE_BAND_OFFSETS} />
-        </div>
 
-        <div className="relative mx-auto flex w-full max-w-[1440px] items-center justify-center px-[40px] py-[63px] lg:h-full lg:px-0 lg:py-0">
-          <div className="relative flex w-full max-w-[1199px] items-center justify-center rounded-[16px] bg-[#f7f5f1] px-[16px] py-[60px] lg:h-[242px] lg:p-[10px]">
+        <div className="relative mx-auto flex w-full max-w-[1440px] items-center justify-center px-[40px] py-[63px] lg:hidden">
+          <div className="relative flex w-full max-w-[1199px] items-center justify-center rounded-[16px] bg-[#f7f5f1] px-[16px] py-[60px]">
             <img
               src={quoteMark}
               alt=""
-              className="absolute left-0 top-[31px] size-[71px] opacity-[0.4] lg:left-[29px] lg:top-[60px] lg:size-[83px]"
+              className="absolute left-0 top-[31px] size-[71px] opacity-[0.4]"
             />
-            {/* Figma sets this on one line with a double space after each
-                comma, so the desktop copy keeps them and turns off collapsing. */}
-            <p className="relative max-w-[290px] text-center font-parkinsans text-[32px] font-medium uppercase leading-[42px] tracking-[-1.6px] text-cocoa lg:max-w-none lg:whitespace-pre lg:text-[36px] lg:font-normal lg:leading-[50px] lg:tracking-[-1.8px]">
-              {"Every loaf tells a story of love,  loss,  and new beginnings."}
+            <p className="relative max-w-[290px] text-center font-parkinsans text-[32px] font-medium uppercase leading-[42px] tracking-[-1.6px] text-cocoa">
+              Every loaf tells a story of love, loss, and new beginnings.
             </p>
           </div>
         </div>
