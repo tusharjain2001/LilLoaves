@@ -110,7 +110,7 @@ const LUNCHBOX_INSIDE = [
   },
 ];
 
-function BreadCard({ item, qty, onAdd, onInc, onDec }) {
+function BreadCard({ item, qty, onAdd, onInc, onDec, onSelectPackSize }) {
   return (
     <div className="relative w-full max-w-[370px] rounded-[13px] border-[0.8px] border-shell p-[6px] pb-[13px] lg:w-[348px] lg:rounded-[13.22px] lg:p-[6.37px] lg:pb-[12.74px]">
       {/* The whole card opens the product page. It is an overlay rather than a
@@ -134,6 +134,32 @@ function BreadCard({ item, qty, onAdd, onInc, onDec }) {
           {/* Figma's gradient runs solid at the image's top edge and fades out
               46% of the way down. */}
           <div className="absolute inset-x-0 top-0 h-[70px] bg-gradient-to-b from-[#57423d] to-transparent lg:h-[126.58px]" />
+          {/* Pack-size pills (Muffins/Cookies/Crackers only - never rendered,
+              not even empty, for a product with none, so a bread's card is
+              byte-for-byte what it was before pack sizes existed). z-20 to
+              clear the full-card <Link> above at z-10, same reasoning as the
+              price/actions row below. */}
+          {item.packSizes && item.packSizes.length > 0 && (
+            <div className="absolute left-[15.414px] top-[20.9px] z-20 flex items-center gap-[8.67px]">
+              {item.packSizes.map((size) => {
+                const isSelected = size.id === item.selectedPackSizeId;
+                return (
+                  <button
+                    key={size.id}
+                    type="button"
+                    aria-pressed={isSelected}
+                    disabled={!size.purchasable}
+                    onClick={() => onSelectPackSize(size.id)}
+                    className={`cursor-pointer whitespace-nowrap rounded-[15.414px] px-[7.707px] py-[3.854px] font-parkinsans text-[13.487px] text-[#57423d] disabled:cursor-not-allowed disabled:opacity-50 ${
+                      isSelected ? "bg-[#fff3d4]" : "bg-[#f7f5f1]"
+                    }`}
+                  >
+                    {size.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-[20px] px-[13px] lg:gap-[28.66px] lg:px-[12.74px]">
           <div className="flex flex-col gap-[3px] lg:gap-[3.18px]">
@@ -239,6 +265,10 @@ export default function Menu() {
   const [products, setProducts] = useState([]);
   const [specials, setSpecials] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
+  // Keyed by product id -> chosen variation id. Absent for any product not
+  // yet touched, which is why the render loop below defaults to
+  // `packSizes[0].id` rather than treating "absent" as "nothing selected".
+  const [selectedPackSizes, setSelectedPackSizes] = useState({});
   const [selectedBread, setSelectedBread] = useState("");
   const [selectedCracker, setSelectedCracker] = useState("");
   const [selectedDessert, setSelectedDessert] = useState("");
@@ -399,23 +429,53 @@ export default function Menu() {
               </p>
             ) : (
               activeItems.map((p) => {
+                // Muffins/Cookies/Crackers carry real pack sizes from
+                // woo.js's /variations merge; breads and Lunch Box have no
+                // `packSizes` at all, so every branch below falls back to
+                // the product's own price/stock, byte-for-byte the old
+                // behaviour. Undefined until touched, so it defaults to the
+                // wp-admin-ordered first pack size rather than "none chosen".
+                const packSizes = p.packSizes ?? [];
+                const hasPackSizes = packSizes.length > 0;
+                const selectedVariationId = hasPackSizes
+                  ? (selectedPackSizes[p.id] ?? packSizes[0].id)
+                  : null;
+                const selectedPackSize = hasPackSizes
+                  ? packSizes.find((s) => s.id === selectedVariationId) ?? packSizes[0]
+                  : null;
                 const item = {
                   slug: p.slug,
                   name: p.name,
                   desc: p.summary,
-                  price: p.priceFormatted,
+                  price: selectedPackSize ? selectedPackSize.priceFormatted : p.priceFormatted,
                   img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
-                  inStock: p.inStock,
+                  inStock: selectedPackSize ? selectedPackSize.inStock : p.inStock,
+                  packSizes,
+                  selectedPackSizeId: selectedVariationId,
                 };
-                const qty = cart.lines.find((l) => l.id === p.id)?.qty ?? 0;
+                // Scoped to the currently selected pack size, not the
+                // product overall - two sizes of one cookie are separate
+                // cart lines (separate variationId), so the stepper must
+                // reflect only the size on screen right now.
+                const qty =
+                  cart.lines.find(
+                    (l) => l.id === p.id && (hasPackSizes ? l.variationId === selectedVariationId : !l.variationId),
+                  )?.qty ?? 0;
+                const cartProduct = selectedPackSize
+                  ? { ...p, priceFormatted: selectedPackSize.priceFormatted }
+                  : p;
+                const cartOptions = selectedPackSize ? { size: selectedPackSize.name } : undefined;
                 return (
                   <BreadCard
                     key={p.id}
                     item={item}
                     qty={qty}
-                    onAdd={() => cart.add(p, 1)}
-                    onInc={() => cart.setQty(p.id, qty + 1)}
-                    onDec={() => cart.setQty(p.id, qty - 1)}
+                    onAdd={() => cart.add(cartProduct, 1, cartOptions, selectedVariationId)}
+                    onInc={() => cart.setQty(p.id, qty + 1, cartOptions)}
+                    onDec={() => cart.setQty(p.id, qty - 1, cartOptions)}
+                    onSelectPackSize={(variationId) =>
+                      setSelectedPackSizes((prev) => ({ ...prev, [p.id]: variationId }))
+                    }
                   />
                 );
               })

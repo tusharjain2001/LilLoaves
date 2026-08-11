@@ -36,7 +36,12 @@ export async function fetchQuote({ lines, fulfilment, postcode, coupon, signal }
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        items: lines.map((l) => ({ id: l.id, qty: l.qty })),
+        // variation_id selects a pack size (Muffins/Cookies/Crackers); a
+        // plain product (bread) has no variationId on its cart line, and
+        // omitting the field entirely is exactly the pre-pack-size contract.
+        items: lines.map((l) =>
+          l.variationId ? { id: l.id, qty: l.qty, variation_id: l.variationId } : { id: l.id, qty: l.qty },
+        ),
         fulfilment,
         postcode,
         coupon,
@@ -50,8 +55,13 @@ export async function fetchQuote({ lines, fulfilment, postcode, coupon, signal }
     const data = await response.json()
     return {
       ok: true,
+      // (id, variationId) is the line's real key once pack sizes exist - id
+      // alone can't tell "1 x Single Cookie" from "1 x Box of 6" of the same
+      // product apart, since both share the same parent id. variationId is 0
+      // for a simple product (bread), matching the backend's own contract.
       lines: data.lines.map((l) => ({
         id: l.id,
+        variationId: l.variation_id ?? 0,
         qty: l.qty,
         totalFormatted: formatPrice(data.currency, l.total),
         unitFormatted: formatPrice(data.currency, l.unit),

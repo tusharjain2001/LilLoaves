@@ -57,7 +57,12 @@ export function CartProvider({ children }) {
   }, [lines])
 
   const value = useMemo(() => {
-    const add = (product, qty = 1, options) =>
+    // variationId (a pack size's WooCommerce variation id, e.g. "Box of 6" of
+    // Choco Chip Cookies) is never part of the key - `options` already makes
+    // it unique (two pack sizes of one product have different `options.size`
+    // strings), same as the Lunch Box's bread/cracker/dessert picks. It rides
+    // along purely as pricing data for /quote and checkout.
+    const add = (product, qty = 1, options, variationId) =>
       setLines((prev) => {
         const key = lineKey(product.id, options)
         const existing = prev.find((l) => lineKey(l.id, l.options) === key)
@@ -73,6 +78,7 @@ export function CartProvider({ children }) {
             image: product.images?.[0]?.src ?? '',
             priceFormatted: product.priceFormatted,
             ...(options ? { options } : {}),
+            ...(variationId ? { variationId } : {}),
           },
         ]
       })
@@ -85,16 +91,21 @@ export function CartProvider({ children }) {
           : prev.map((l) => (lineKey(l.id, l.options) === key ? { ...l, qty } : l))
       })
 
-    // ponytail: matches by bare id, not lineKey - deliberately, not a
-    // leftover. This refreshes every line sharing a product id, including
-    // every options-variant of it, because price never varies by option
-    // and quote.js never round-trips options in the first place (there is
-    // no per-variant price to sync even if this wanted to be stricter). If
-    // either assumption changes, thread `options` through and match via
-    // lineKey the way add/setQty/remove do.
-    const syncSnapshot = (id, priceFormatted) =>
+    // Matches by (id, variationId), not the full lineKey - deliberately,
+    // not a leftover of the pre-pack-size version below. A Lunch Box's
+    // bread/cracker/dessert options never carry a variationId and never
+    // change price, so every options-variant of it still shares one group
+    // and gets refreshed together (unchanged from before pack sizes
+    // existed). A pack size's price genuinely does vary by variation - two
+    // sizes of one product share `id` but carry different `variationId`, so
+    // without this a Box of 6's snapshot could be overwritten by a Single
+    // Cookie's quote (verified live: this shipped as a real display bug
+    // before this guard was added).
+    const syncSnapshot = (id, priceFormatted, variationId) =>
       setLines((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, priceFormatted } : l)),
+        prev.map((l) =>
+          l.id === id && (l.variationId ?? 0) === (variationId ?? 0) ? { ...l, priceFormatted } : l,
+        ),
       )
 
     const remove = (id, options) => {

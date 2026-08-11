@@ -95,10 +95,46 @@ export function normalizeProduct(raw) {
 // every product.
 const FILTER_PARAMS = ['featured', 'tag', 'slug', 'category']
 
+// Muffins/Cookies/Crackers are WooCommerce *variable* products - the Store
+// API's own product list carries no per-variation price (verified live), so
+// pack-size prices come from this separate bridge endpoint and get merged
+// onto the matching product by id below. A simple product (bread) is never a
+// key in `products`, so it comes back from `attachPackSizes` untouched - no
+// `packSizes` field at all, which is what lets the menu/product page render
+// it exactly as before pack sizes existed.
+async function fetchVariationsData() {
+  try {
+    return await get('variations', {})
+  } catch {
+    // A price lookup failing must degrade to base prices, not break the menu.
+    return null
+  }
+}
+
+function attachPackSizes(product, variationsData) {
+  const list = variationsData.products?.[product.id]
+  if (!list?.length) return product
+  const currency = variationsData.currency
+  return {
+    ...product,
+    packSizes: list.map((v) => ({
+      id: v.id,
+      name: decodeName(v.name),
+      slug: v.slug,
+      price: minorToMajor(v.price, currency.currency_minor_unit),
+      priceFormatted: formatPrice(currency, v.price),
+      inStock: v.in_stock,
+      purchasable: v.purchasable,
+    })),
+  }
+}
+
 export async function fetchProducts(params = {}) {
   try {
     const raw = await get('products', { per_page: 100, ...params })
-    return raw.map(normalizeProduct)
+    const products = raw.map(normalizeProduct)
+    const variationsData = await fetchVariationsData()
+    return variationsData ? products.map((p) => attachPackSizes(p, variationsData)) : products
   } catch {
     // A WordPress outage must still render a bakery, just with stale stock.
     if (FILTER_PARAMS.some((key) => params[key] !== undefined)) return []

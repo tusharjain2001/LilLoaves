@@ -50,7 +50,11 @@ export function splitName(fullName = '') {
  * to gain from hashing client-side too.
  */
 export function buildCheckoutToken({ lines, fulfilment, postcode, coupon }) {
-  const itemsKey = lines.map((l) => `${l.id}:${l.qty}`).join(',')
+  // variationId folded in: id:qty alone can't tell two pack sizes of one
+  // product apart (both share the same parent id), so without it a Single
+  // Cookie and a Box of 6 in the same cart state would collapse onto the
+  // same token.
+  const itemsKey = lines.map((l) => `${l.id}:${l.variationId ?? 0}:${l.qty}`).join(',')
   return [itemsKey, fulfilment, postcode || '', coupon || ''].join('|')
 }
 
@@ -78,12 +82,18 @@ export function submitCheckout({
 
   const fields = {
     action: HANDOFF_ACTION,
-    // The WordPress handler (ll_handoff()) currently reads only `id` and
-    // `qty` per item and will silently ignore `options` until it's taught to
-    // store it as order line-item meta - it is sent anyway so that follow-up
-    // work has real data to read.
+    // `variation_id` selects a pack size and is read/validated server-side
+    // (ll_validate_variation()) exactly like `id`/`qty`. `options` is a
+    // separate, display-only field the handler still only reads `id`/`qty`/
+    // `variation_id` from (see the Lunch Box note this comment replaces) -
+    // it's sent anyway so that follow-up work has real data to read.
     items: JSON.stringify(
-      lines.map((l) => (l.options ? { id: l.id, qty: l.qty, options: l.options } : { id: l.id, qty: l.qty })),
+      lines.map((l) => ({
+        id: l.id,
+        qty: l.qty,
+        ...(l.options ? { options: l.options } : {}),
+        ...(l.variationId ? { variation_id: l.variationId } : {}),
+      })),
     ),
     fulfilment,
     token,

@@ -26,10 +26,10 @@ export default defineConfig(({ mode }) => {
             const endpoint = params.get('endpoint') ?? ''
             params.delete('endpoint')
             const rest = params.toString()
-            // /quote and /pickup both live on the bridge plugin's own
-            // namespace, not the WooCommerce Store API, and take no query
-            // string.
-            if (endpoint === 'quote' || endpoint === 'pickup') return `/wp-json/lilloaves/v1/${endpoint}`
+            // /quote, /pickup and /variations all live on the bridge
+            // plugin's own namespace, not the WooCommerce Store API, and
+            // take no query string.
+            if (['quote', 'pickup', 'variations'].includes(endpoint)) return `/wp-json/lilloaves/v1/${endpoint}`
             return `/wp-json/wc/store/v1/${endpoint}${rest ? `?${rest}` : ''}`
           },
           configure: (proxy) => {

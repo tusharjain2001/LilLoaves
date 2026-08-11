@@ -170,7 +170,7 @@ export default function Cart() {
   // below calls setLines on every quote, which produces a new array
   // reference even when nothing priced actually changed. Depending on the
   // array would re-quote forever against a rate-limited endpoint.
-  const linesKey = cart.lines.map((l) => `${l.id}:${l.qty}`).join(",");
+  const linesKey = cart.lines.map((l) => `${l.id}:${l.variationId ?? 0}:${l.qty}`).join(",");
 
   // Derived once per cart state, not once per click - both clicks of a
   // double-click on an unchanged cart must carry the same token, or the
@@ -250,7 +250,7 @@ export default function Cart() {
         setQuote(result);
         if (result.ok) {
           result.lines.forEach((line) =>
-            cart.syncSnapshot(line.id, line.unitFormatted)
+            cart.syncSnapshot(line.id, line.unitFormatted, line.variationId)
           );
         }
       });
@@ -263,11 +263,15 @@ export default function Cart() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linesKey, mode, postcode, appliedCoupon]);
 
+  // Keyed by (id, variationId), not id alone: a parent product id stays the
+  // same across pack sizes, so two lines of one product (e.g. Single Cookie
+  // and Box of 6, both id 88) would otherwise collide in this Map and the
+  // second quoted line would silently overwrite the first's total.
   // `|| PENDING` (not `?? PENDING`) on purpose: a landed-but-failed quote
   // (network error, non-200) is a real object with genuinely blank ""
   // strings, not null - it must show the same placeholder, not an empty row.
   const quoteLineTotals = new Map(
-    (quote?.lines ?? []).map((l) => [l.id, l.totalFormatted])
+    (quote?.lines ?? []).map((l) => [`${l.id}:${l.variationId ?? 0}`, l.totalFormatted])
   );
   const summaryRows = [
     { key: "subtotal", label: "Subtotal", value: quote?.subtotalFormatted || PENDING },
@@ -360,7 +364,7 @@ export default function Cart() {
               </div>
               <div className="hidden items-center gap-[35px] lg:flex">
                 <p className="font-parkinsans text-[24px] text-cocoa">
-                  {quoteLineTotals.get(line.id) || PENDING}
+                  {quoteLineTotals.get(`${line.id}:${line.variationId ?? 0}`) || PENDING}
                 </p>
                 <button
                   type="button"

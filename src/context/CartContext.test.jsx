@@ -186,3 +186,83 @@ describe('CartContext line options (e.g. Lunch Box picks)', () => {
     expect(cart.lines).toEqual([])
   })
 })
+
+// Pack sizes (Muffins/Cookies/Crackers) reuse the same options mechanism the
+// Lunch Box already exercises above - a pack size's name lives in `options`
+// (so the existing lineKey/optionSummary machinery separates and displays
+// the lines with zero new code), and its numeric variation id rides along as
+// its own field, used only for pricing (/quote, checkout), never for keying.
+const COOKIES = { id: 88, name: 'Choco Chip Cookies', priceFormatted: '$5.00', images: [] }
+
+describe('CartContext pack-size lines (variationId)', () => {
+  it('stores variationId on the line alongside its display options', () => {
+    renderCart()
+    act(() => cart.add(COOKIES, 1, { size: 'Single Cookie' }, 89))
+    expect(cart.lines[0]).toMatchObject({
+      id: 88,
+      variationId: 89,
+      options: { size: 'Single Cookie' },
+      priceFormatted: '$5.00',
+    })
+  })
+
+  it('does not add a variationId field when none is given (breads, Lunch Box unaffected)', () => {
+    renderCart()
+    act(() => cart.add(PRODUCT))
+    expect(cart.lines[0].variationId).toBeUndefined()
+  })
+
+  it('keeps two pack sizes of the same product as separate, independently removable lines', () => {
+    renderCart()
+    act(() => cart.add(COOKIES, 1, { size: 'Single Cookie' }, 89))
+    act(() => cart.add({ ...COOKIES, priceFormatted: '$20.00' }, 1, { size: 'Box of 6' }, 90))
+    expect(cart.lines).toHaveLength(2)
+    expect(cart.count).toBe(2)
+
+    act(() => cart.remove(88, { size: 'Single Cookie' }))
+    expect(cart.lines).toHaveLength(1)
+    expect(cart.lines[0].variationId).toBe(90)
+  })
+
+  it('setQty preserves variationId on the updated line', () => {
+    renderCart()
+    act(() => cart.add(COOKIES, 1, { size: 'Box of 6' }, 90))
+    act(() => cart.setQty(88, 3, { size: 'Box of 6' }))
+    expect(cart.lines[0]).toMatchObject({ qty: 3, variationId: 90 })
+  })
+
+  it('adding the same pack size again increments qty rather than duplicating', () => {
+    renderCart()
+    act(() => cart.add(COOKIES, 1, { size: 'Single Cookie' }, 89))
+    act(() => cart.add(COOKIES, 2, { size: 'Single Cookie' }, 89))
+    expect(cart.lines).toHaveLength(1)
+    expect(cart.lines[0].qty).toBe(3)
+    expect(cart.lines[0].variationId).toBe(89)
+  })
+
+  // Regression: found live in the browser, not by reading code. syncSnapshot
+  // used to match by bare id only (correct for the Lunch Box, whose price
+  // never varies by option), so quoting a Single Cookie line overwrote a
+  // Box of 6 line's displayed price too, since both share product id 88.
+  it('syncSnapshot updates only the line matching (id, variationId), not every pack size of the product', () => {
+    renderCart()
+    act(() => cart.add(COOKIES, 1, { size: 'Single Cookie' }, 89))
+    act(() => cart.add({ ...COOKIES, priceFormatted: '$20.00' }, 1, { size: 'Box of 6' }, 90))
+
+    act(() => cart.syncSnapshot(88, '$5.00', 89))
+
+    const single = cart.lines.find((l) => l.variationId === 89)
+    const box = cart.lines.find((l) => l.variationId === 90)
+    expect(single.priceFormatted).toBe('$5.00')
+    expect(box.priceFormatted).toBe('$20.00')
+  })
+
+  it('syncSnapshot still refreshes every options-variant of a plain (no-variationId) line, e.g. the Lunch Box', () => {
+    const LUNCH_BOX = { id: 15, name: 'Lunch Box', priceFormatted: '$39.00', images: [] }
+    renderCart()
+    act(() => cart.add(LUNCH_BOX, 1, { bread: 'Sour Dough' }))
+    act(() => cart.add(LUNCH_BOX, 1, { bread: 'Japanese Milk Bread' }))
+    act(() => cart.syncSnapshot(15, '$42.00'))
+    expect(cart.lines.every((l) => l.priceFormatted === '$42.00')).toBe(true)
+  })
+})

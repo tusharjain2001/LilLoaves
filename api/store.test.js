@@ -283,3 +283,59 @@ describe('GET /pickup', () => {
     expect(res.statusCode).toBe(502)
   })
 })
+
+describe('GET /variations', () => {
+  const variationsBody = { products: { 88: [{ id: 89, name: 'Single Cookie', price: 500 }] }, currency: {} }
+
+  it('forwards to the lilloaves/v1 namespace, not wc/store/v1', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => variationsBody })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'variations' }, headers: {} }, res)
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://wp.example.com/wp-json/lilloaves/v1/variations',
+      expect.anything(),
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toEqual(variationsBody)
+  })
+
+  it('does not require or send a shared secret - the endpoint is public', async () => {
+    delete process.env.LL_BRIDGE_SECRET
+    global.fetch.mockResolvedValue({ ok: true, json: async () => variationsBody })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'variations' }, headers: {} }, res)
+
+    expect(res.statusCode).toBe(200)
+    const options = global.fetch.mock.calls[0][1]
+    expect(options.headers?.['X-LL-Secret']).toBeUndefined()
+  })
+
+  it('caches it at the edge like the other read-only endpoints', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => variationsBody })
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'variations' }, headers: {} }, res)
+
+    expect(res.headers['vercel-cdn-cache-control']).toBe(
+      'public, s-maxage=60, stale-while-revalidate=600',
+    )
+  })
+
+  it('rejects POST to /variations', async () => {
+    const res = mockRes()
+    await handler({ method: 'POST', query: { endpoint: 'variations' }, headers: {}, body: {} }, res)
+
+    expect(res.statusCode).toBe(405)
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('returns 502 when upstream is unreachable', async () => {
+    global.fetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = mockRes()
+    await handler({ method: 'GET', query: { endpoint: 'variations' }, headers: {} }, res)
+
+    expect(res.statusCode).toBe(502)
+    consoleSpy.mockRestore()
+  })
+})

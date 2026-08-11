@@ -184,6 +184,130 @@ describe('Menu cart', () => {
   })
 })
 
+const COOKIE_PACK_SIZES = [
+  { id: 89, name: 'Single Cookie', slug: 'single-cookie', price: 5, priceFormatted: '$5.00', inStock: true, purchasable: true },
+  { id: 90, name: 'Box of 6', slug: 'box-of-6', price: 20, priceFormatted: '$20.00', inStock: true, purchasable: true },
+]
+
+const cookieProduct = (over = {}) =>
+  product({
+    id: 88,
+    slug: 'choco-chip-cookies',
+    name: 'Choco Chip Cookies',
+    priceFormatted: '$5.00',
+    packSizes: COOKIE_PACK_SIZES,
+    ...over,
+  })
+
+// The pill row sits over the card image (a sibling of the name/price/actions
+// column below it), so `card` here goes one hop further up than the
+// `.parentElement.parentElement` used in "Menu cart" above - to the column
+// that holds both the image (with pills) and the info column.
+function cardFor(name) {
+  return screen.getByText(name).parentElement.parentElement.parentElement
+}
+
+describe('Menu pack-size pills', () => {
+  it('renders a pill per pack size, in wp-admin order, and none for a product with no pack sizes', async () => {
+    woo.fetchProducts.mockResolvedValue([cookieProduct(), product()])
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    const cookieCard = cardFor('Choco Chip Cookies')
+    expect(within(cookieCard).getByRole('button', { name: 'Single Cookie' })).toBeTruthy()
+    expect(within(cookieCard).getByRole('button', { name: 'Box of 6' })).toBeTruthy()
+
+    const breadCard = cardFor('Sour Dough')
+    expect(within(breadCard).queryByRole('button', { name: /single|box of/i })).toBeNull()
+  })
+
+  it('defaults to the first pack size selected and shows its price', async () => {
+    woo.fetchProducts.mockResolvedValue([cookieProduct()])
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    const cookieCard = cardFor('Choco Chip Cookies')
+    expect(within(cookieCard).getByRole('button', { name: 'Single Cookie' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(cookieCard).getByText('$5.00')).toBeTruthy()
+  })
+
+  it('selecting a different pack size updates the displayed price', async () => {
+    woo.fetchProducts.mockResolvedValue([cookieProduct()])
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    const cookieCard = cardFor('Choco Chip Cookies')
+    fireEvent.click(within(cookieCard).getByRole('button', { name: 'Box of 6' }))
+
+    expect(within(cookieCard).getByText('$20.00')).toBeTruthy()
+    expect(within(cookieCard).queryByText('$5.00')).toBeNull()
+    expect(within(cookieCard).getByRole('button', { name: 'Box of 6' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(cookieCard).getByRole('button', { name: 'Single Cookie' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('Add to Cart adds the selected pack size as its own line, carrying variationId and a size label', async () => {
+    woo.fetchProducts.mockResolvedValue([cookieProduct()])
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    const cookieCard = cardFor('Choco Chip Cookies')
+    fireEvent.click(within(cookieCard).getByRole('button', { name: 'Box of 6' }))
+    fireEvent.click(within(cookieCard).getByText('Add to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toEqual([
+        {
+          id: 88,
+          qty: 1,
+          name: 'Choco Chip Cookies',
+          image: 'a.jpg',
+          priceFormatted: '$20.00',
+          options: { size: 'Box of 6' },
+          variationId: 90,
+        },
+      ])
+    })
+  })
+
+  it('two pack sizes of the same product become two separate, independently-addable cart lines', async () => {
+    woo.fetchProducts.mockResolvedValue([cookieProduct()])
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    const cookieCard = cardFor('Choco Chip Cookies')
+    fireEvent.click(within(cookieCard).getByText('Add to Cart')) // Single Cookie (default)
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toHaveLength(1)
+    })
+
+    fireEvent.click(within(cookieCard).getByRole('button', { name: 'Box of 6' }))
+    fireEvent.click(within(cookieCard).getByText('Add to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toHaveLength(2)
+      expect(stored.map((l) => l.variationId).sort()).toEqual([89, 90])
+    })
+  })
+
+  it('the qty stepper reflects only the currently selected pack size, not the product overall', async () => {
+    woo.fetchProducts.mockResolvedValue([cookieProduct()])
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    const cookieCard = cardFor('Choco Chip Cookies')
+    fireEvent.click(within(cookieCard).getByText('Add to Cart')) // adds Single Cookie, qty 1
+    await waitFor(() => expect(within(cookieCard).getByText('1')).toBeTruthy())
+
+    // Box of 6 has never been added - switching to it must show "Add to
+    // Cart" again, not a stepper carrying Single Cookie's quantity.
+    fireEvent.click(within(cookieCard).getByRole('button', { name: 'Box of 6' }))
+    expect(within(cookieCard).getByText('Add to Cart')).toBeTruthy()
+  })
+})
+
 // The card is a link with the cart controls sitting on top of it, so these
 // drive the real card rather than asserting on an href: the two paths have to
 // cross, or "Add to Cart" silently navigates away instead of adding.

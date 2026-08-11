@@ -205,6 +205,77 @@ describe('Cart line with options (e.g. a Lunch Box)', () => {
   })
 })
 
+describe('Cart line with a pack size (e.g. two sizes of one cookie)', () => {
+  // Regression coverage for the line-total lookup: two lines can share the
+  // same product id (a parent id is stable across pack sizes) with
+  // different variationId. Keying quoteLineTotals by bare id would let the
+  // second line's total silently overwrite the first's in the Map, so both
+  // lines would render the same (wrong) total instead of their own.
+  const SINGLE_COOKIE = {
+    id: 88,
+    qty: 2,
+    variationId: 89,
+    name: 'Choco Chip Cookies',
+    image: '',
+    priceFormatted: '$5.00',
+    options: { size: 'Single Cookie' },
+  }
+  const BOX_OF_SIX = {
+    id: 88,
+    qty: 2,
+    variationId: 90,
+    name: 'Choco Chip Cookies',
+    image: '',
+    priceFormatted: '$20.00',
+    options: { size: 'Box of 6' },
+  }
+
+  it('shows each pack-size line its own correct quoted total, not the other line\'s', async () => {
+    seedCart([SINGLE_COOKIE, BOX_OF_SIX])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(
+      makeQuote({
+        lines: [
+          { id: 88, variationId: 89, qty: 2, totalFormatted: '$10.00', unitFormatted: '$5.00' },
+          { id: 88, variationId: 90, qty: 2, totalFormatted: '$40.00', unitFormatted: '$20.00' },
+        ],
+        subtotalFormatted: '$50.00',
+        deliveryFormatted: '$0.00',
+        totalFormatted: '$50.00',
+      }),
+    )
+    renderCart()
+
+    await waitFor(() => expect(screen.getByText('Single Cookie')).toBeTruthy())
+    await waitFor(() => {
+      const removeButtons = screen.getAllByLabelText('Remove Choco Chip Cookies from cart')
+      const totals = removeButtons.map((btn) => btn.previousElementSibling.textContent).sort()
+      expect(totals).toEqual(['$10.00', '$40.00'])
+    })
+    // Regression, found live in the browser: the quote landing also fires
+    // syncSnapshot for each line. It used to match by bare product id, so
+    // the last-processed pack size's unit price silently overwrote the
+    // other line's displayed unit price too, since both share id 88.
+    expect(screen.getByText('$5.00')).toBeTruthy()
+    expect(screen.getByText('$20.00')).toBeTruthy()
+  })
+
+  it('removing one pack-size line leaves the other untouched', async () => {
+    seedCart([SINGLE_COOKIE, BOX_OF_SIX])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart()
+
+    await waitFor(() => expect(screen.getByText('Single Cookie')).toBeTruthy())
+    const removeButtons = screen.getAllByLabelText('Remove Choco Chip Cookies from cart')
+    fireEvent.click(removeButtons[0])
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toHaveLength(1)
+      expect(stored[0].variationId).toBe(90)
+    })
+  })
+})
+
 describe('Empty cart', () => {
   it('renders an empty state without any blank money rows and disables checkout', async () => {
     // The effect still fires fetchQuote({ lines: [], ... }) after the debounce -

@@ -46,6 +46,40 @@ describe('fetchQuote', () => {
     expect(JSON.stringify(body)).not.toMatch(/Sour Dough|a\.jpg|21\.13/)
   })
 
+  it('includes variation_id for a pack-size line, and omits it for a plain line', async () => {
+    global.fetch.mockResolvedValueOnce(quoteResponse())
+    const lines = [
+      { id: 88, qty: 1, variationId: 90, name: 'Choco Chip Cookies', priceFormatted: '$20.00' },
+      LINES[0],
+    ]
+    await fetchQuote({ lines, fulfilment: 'delivery' })
+
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body)
+    expect(body.items).toEqual([
+      { id: 88, qty: 1, variation_id: 90 },
+      { id: 13, qty: 2 },
+    ])
+  })
+
+  it('returns variationId on each priced line, keyed alongside id (0 for a simple product)', async () => {
+    global.fetch.mockResolvedValueOnce(
+      quoteResponse({
+        lines: [
+          { id: 88, variation_id: 89, qty: 1, total: 500, unit: 500 },
+          { id: 88, variation_id: 90, qty: 1, total: 2000, unit: 2000 },
+          { id: 13, variation_id: 0, qty: 2, total: 4226, unit: 2113 },
+        ],
+      }),
+    )
+    const quote = await fetchQuote({ lines: LINES, fulfilment: 'delivery' })
+
+    expect(quote.lines.map((l) => ({ id: l.id, variationId: l.variationId }))).toEqual([
+      { id: 88, variationId: 89 },
+      { id: 88, variationId: 90 },
+      { id: 13, variationId: 0 },
+    ])
+  })
+
   it('posts to the quote proxy endpoint', async () => {
     global.fetch.mockResolvedValueOnce(quoteResponse())
     await fetchQuote({ lines: LINES, fulfilment: 'delivery' })
@@ -90,7 +124,9 @@ describe('fetchQuote', () => {
     )
     const quote = await fetchQuote({ lines: LINES, fulfilment: 'delivery' })
 
-    expect(quote.lines).toEqual([{ id: 13, qty: 2, totalFormatted: '42,26 kr', unitFormatted: '21,13 kr' }])
+    expect(quote.lines).toEqual([
+      { id: 13, variationId: 0, qty: 2, totalFormatted: '42,26 kr', unitFormatted: '21,13 kr' },
+    ])
   })
 
   it('surfaces the server errors array unchanged', async () => {

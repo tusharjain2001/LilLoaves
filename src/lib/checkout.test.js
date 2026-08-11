@@ -121,6 +121,39 @@ describe('submitCheckout', () => {
     expect(payload).not.toMatch(/Sour Dough|a\.jpg|21\.13/)
   })
 
+  it('carries variation_id for a pack-size line, omits it for a plain line', () => {
+    const linesWithVariation = [
+      { id: 88, qty: 1, variationId: 90, name: 'Choco Chip Cookies', priceFormatted: '$20.00' },
+      { id: 13, qty: 2, name: 'Sour Dough', image: 'a.jpg', priceFormatted: '$21.13' },
+    ]
+    submitCheckout({ ...DELIVERY_ARGS, lines: linesWithVariation })
+    const form = getForm()
+
+    expect(JSON.parse(fieldValue(form, 'items'))).toEqual([
+      { id: 88, qty: 1, variation_id: 90 },
+      { id: 13, qty: 2 },
+    ])
+  })
+
+  it('carries both options and variation_id together for a pack size that also had a display option set', () => {
+    const lines = [
+      {
+        id: 88,
+        qty: 1,
+        variationId: 90,
+        options: { size: 'Box of 6' },
+        name: 'Choco Chip Cookies',
+        priceFormatted: '$20.00',
+      },
+    ]
+    submitCheckout({ ...DELIVERY_ARGS, lines })
+    const form = getForm()
+
+    expect(JSON.parse(fieldValue(form, 'items'))).toEqual([
+      { id: 88, qty: 1, options: { size: 'Box of 6' }, variation_id: 90 },
+    ])
+  })
+
   it('carries a line-level options object (e.g. Lunch Box picks) in the items payload', () => {
     const linesWithOptions = [
       {
@@ -164,6 +197,18 @@ describe('buildCheckoutToken', () => {
 
   it('changes when the coupon changes', () => {
     expect(buildCheckoutToken(base)).not.toBe(buildCheckoutToken({ ...base, coupon: 'LOAF10' }))
+  })
+
+  it('does not collapse two different pack sizes of one product into the same token', () => {
+    // Same id, same qty, different variationId (e.g. Single Cookie vs Box of
+    // 6 of the same Choco Chip Cookies product) - id:qty alone would collide.
+    const singleCookie = { ...base, lines: [{ id: 88, qty: 1, variationId: 89 }] }
+    const boxOfSix = { ...base, lines: [{ id: 88, qty: 1, variationId: 90 }] }
+    expect(buildCheckoutToken(singleCookie)).not.toBe(buildCheckoutToken(boxOfSix))
+  })
+
+  it('is unchanged for a plain (no-variation) line, same shape as before pack sizes existed', () => {
+    expect(buildCheckoutToken(base)).toBe(buildCheckoutToken({ ...base }))
   })
 })
 

@@ -39,13 +39,38 @@ const RAW = {
   is_purchasable: true,
 }
 
+// fetchProducts now always fetches /variations too (see 'fetchProducts pack
+// sizes' below), so the mock routes that call to its own default rather than
+// consuming a slot every other test's jsonOnce(...) calls queue for the
+// products/tags/categories request they actually care about. Tests that want
+// to control the variations response use mockVariations/failVariations
+// instead of jsonOnce for it.
+let queue = []
+let variationsImpl = () =>
+  Promise.resolve({ ok: true, json: async () => ({ products: {}, currency: null }) })
+
 function jsonOnce(payload) {
-  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => payload })
+  queue.push({ ok: true, json: async () => payload })
+}
+
+function mockVariations(payload) {
+  variationsImpl = () => Promise.resolve({ ok: true, json: async () => payload })
+}
+
+function failVariations() {
+  variationsImpl = () => Promise.reject(new Error('offline'))
 }
 
 beforeEach(() => {
   clearCache()
-  global.fetch = vi.fn()
+  queue = []
+  variationsImpl = () =>
+    Promise.resolve({ ok: true, json: async () => ({ products: {}, currency: null }) })
+  global.fetch = vi.fn((url) => {
+    if (String(url).includes('endpoint=variations')) return variationsImpl()
+    const next = queue.shift()
+    return next ? Promise.resolve(next) : Promise.reject(new Error(`unmocked fetch call: ${url}`))
+  })
 })
 
 describe('normalizeProduct', () => {
@@ -134,7 +159,9 @@ describe('fetchProducts', () => {
     jsonOnce([RAW])
     await fetchProducts()
     await fetchProducts()
-    expect(global.fetch).toHaveBeenCalledTimes(1)
+    // 1 products fetch + 1 variations fetch, each cached independently -
+    // the second fetchProducts() call hits both caches.
+    expect(global.fetch).toHaveBeenCalledTimes(2)
   })
 
   it('treats different params as different cache entries', async () => {
@@ -142,7 +169,9 @@ describe('fetchProducts', () => {
     jsonOnce([])
     await fetchProducts()
     await fetchProducts({ category: '1372' })
-    expect(global.fetch).toHaveBeenCalledTimes(2)
+    // 2 distinct products fetches (different params) + 1 variations fetch,
+    // shared/cached across both since it takes no params.
+    expect(global.fetch).toHaveBeenCalledTimes(3)
   })
 
   it('falls back to the committed snapshot when the proxy fails', async () => {
@@ -194,6 +223,60 @@ describe('fetchCategories', () => {
     global.fetch.mockRejectedValue(new Error('offline'))
     const cats = await fetchCategories()
     expect(cats.map((c) => c.slug)).toContain('breads')
+  })
+})
+
+const VARIATIONS = {
+  products: {
+    88: [
+      { id: 89, name: 'Single Cookie', slug: 'single-cookie', price: 500, in_stock: true, purchasable: true },
+      { id: 90, name: 'Box of 6', slug: 'box-of-6', price: 2000, in_stock: true, purchasable: true },
+    ],
+  },
+  currency: PRICES,
+}
+
+describe('fetchProducts pack sizes', () => {
+  it('attaches packSizes to a product present in the variations map, prices formatted via money.js', async () => {
+    jsonOnce([{ ...RAW, id: 88 }])
+    mockVariations(VARIATIONS)
+    const [p] = await fetchProducts()
+    expect(p.packSizes).toEqual([
+      { id: 89, name: 'Single Cookie', slug: 'single-cookie', price: 5, priceFormatted: '$5.00', inStock: true, purchasable: true },
+      { id: 90, name: 'Box of 6', slug: 'box-of-6', price: 20, priceFormatted: '$20.00', inStock: true, purchasable: true },
+    ])
+  })
+
+  it('preserves the wp-admin ordering instead of sorting', async () => {
+    jsonOnce([{ ...RAW, id: 88 }])
+    mockVariations(VARIATIONS)
+    const [p] = await fetchProducts()
+    expect(p.packSizes.map((s) => s.name)).toEqual(['Single Cookie', 'Box of 6'])
+  })
+
+  it('does not attach packSizes to a product absent from the variations map (e.g. a bread)', async () => {
+    jsonOnce([RAW]) // RAW is product id 13, not a key in VARIATIONS
+    mockVariations(VARIATIONS)
+    const [p] = await fetchProducts()
+    expect(p.packSizes).toBeUndefined()
+  })
+
+  it('still returns products, with no packSizes on any of them, when the variations endpoint fails', async () => {
+    jsonOnce([{ ...RAW, id: 88 }])
+    failVariations()
+    const products = await fetchProducts()
+    expect(products[0].slug).toBe('sour-dough')
+    expect(products[0].packSizes).toBeUndefined()
+  })
+
+  it('decodes an HTML-encoded pack size name', async () => {
+    jsonOnce([{ ...RAW, id: 88 }])
+    mockVariations({
+      products: { 88: [{ id: 89, name: 'Doc&#8217;s Size', slug: 'docs-size', price: 500, in_stock: true, purchasable: true }] },
+      currency: PRICES,
+    })
+    const [p] = await fetchProducts()
+    expect(p.packSizes[0].name).toBe('Doc’s Size')
   })
 })
 

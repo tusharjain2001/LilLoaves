@@ -17,8 +17,6 @@ import cardBlueberryMuffins from "../assets/product/card-blueberry-muffins.jpg";
 // the path that actually executes today. Keeps the gallery from collapsing.
 const PLACEHOLDER_IMAGES = [productMain, productThumb1, productThumb2];
 
-const PACK_OPTIONS = ["Pack of 2", "Pack of 4"];
-
 // Placeholder copy, the same for every product. The bakery has not supplied
 // per-product ingredient or allergen text yet, and WooCommerce has no field
 // holding it - swap these strings (or key them off product.slug) once it does.
@@ -81,7 +79,11 @@ export default function Product() {
 
   // gallery[0] is the elevated hero slot, gallery[1]/[2] are the plain thumbnails
   const [galleryOrder, setGalleryOrder] = useState([0, 1, 2]);
-  const [selectedPack, setSelectedPack] = useState(0);
+  // Chosen pack-size variation id (Muffins/Cookies/Crackers only). null until
+  // touched, same as Menu.jsx's selection state - the render below defaults
+  // to the first (wp-admin-ordered) pack size rather than treating null as
+  // "nothing selected".
+  const [selectedVariationId, setSelectedVariationId] = useState(null);
   const [openAccordion, setOpenAccordion] = useState(null);
 
   const swapToHero = (position) => {
@@ -114,6 +116,21 @@ export default function Product() {
     ...product.images.map((i) => i.src),
     ...PLACEHOLDER_IMAGES,
   ].slice(0, 3);
+
+  // Muffins/Cookies/Crackers carry real pack sizes from woo.js's /variations
+  // merge; breads and the Lunch Box have no `packSizes` at all, so every
+  // branch below falls back to the product's own price/stock exactly as
+  // before pack sizes existed - never a hardcoded pack list or count.
+  const packSizes = product.packSizes ?? [];
+  const hasPackSizes = packSizes.length > 0;
+  const selectedPackSize = hasPackSizes
+    ? packSizes.find((s) => s.id === selectedVariationId) ?? packSizes[0]
+    : null;
+  const displayPrice = selectedPackSize ? selectedPackSize.priceFormatted : product.priceFormatted;
+  const purchasable = selectedPackSize ? selectedPackSize.inStock : product.inStock;
+  const cartProduct = selectedPackSize ? { ...product, priceFormatted: selectedPackSize.priceFormatted } : product;
+  const cartOptions = selectedPackSize ? { size: selectedPackSize.name } : undefined;
+  const cartVariationId = selectedPackSize ? selectedPackSize.id : undefined;
 
   return (
     <main className="w-full bg-cream">
@@ -179,7 +196,12 @@ export default function Product() {
                       {product.name}
                     </p>
                     <div className="flex items-center gap-[10.05px] whitespace-nowrap font-parkinsans lg:gap-[16px]">
-                      <p className="text-[22.613px] text-cocoa lg:text-[36px]">{product.priceFormatted}</p>
+                      <p className="text-[22.613px] text-cocoa lg:text-[36px]">{displayPrice}</p>
+                      {/* No per-pack-size regular/sale price exists (the
+                          /variations endpoint returns only a current active
+                          price), so the struck-through "was" price stays
+                          tied to the product overall, same as before pack
+                          sizes existed. */}
                       {product.onSale && (
                         <p className="text-[20.1px] text-shell line-through decoration-solid lg:text-[32px]">
                           {product.regularPriceFormatted}
@@ -192,33 +214,36 @@ export default function Product() {
                       className="max-w-[370px] text-center font-parkinsans text-[12.563px] text-[#9e8e7f] lg:max-w-none lg:text-left lg:text-[20px]"
                       dangerouslySetInnerHTML={{ __html: product.description }}
                     />
-                    {product.hasOptions && (
-                      <div className="flex items-center justify-center gap-[10.05px] lg:gap-[16px]">
-                        {PACK_OPTIONS.map((label, i) => (
-                          <button
-                            key={label}
-                            type="button"
-                            onClick={() => setSelectedPack(i)}
-                            className={`cursor-pointer whitespace-nowrap rounded-[9.682px] border-[1.256px] px-[10.05px] py-[5.025px] font-parkinsans text-[12.563px] lg:rounded-[15px] lg:border-2 lg:px-[16px] lg:py-[8px] lg:text-[16px] ${
-                              selectedPack === i
-                                ? "border-taupe bg-taupe text-white"
-                                : "border-latte bg-transparent text-latte"
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
+                    {hasPackSizes && (
+                      <div className="flex items-center justify-center gap-[8.67px]">
+                        {packSizes.map((size) => {
+                          const isSelected = size.id === selectedPackSize.id;
+                          return (
+                            <button
+                              key={size.id}
+                              type="button"
+                              aria-pressed={isSelected}
+                              disabled={!size.purchasable}
+                              onClick={() => setSelectedVariationId(size.id)}
+                              className={`cursor-pointer whitespace-nowrap rounded-[15.414px] px-[7.707px] py-[3.854px] font-parkinsans text-[13.487px] text-[#57423d] disabled:cursor-not-allowed disabled:opacity-50 ${
+                                isSelected ? "bg-[#fff3d4]" : "bg-[#f7f5f1]"
+                              }`}
+                            >
+                              {size.name}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
                 </div>
 
                 <div className="flex w-full items-start gap-[10.05px] lg:gap-[16px]">
-                  {product.inStock ? (
+                  {purchasable ? (
                     <>
                       <button
                         type="button"
-                        onClick={() => cart.add(product, 1)}
+                        onClick={() => cart.add(cartProduct, 1, cartOptions, cartVariationId)}
                         className="flex-1 cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[30.15px] py-[6.281px] font-parkinsans text-[12.563px] text-white lg:flex-none lg:px-[48px] lg:py-[10px] lg:text-[16px]"
                       >
                         Add to Cart
@@ -226,7 +251,7 @@ export default function Product() {
                       <button
                         type="button"
                         onClick={() => {
-                          cart.add(product, 1);
+                          cart.add(cartProduct, 1, cartOptions, cartVariationId);
                           navigate("/cart");
                         }}
                         className="flex-1 cursor-pointer whitespace-nowrap rounded-full border-[1.256px] border-cocoa px-[30.15px] py-[6.281px] font-parkinsans text-[12.563px] text-cocoa lg:flex-none lg:border-2 lg:px-[48px] lg:py-[10px] lg:text-[16px]"

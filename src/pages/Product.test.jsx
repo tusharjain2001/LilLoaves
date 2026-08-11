@@ -139,6 +139,86 @@ describe('Product cart', () => {
   })
 })
 
+const COOKIE_PACK_SIZES = [
+  { id: 89, name: 'Single Cookie', slug: 'single-cookie', price: 5, priceFormatted: '$5.00', inStock: true, purchasable: true },
+  { id: 90, name: 'Box of 6', slug: 'box-of-6', price: 20, priceFormatted: '$20.00', inStock: true, purchasable: true },
+]
+
+describe('Product pack sizes', () => {
+  it('renders no pill for a product without pack sizes (unchanged layout)', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue(PRODUCT)
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Sour Dough')).toBeTruthy())
+    expect(screen.queryByRole('button', { name: 'Single Cookie' })).toBeNull()
+  })
+
+  it('renders a pill per pack size, defaulting to the first, with its price shown', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue({
+      ...PRODUCT,
+      id: 88,
+      name: 'Choco Chip Cookies',
+      priceFormatted: '$5.00',
+      packSizes: COOKIE_PACK_SIZES,
+    })
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    expect(screen.getByRole('button', { name: 'Single Cookie' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Box of 6' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Single Cookie' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('$5.00')).toBeTruthy()
+  })
+
+  it('selecting a different pack size updates the displayed price', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue({
+      ...PRODUCT,
+      id: 88,
+      name: 'Choco Chip Cookies',
+      priceFormatted: '$5.00',
+      packSizes: COOKIE_PACK_SIZES,
+    })
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Box of 6' }))
+
+    expect(screen.getByText('$20.00')).toBeTruthy()
+    expect(screen.queryByText('$5.00')).toBeNull()
+  })
+
+  it('Add to Cart sends the selected pack size as a line with variationId and a size option', async () => {
+    vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue({
+      ...PRODUCT,
+      id: 88,
+      name: 'Choco Chip Cookies',
+      priceFormatted: '$5.00',
+      images: [],
+      packSizes: COOKIE_PACK_SIZES,
+    })
+    renderAt('/product/sour-dough')
+    await waitFor(() => expect(screen.getByText('Choco Chip Cookies')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Box of 6' }))
+    const purchaseRow = screen.getByText('Buy Now').parentElement
+    fireEvent.click(within(purchaseRow).getByText('Add to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored).toEqual([
+        {
+          id: 88,
+          qty: 1,
+          name: 'Choco Chip Cookies',
+          image: '',
+          priceFormatted: '$20.00',
+          options: { size: 'Box of 6' },
+          variationId: 90,
+        },
+      ])
+    })
+  })
+})
+
 describe('Product gallery', () => {
   it('fills empty gallery slots with placeholders when only one photo exists, without an undefined src', async () => {
     vi.spyOn(woo, 'fetchProductBySlug').mockResolvedValue({
