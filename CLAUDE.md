@@ -37,6 +37,14 @@ So everything goes through a Vercel serverless proxy at `api/store.js`, edge-cac
 1. It was originally `api/store/[...path].js`. Vercel never resolved that catch-all on this project — a single path segment reached the function with no `path` in the query, and a two-segment path never reached it at all. It is now a flat file taking `?endpoint=`. **Don't reintroduce a catch-all.**
 2. Vercel ignores a plain `Cache-Control: s-maxage`. Every response came back `X-Vercel-Cache: MISS`, so every page load was hitting WordPress directly — exactly the throttling the proxy exists to prevent. It now sets `Vercel-CDN-Cache-Control` and `CDN-Cache-Control`. **Don't "simplify" that back to one header.**
 
+3. It **allowlists endpoints**. A new bridge route is unreachable from the browser until it is added there — and `vite.config.js` has a parallel rewrite for `npm run dev`, so missing one breaks only dev and missing the other breaks only production.
+
+### Pack sizes live outside the Store API
+
+The Store API exposes a variable product's attribute terms and variation ids, and a `price_range` — but **no per-variation price**, and variations are not fetchable as products (`?include=<variation_id>` returns empty). So pack-size prices come from our own bridge route, `GET /lilloaves/v1/variations`: every variable product in **one** edge-cached request, keyed by parent id, minor units.
+
+Selling one means sending a `variation_id` alongside the parent `id`. WooCommerce needs `add_to_cart($parent, $qty, $variation)` — passing a variation id as the product id does not work. `/quote` and the handoff both validate that the variation genuinely belongs to the parent and is purchasable; it is a selector, never a price.
+
 ### The money rule
 
 **No money arithmetic anywhere in React.** The Store API returns minor-unit strings (`"2113"` with `currency_minor_unit: 2` means $21.13).
@@ -151,7 +159,8 @@ Every one of these was found by running against the real server, not by reading 
 
 | | |
 |---|---|
-| Products | Sour Dough **13**, Danish Pastries **14** (Featured), Lunch Box **15**, Japanese Milk Bread **16** (out of stock) |
+| Products | The client's real catalogue. Breads (Sourdough, Japanese Milk Bread) and Lunch Box **15** are simple. Muffins **82/84/86**, cookies **88/91** and crackers **94/97** are **variable**, sharing the global `pa_pack-size` attribute |
+| Pack sizes | Muffins *Pack of 4* $10 · Cookies *Single* $5 / *Box of 6* $20 · Crackers *5 oz* $7 / *10 oz* $12. All owner-editable in `wp-admin` — **never hardcode a size, price or count** |
 | Delivery zone | Postcodes 92866–92869, flat rate **$5.00**. Test with **92868 / Orange / CA**; **90210** is out of area |
 | Pickup | `local_pickup` on zones 1 **and** 0 |
 | Coupon | `LOAF10` = 10% off |
@@ -168,6 +177,9 @@ Every one of these was found by running against the real server, not by reading 
 - No payment gateway beyond COD
 - `Pickup.jsx`'s month chevrons are non-functional
 - Only the first configured store is ever used — no multi-store picker
+- **A sale price on a *variation* won't show its struck-through "was" price.** `/variations` returns only the current price, so the strikethrough stays tied to the parent. Nothing is on sale today
+- Chocolate Muffins has no photo, and Dinner Rolls sits as a draft awaiting a price
+- Ingredients and allergens are unpublished — the client's own doc says they must verify them first
 
 ---
 
