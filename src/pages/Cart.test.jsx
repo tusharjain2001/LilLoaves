@@ -107,8 +107,8 @@ describe('Cart items', () => {
     })
   })
 
-  it('decrement calls the cart context but never drops below quantity 1', async () => {
-    seedCart([{ ...MUFFIN, qty: 1 }])
+  it('decrement at quantity 2 reduces to 1 without removing the line', async () => {
+    seedCart([{ ...MUFFIN, qty: 2 }])
     vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
     renderCart()
 
@@ -117,6 +117,70 @@ describe('Cart items', () => {
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
       expect(stored.find((l) => l.id === 1).qty).toBe(1)
+    })
+  })
+
+  // The client's explicit ask: pressing "-" at quantity 1 removes the line,
+  // rather than clamping at 1 and requiring the separate bin icon.
+  it('decrement at quantity 1 removes the line entirely', async () => {
+    seedCart([{ ...MUFFIN, qty: 1 }])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+    renderCart()
+
+    fireEvent.click(screen.getByLabelText('Decrease Blueberry Muffin quantity'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 1)).toBeUndefined()
+    })
+    expect(screen.queryByText('Blueberry Muffin')).toBeNull()
+  })
+
+  // Regression coverage for the fix: a Lunch Box (options-keyed line) and two
+  // pack sizes of the same cookie product must each delete independently at
+  // quantity 1 - decrementing one must never touch the others, even though
+  // two of them share a product id (88) and the third shares no id with
+  // either but exercises the same options-keyed path as the Lunch Box.
+  it('decrementing one options-keyed line to zero removes only that line, leaving a Lunch Box and the other pack size untouched', async () => {
+    const SINGLE_COOKIE = {
+      id: 88,
+      qty: 1,
+      variationId: 89,
+      name: 'Choco Chip Cookies',
+      image: '',
+      priceFormatted: '$5.00',
+      options: { size: 'Single Cookie' },
+    }
+    const BOX_OF_SIX = {
+      id: 88,
+      qty: 1,
+      variationId: 90,
+      name: 'Choco Chip Cookies',
+      image: '',
+      priceFormatted: '$20.00',
+      options: { size: 'Box of 6' },
+    }
+    seedCart([LUNCH_BOX, SINGLE_COOKIE, BOX_OF_SIX])
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(
+      makeQuote({
+        lines: [
+          { id: 15, qty: 1, totalFormatted: '$39.00', unitFormatted: '$39.00' },
+          { id: 88, variationId: 89, qty: 1, totalFormatted: '$5.00', unitFormatted: '$5.00' },
+          { id: 88, variationId: 90, qty: 1, totalFormatted: '$20.00', unitFormatted: '$20.00' },
+        ],
+      }),
+    )
+    renderCart()
+
+    await waitFor(() => expect(screen.getByText('Single Cookie')).toBeTruthy())
+    const decreaseButtons = screen.getAllByLabelText('Decrease Choco Chip Cookies quantity')
+    fireEvent.click(decreaseButtons[0])
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 88 && l.variationId === 89)).toBeUndefined()
+      expect(stored.find((l) => l.id === 88 && l.variationId === 90)?.qty).toBe(1)
+      expect(stored.find((l) => l.id === 15)?.qty).toBe(1)
     })
   })
 

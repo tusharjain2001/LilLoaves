@@ -568,8 +568,9 @@ export default function Menu() {
   const [selectedPackSizes, setSelectedPackSizes] = useState({});
   const [selectedBread, setSelectedBread] = useState("");
   const [selectedCracker, setSelectedCracker] = useState("");
+  const [selectedDessert, setSelectedDessert] = useState("");
   const [lunchboxQty, setLunchboxQty] = useState(1);
-  const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [] });
+  const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [], dessert: [] });
   const [lunchBoxProduct, setLunchBoxProduct] = useState(null);
   // The loading state is otherwise indistinguishable from the empty state
   // (both show zero visible products), so every visitor would see "More
@@ -629,14 +630,17 @@ export default function Menu() {
     Promise.all([
       fetchByTagSlug("lunchbox-bread"),
       fetchByTagSlug("lunchbox-cracker"),
-    ]).then(([bread, cracker]) => {
+      fetchByTagSlug("lunchbox-dessert"),
+    ]).then(([bread, cracker, dessert]) => {
       if (!active) return;
       setLunchbox({
         bread: bread.map(toBoxOption),
         cracker: cracker.map(toBoxOption),
+        dessert: dessert.map(toBoxOption),
       });
       setSelectedBread(bread[0]?.name ?? "");
       setSelectedCracker(cracker[0]?.name ?? "");
+      setSelectedDessert(dessert[0]?.name ?? "");
     });
     return () => {
       active = false;
@@ -801,6 +805,13 @@ export default function Menu() {
             selected={selectedCracker}
             onSelect={setSelectedCracker}
           />
+          <LunchboxGroup
+            step={3}
+            title="CHoose your Dessert"
+            options={lunchbox.dessert}
+            selected={selectedDessert}
+            onSelect={setSelectedDessert}
+          />
         </div>
       </div>
 
@@ -831,6 +842,7 @@ export default function Menu() {
               cart.add(lunchBoxProduct, lunchboxQty, {
                 bread: selectedBread,
                 cracker: selectedCracker,
+                dessert: selectedDessert,
               });
             }}
             className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[24px] py-[16px] font-parkinsans text-[16px] text-white lg:grid lg:h-[54px] lg:w-[170.53px] lg:place-items-center lg:rounded-[96.35px] lg:px-0 lg:py-0"

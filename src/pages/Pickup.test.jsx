@@ -1,7 +1,39 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Pickup from './Pickup.jsx'
+import { CartProvider } from '../context/CartContext.jsx'
 import * as pickupLib from '../lib/pickup.js'
+import * as quoteLib from '../lib/quote.js'
+
+const STORAGE_KEY = 'lilloaves:cart'
+
+function seedCart(lines) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(lines))
+}
+
+const MUFFIN = { id: 1, qty: 2, name: 'Blueberry Muffin', image: 'blueberry.png', priceFormatted: '$21.13' }
+const LUNCH_BOX = {
+  id: 15,
+  qty: 1,
+  name: 'Lunch Box',
+  image: '',
+  priceFormatted: '$39.00',
+  options: { bread: 'Sour Dough', cracker: '', dessert: '' },
+}
+
+function makeQuote(overrides = {}) {
+  return {
+    ok: true,
+    lines: [{ id: 1, qty: 2, totalFormatted: '$42.26', unitFormatted: '$21.13' }],
+    subtotalFormatted: '$42.26',
+    deliveryFormatted: '$0.00',
+    discountFormatted: '$0.00',
+    taxFormatted: '$0.00',
+    totalFormatted: '$42.26',
+    errors: [],
+    ...overrides,
+  }
+}
 
 const PICKUP_STORE = {
   id: 'orange-county-store',
@@ -21,9 +53,19 @@ const PICKUP_CONFIG = { ok: true, stores: [PICKUP_STORE] }
 const renderPickup = () =>
   render(
     <MemoryRouter>
-      <Pickup />
+      <CartProvider>
+        <Pickup />
+      </CartProvider>
     </MemoryRouter>,
   )
+
+beforeEach(() => {
+  localStorage.clear()
+  // Every render of Pickup now fetches a quote for whatever's in the cart -
+  // default it to a real, working response so tests below that don't care
+  // about pricing aren't forced to mock it too.
+  vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+})
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -98,5 +140,72 @@ describe('Pickup page - wired to the same /pickup config as the cart', () => {
     renderPickup()
 
     expect(await screen.findByText(/not available/i)).toBeTruthy()
+  })
+})
+
+describe('Pickup page shows the cart items panel', () => {
+  // The bug: Pickup.jsx had no cart code at all, so a collection customer who
+  // followed OrderHero's Pickup link never saw what they were buying. This
+  // reuses the exact same CartItemsPanel component Cart.jsx renders (see
+  // Cart.test.jsx's own "Pickup mode shows cart items" coverage), so
+  // asserting it works here is really asserting the two pages share one
+  // definition and cannot drift apart.
+  it('renders cart lines with working quantity and remove controls, including a Lunch Box line', async () => {
+    vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue(PICKUP_CONFIG)
+    quoteLib.fetchQuote.mockResolvedValue(
+      makeQuote({
+        lines: [
+          { id: 1, qty: 2, totalFormatted: '$42.26', unitFormatted: '$21.13' },
+          { id: 15, qty: 1, totalFormatted: '$39.00', unitFormatted: '$39.00' },
+        ],
+      }),
+    )
+    seedCart([MUFFIN, LUNCH_BOX])
+    renderPickup()
+
+    expect(screen.getByText('Blueberry Muffin')).toBeTruthy()
+    expect(screen.getByText('Cart Items (3)')).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('Increase Lunch Box quantity'))
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15).qty).toBe(2)
+    })
+
+    fireEvent.click(screen.getByLabelText('Remove Lunch Box from cart'))
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 15)).toBeUndefined()
+    })
+  })
+
+  it('decrementing a line at quantity 1 removes it, same as Cart.jsx', async () => {
+    vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue(PICKUP_CONFIG)
+    seedCart([{ ...MUFFIN, qty: 1 }])
+    renderPickup()
+
+    fireEvent.click(screen.getByLabelText('Decrease Blueberry Muffin quantity'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 1)).toBeUndefined()
+    })
+  })
+
+  it('shows a sensible empty-cart message rather than a bare empty box', async () => {
+    vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue(PICKUP_CONFIG)
+    renderPickup()
+
+    expect(await screen.findByText(/cart is empty/i)).toBeTruthy()
+    expect(screen.getByText('Cart Items (0)')).toBeTruthy()
+  })
+
+  it('renders the real quoted per-line total, never computed locally', async () => {
+    vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue(PICKUP_CONFIG)
+    quoteLib.fetchQuote.mockResolvedValue(makeQuote())
+    seedCart([MUFFIN])
+    renderPickup()
+
+    await waitFor(() => expect(screen.getByText('$42.26')).toBeTruthy())
   })
 })

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import OrderHero from "../components/OrderHero.jsx";
+import CartItemsPanel from "../components/CartItemsPanel.jsx";
+import { useCart } from "../context/CartContext.jsx";
+import { fetchQuote } from "../lib/quote.js";
 import { fetchPickupConfig, slotValue, pickupDayCopy } from "../lib/pickup.js";
 import waveRose from "../assets/pickup/wave-rose.svg";
 import iconLocation from "../assets/pickup/icon-location.svg";
@@ -35,6 +38,7 @@ function Asterisk() {
 }
 
 export default function Pickup() {
+  const cart = useCart();
   const [form, setForm] = useState(INITIAL_FORM);
   const [activeTab, setActiveTab] = useState("date");
   const [selectedDate, setSelectedDate] = useState(null);
@@ -43,6 +47,10 @@ export default function Pickup() {
   // Cart.jsx reads, via the same lib/pickup.js module, so this page can
   // never show a date/time the cart wouldn't also offer.
   const [pickupConfig, setPickupConfig] = useState(null);
+  // null means "no quote has landed yet" for the same reason as Cart.jsx -
+  // per-line totals render a PENDING placeholder inside CartItemsPanel until
+  // this actually resolves, never a fabricated $0.00.
+  const [quote, setQuote] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -52,6 +60,45 @@ export default function Pickup() {
     });
     return () => controller.abort();
   }, []);
+
+  // A string key of "id:variationId:qty" triples, not `cart.lines` itself -
+  // same reasoning as Cart.jsx: syncSnapshot below calls setLines on every
+  // quote landing, which would otherwise re-trigger this effect forever
+  // against a rate-limited endpoint.
+  const linesKey = cart.lines.map((l) => `${l.id}:${l.variationId ?? 0}:${l.qty}`).join(",");
+
+  // Same debounced quote as Cart.jsx, fulfilment fixed to "pickup" since
+  // this page never collects a delivery postcode or a coupon - both the
+  // per-line and summary totals must still come from the server, never be
+  // computed here, per the money rule.
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetchQuote({ lines: cart.lines, fulfilment: "pickup", postcode: "", coupon: "", signal: controller.signal }).then(
+        (result) => {
+          if (controller.signal.aborted) return;
+          setQuote(result);
+          if (result.ok) {
+            result.lines.forEach((line) =>
+              cart.syncSnapshot(line.id, line.unitFormatted, line.variationId)
+            );
+          }
+        },
+      );
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linesKey]);
+
+  // Keyed by (id, variationId), same reasoning as Cart.jsx's own map: two
+  // pack sizes of one product share a parent id, so keying by bare id would
+  // let the second line's total silently overwrite the first's.
+  const quoteLineTotals = new Map(
+    (quote?.lines ?? []).map((l) => [`${l.id}:${l.variationId ?? 0}`, l.totalFormatted]),
+  );
 
   // ponytail: only the first configured store is ever offered - see the
   // matching comment in Cart.jsx. No Figma design for a multi-store picker,
@@ -101,6 +148,19 @@ export default function Pickup() {
             </span>
           </div>
         </div>
+      </section>
+
+      {/* CART ITEMS - shown before the contact form and date/time picker,
+          same ordering as Cart.jsx's pickup mode: a collection customer
+          reasonably expects to see what they're buying before choosing when
+          to pick it up. No Figma design exists for this section on /pickup
+          (confirmed against the live "Pickup" frame, node 247:24076 in the
+          Figma file - it jumps straight from the hero to Contact
+          Information), so this reuses the shared CartItemsPanel and the
+          horizontal padding already used by the Contact Information section
+          below rather than inventing new layout. */}
+      <section className="mx-auto w-full max-w-[1440px] px-[16px] pt-[32px] lg:px-[181px] lg:pt-[64px]">
+        <CartItemsPanel quoteLineTotals={quoteLineTotals} />
       </section>
 
       {/* CONTACT INFORMATION */}

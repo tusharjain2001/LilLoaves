@@ -383,7 +383,7 @@ describe('Menu product links', () => {
 })
 
 describe('Menu lunch box', () => {
-  it('builds each column from its tag', async () => {
+  it('builds each column from its tag, including Dessert', async () => {
     woo.fetchByTagSlug.mockImplementation(async (slug) =>
       slug === 'lunchbox-bread'
         ? [product(), product({ id: 16, slug: 'japanese-milk-bread', name: 'Japanese Milk Bread' })]
@@ -392,10 +392,16 @@ describe('Menu lunch box', () => {
     renderMenu()
     await waitFor(() => expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-bread'))
     expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-cracker')
-    // The Lunch Box dropped its "Choose your Dessert" chooser - the dessert
-    // stays in the box, it's just no longer customer-selected, so the
-    // builder never fetches this tag any more.
-    expect(woo.fetchByTagSlug).not.toHaveBeenCalledWith('lunchbox-dessert')
+    // The Lunch Box has three choosers - Bread, Crackers and Dessert - so the
+    // dessert column is customer-selected too, built from its own tag.
+    expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-dessert')
+  })
+
+  it('renders three choosers for the Lunch Box - Bread, Crackers and Dessert', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
+    expect(screen.getByText('CHoose your Crackers')).toBeTruthy()
+    expect(screen.getByText('CHoose your Dessert')).toBeTruthy()
   })
 
   it('renders no options for a tag with no products yet', async () => {
@@ -486,6 +492,29 @@ describe('Menu lunch box option wrapping', () => {
 
     ;[0, 1, 2, 3].forEach((i) => expect(screen.getByText(`Bread ${i}`)).toBeTruthy())
   })
+
+  // The restored Dessert chooser is the group with a real 5-option catalogue
+  // today (5 products tagged lunchbox-dessert) - same wrap mechanism as
+  // above, exercised on the Dessert column specifically so this wraps
+  // 2-2-1 rather than silently only ever being tested on Bread.
+  it('wraps five dessert options across three lines (2-2-1) without dropping any', async () => {
+    const dessertOptions = Array.from({ length: 5 }, (_, i) =>
+      product({ id: 200 + i, slug: `dessert-${i}`, name: `Dessert ${i}` }),
+    )
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-dessert' ? dessertOptions : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Dessert 4')).toBeTruthy())
+
+    const buttons = [0, 1, 2, 3, 4].map((i) => screen.getByText(`Dessert ${i}`).closest('button'))
+    const row = buttons[0].parentElement
+    expect(row.className).toMatch(/flex-wrap/)
+    buttons.forEach((btn) => {
+      expect(btn.parentElement).toBe(row)
+      expect(btn.className).toMatch(/basis-\[calc\(50%-6px\)\]/)
+    })
+  })
 })
 
 describe('Menu group cards wrapping', () => {
@@ -528,15 +557,20 @@ describe('Menu lunch box add to cart', () => {
     categories: [],
   })
 
-  it('adds product 15 to the cart carrying the selected bread/cracker options', async () => {
+  it('adds product 15 to the cart carrying the selected bread/cracker/dessert options', async () => {
     woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
     woo.fetchByTagSlug.mockImplementation(async (slug) =>
       slug === 'lunchbox-bread'
         ? [product(), product({ id: 16, slug: 'japanese-milk-bread', name: 'Japanese Milk Bread' })]
-        : [],
+        : slug === 'lunchbox-dessert'
+          ? [product({ id: 17, slug: 'cookies', name: 'Cookies' })]
+          : [],
     )
     renderMenu()
-    await waitFor(() => expect(screen.getByAltText('Selected')).toBeTruthy())
+    // Both Bread and Dessert have a default selection now, so two "Selected"
+    // markers land - assert both, rather than getByAltText which only
+    // tolerates exactly one match.
+    await waitFor(() => expect(screen.getAllByAltText('Selected')).toHaveLength(2))
     // The bread selection and the Lunch Box product itself resolve from two
     // separate effects - wait for both to have actually landed in state
     // before clicking, not just for the selection marker.
@@ -549,9 +583,9 @@ describe('Menu lunch box add to cart', () => {
       const line = stored.find((l) => l.id === 15)
       expect(line).toBeTruthy()
       expect(line.qty).toBe(1)
-      // No dessert key any more - the dessert is still in the box, it's
-      // just not a customer selection, so there is nothing to carry for it.
-      expect(line.options).toEqual({ bread: 'Sour Dough', cracker: '' })
+      // The Lunch Box has three choosers - Bread, Crackers and Dessert - so
+      // all three selections reach the cart's options.
+      expect(line.options).toEqual({ bread: 'Sour Dough', cracker: '', dessert: 'Cookies' })
     })
   })
 
@@ -573,9 +607,9 @@ describe('Menu lunch box add to cart', () => {
     })
   })
 
-  it('adds without crashing when the cracker column has no options available yet', async () => {
+  it('adds without crashing when the cracker/dessert columns have no options available yet', async () => {
     // Default beforeEach mocks fetchByTagSlug to resolve [] for every tag,
-    // so bread/cracker both have no selection - this is today's real
+    // so bread/cracker/dessert all have no selection - this is today's real
     // catalogue state (only lunchbox-bread is tagged).
     woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
     renderMenu()
@@ -588,7 +622,7 @@ describe('Menu lunch box add to cart', () => {
 
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
-      expect(stored.find((l) => l.id === 15).options).toEqual({ bread: '', cracker: '' })
+      expect(stored.find((l) => l.id === 15).options).toEqual({ bread: '', cracker: '', dessert: '' })
     })
   })
 
