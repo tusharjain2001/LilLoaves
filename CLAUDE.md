@@ -169,7 +169,7 @@ Every one of these was found by running against the real server, not by reading 
 |---|---|
 | Products | The client's real catalogue. Breads (Sourdough, Japanese Milk Bread) and Lunch Box **15** are simple. Muffins **82/84/86**, cookies **88/91** and crackers **94/97** are **variable**, sharing the global `pa_pack-size` attribute |
 | Pack sizes | Muffins *Pack of 4* $10 · Cookies *Single* $5 / *Box of 6* $20 · Crackers *5 oz* $7 / *10 oz* $12. All owner-editable in `wp-admin` — **never hardcode a size, price or count** |
-| Boxes | Lunch Box **15** ($39) and Sampler Box **104** ($50), plus mini loaves **105/106** ($6). The Menu carousel loops between the two boxes; each offers **two** choosers (bread, cracker). The Lunch Box's dessert is included but no longer customer-chosen |
+| Boxes | Lunch Box **15** ($39) and Sampler Box **104** ($50), plus mini loaves **105/106** ($6). The Menu carousel loops between them. **Lunch Box has three choosers** (bread, cracker, dessert); **Sampler Box has two** (bread, cracker) — its sweets are included, not chosen. Don't "harmonise" them |
 | Box prices | **$50 and $6 came from a Figma mockup, not the client** — she must confirm them |
 | Delivery zone | Postcodes 92866–92869, flat rate **$5.00**. Test with **92868 / Orange / CA**; **90210** is out of area |
 | Pickup | `local_pickup` on zones 1 **and** 0 |
