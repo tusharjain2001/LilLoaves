@@ -77,15 +77,16 @@ Starred products appear as Seasonal Specials. Unstar to remove. That's the whole
 
 The Lunch Box lets a customer pick one bread, one cracker and one dessert.
 
-You control the choices with **tags**. Open a product, find the **Tags** box, and add:
+Open the bake → on the **General** tab, near the top, find the **Lunch Box** field → choose:
 
-| Tag | Puts it in |
+| Choose | Puts it in |
 |---|---|
-| `lunchbox-bread` | the Bread column |
-| `lunchbox-cracker` | the Crackers column |
-| `lunchbox-dessert` | the Dessert column |
+| Not in the Lunch Box | nowhere — it's not offered as a Lunch Box option |
+| Lunch Box — Bread | the Bread column |
+| Lunch Box — Cracker | the Crackers column |
+| Lunch Box — Dessert | the Dessert column |
 
-Type it exactly, all lowercase with hyphens. Add the tag and the bake appears as an option; remove it and it disappears.
+**Update**, and the bake appears (or disappears) as a Lunch Box option. This works the same way for the muffins, cookies and crackers too, even though they also have pack sizes.
 
 To change the Lunch Box price, edit the **Lunch Box** product itself like any other.
 
