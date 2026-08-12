@@ -92,6 +92,29 @@ To change the Lunch Box price, edit the **Lunch Box** product itself like any ot
 
 ---
 
+## The Sampler Box
+
+The Sampler Box lets a customer pick one bread and one cracker for their $50 box (the sweets are always included, no picking needed), plus buy extra bread or crackers alongside it if they want more.
+
+Open the bake → on the **General** tab, near the top, find the **Sampler Box** checkboxes → tick whichever apply:
+
+| Tick | Puts it in |
+|---|---|
+| Bread choice | one of the free bread picks inside the box |
+| Cracker choice | one of the free cracker picks inside the box |
+| Bread add-on | an extra bread customers can add on top, at its own price |
+| Cracker add-on | an extra cracker customers can add on top, at its own price |
+
+Unlike the Lunch Box, you can tick **more than one box** on the same bake. Doc's and Chief's crackers, for example, are ticked as both "Cracker choice" and "Cracker add-on" — they're the only crackers you sell, so they do both jobs: free pick, or paid extra. Leave every box unticked to keep a bake out of the Sampler Box altogether.
+
+**Update**, and the bake appears (or disappears) from the Sampler Box right away.
+
+To change the Sampler Box's own price, edit the **Sampler Box** product itself like any other.
+
+⚠️ **The $50 box price and the $6 mini loaf prices were set from a design mockup, not by you.** Check them and change them if they're wrong — nothing else on the site depends on that exact number, the whole site reads prices from the product itself.
+
+---
+
 ## Orders
 
 **WooCommerce → Orders.**
