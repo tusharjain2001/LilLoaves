@@ -89,6 +89,24 @@ describe('Menu', () => {
     expect(screen.queryByText(/<p/)).toBeNull()
   })
 
+  it('shows the tagline only - never the ingredients/allergens custom attributes - on a menu card', async () => {
+    woo.fetchProducts.mockResolvedValue([
+      product({
+        summary: 'Crisp crust, airy crumb.',
+        customAttributes: [
+          { id: 0, name: 'Ingredients', value: 'Flour, water, sourdough starter, and sea salt.' },
+          { id: 1, name: 'Allergens', value: 'Contains wheat and gluten.' },
+        ],
+      }),
+    ])
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Crisp crust, airy crumb.')).toBeTruthy())
+    expect(screen.queryByText(/Flour, water, sourdough starter/)).toBeNull()
+    expect(screen.queryByText(/Contains wheat and gluten/)).toBeNull()
+    expect(screen.queryByText('Ingredients')).toBeNull()
+    expect(screen.queryByText('Allergens')).toBeNull()
+  })
+
   it('shows a placeholder image rather than a broken image when the product has none', async () => {
     woo.fetchProducts.mockResolvedValue([product({ images: [] })])
     renderMenu()
@@ -402,6 +420,78 @@ describe('Menu lunch box', () => {
     // regardless of the tag fetch, so it is not a reliable proxy for "the
     // async selection has landed" - wait on the actual selected marker.
     await waitFor(() => expect(screen.getAllByAltText('Selected')).toHaveLength(1))
+  })
+})
+
+// LunchboxGroup lays its options out flex + justify-center, each option
+// taking a basis of about half the row - two sit per line at their original
+// full-bleed width, and a third (or fourth) that no longer fits wraps onto a
+// new, centred line instead of squeezing every option thinner. jsdom does
+// not compute real flexbox layout, so these assert the wrap is wired up
+// (flex-wrap on the row, a shared basis on every option, no per-item
+// flex-1 that would squeeze instead of wrap) rather than pixel positions -
+// confirmed visually in the browser at 390px and 1440px per the task.
+describe('Menu lunch box option wrapping', () => {
+  const breadOptions = (count) =>
+    Array.from({ length: count }, (_, i) =>
+      product({ id: 100 + i, slug: `bread-${i}`, name: `Bread ${i}` }),
+    )
+
+  it('two options keep their original full-width layout unchanged', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread' ? breadOptions(2) : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Bread 1')).toBeTruthy())
+
+    const buttons = [0, 1].map((i) => screen.getByText(`Bread ${i}`).closest('button'))
+    const row = buttons[0].parentElement;
+    expect(row).toBe(buttons[1].parentElement)
+    expect(row.className).toMatch(/flex-wrap/)
+    buttons.forEach((btn) => {
+      expect(btn.className).toMatch(/basis-\[calc\(50%-6px\)\]/)
+      expect(btn.className).not.toMatch(/\bflex-1\b/)
+    })
+  })
+
+  it('wraps a third option onto a new line instead of squeezing all three thinner', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread' ? breadOptions(3) : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Bread 2')).toBeTruthy())
+
+    expect(screen.getByText('Bread 0')).toBeTruthy()
+    expect(screen.getByText('Bread 1')).toBeTruthy()
+    const buttons = [0, 1, 2].map((i) => screen.getByText(`Bread ${i}`).closest('button'))
+    const row = buttons[0].parentElement
+    expect(row.className).toMatch(/flex-wrap/)
+    buttons.forEach((btn) => {
+      expect(btn.parentElement).toBe(row)
+      expect(btn.className).toMatch(/basis-\[calc\(50%-6px\)\]/)
+    })
+  })
+
+  it('wraps four options two-per-line without dropping any of them', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread' ? breadOptions(4) : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Bread 3')).toBeTruthy())
+
+    ;[0, 1, 2, 3].forEach((i) => expect(screen.getByText(`Bread ${i}`)).toBeTruthy())
+  })
+})
+
+describe('Menu group cards wrapping', () => {
+  it('lets the Bread/Crackers/Dessert group-card row wrap on desktop instead of overflowing', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
+
+    const row = screen.getByText('CHoose your Bread').closest('.lg\\:flex-row')
+    expect(row).toBeTruthy()
+    expect(row.className).toMatch(/lg:flex-wrap/)
+    expect(row.className).toMatch(/lg:justify-center/)
   })
 })
 

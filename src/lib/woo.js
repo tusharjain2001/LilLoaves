@@ -85,7 +85,26 @@ export function normalizeProduct(raw) {
       slug: c.slug,
     })),
     tags: (raw.tags ?? []).map((t) => ({ id: t.id, name: decodeName(t.name), slug: t.slug })),
+    customAttributes: extractCustomAttributes(raw.attributes),
   }
+}
+
+// Ingredients/Allergens (or whatever else the owner adds in wp-admin) arrive
+// as custom product attributes - `taxonomy: null` and `has_variations: false`
+// is what tells one apart from a real taxonomy attribute like pa_pack-size
+// (`taxonomy: "pa_pack-size"`, `has_variations: true`), which is a live
+// selling feature and must never be parsed as ingredient text. A term-less
+// attribute is dropped rather than shown empty - load-bearing for allergens,
+// a food-safety field that must never render as a blank or placeholder box.
+function extractCustomAttributes(attributes) {
+  return (attributes ?? [])
+    .filter((a) => !a.taxonomy && !a.has_variations)
+    .map((a) => ({
+      id: a.id,
+      name: decodeName(a.name),
+      value: (a.terms ?? []).map((t) => decodeName(t.name)).join(', '),
+    }))
+    .filter((a) => a.name && a.value)
 }
 
 // The committed snapshot is an unfiltered product dump. It cannot honour a

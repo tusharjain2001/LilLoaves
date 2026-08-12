@@ -17,24 +17,6 @@ import cardBlueberryMuffins from "../assets/product/card-blueberry-muffins.jpg";
 // the path that actually executes today. Keeps the gallery from collapsing.
 const PLACEHOLDER_IMAGES = [productMain, productThumb1, productThumb2];
 
-// Placeholder copy, the same for every product. The bakery has not supplied
-// per-product ingredient or allergen text yet, and WooCommerce has no field
-// holding it - swap these strings (or key them off product.slug) once it does.
-const ACCORDION_ITEMS = [
-  {
-    key: "ingredients",
-    label: "Ingredients",
-    content:
-      "Organic wheat flour, filtered water, live sourdough starter, sea salt. Naturally leavened over 24 hours and baked fresh every morning - no preservatives, no additives.",
-  },
-  {
-    key: "allergens",
-    label: "Allergens",
-    content:
-      "Contains wheat and gluten. Baked in a kitchen that also handles milk, eggs, soy, tree nuts and sesame, so traces may be present.",
-  },
-];
-
 const INFO_BAR = [
   { icon: iconHotspring, label: "100% Freshly Baked" },
   { icon: iconChefhat, label: "Homegrown Brand" },
@@ -84,7 +66,6 @@ export default function Product() {
   // to the first (wp-admin-ordered) pack size rather than treating null as
   // "nothing selected".
   const [selectedVariationId, setSelectedVariationId] = useState(null);
-  const [openAccordion, setOpenAccordion] = useState(null);
 
   const swapToHero = (position) => {
     setGalleryOrder((prev) => {
@@ -93,9 +74,6 @@ export default function Product() {
       return next;
     });
   };
-
-  const toggleAccordion = (key) =>
-    setOpenAccordion((cur) => (cur === key ? null : key));
 
   if (product === undefined) return null;
   if (product === null) {
@@ -121,6 +99,11 @@ export default function Product() {
   // merge; breads and the Lunch Box have no `packSizes` at all, so every
   // branch below falls back to the product's own price/stock exactly as
   // before pack sizes existed - never a hardcoded pack list or count.
+  // Owner-editable custom attributes (Ingredients, Allergens, or whatever
+  // else gets added/renamed/removed in wp-admin) - never a hardcoded pair.
+  // woo.js already excludes pa_pack-size and drops any attribute with no
+  // value, so a product with none (Lunch Box) yields [] here.
+  const customAttributes = product.customAttributes ?? [];
   const packSizes = product.packSizes ?? [];
   const hasPackSizes = packSizes.length > 0;
   const selectedPackSize = hasPackSizes
@@ -270,43 +253,44 @@ export default function Product() {
               {/* Figma draws the rules as their own 1.256px (mobile) / 2px
                   (desktop) bars with a 7.538px / 12px gap either side, which is
                   the same box a border plus that much vertical padding gives -
-                  and keeps each panel attached to the row that opened it. */}
-              <div className="flex w-full flex-col items-start border-t-[1.256px] border-shell lg:border-t-2">
-                {ACCORDION_ITEMS.map((item) => {
-                  const isOpen = openAccordion === item.key;
-                  return (
-                    <div
-                      key={item.key}
-                      className="w-full border-b-[1.256px] border-shell lg:border-b-2"
+                  and keeps each panel attached to the row that opened it.
+                  Native <details>/<summary>: keyboard- and screen-reader-
+                  accessible for free, and each dropdown opens independently.
+                  Renders whatever custom attributes the product actually has
+                  (owner-editable in wp-admin) - a product with none (Lunch
+                  Box) renders no section at all. */}
+              {customAttributes.length > 0 && (
+                <div className="flex w-full flex-col items-start border-t-[1.256px] border-shell lg:border-t-2">
+                  {customAttributes.map((attr) => (
+                    // Not attr.id: WooCommerce gives every custom (non-
+                    // taxonomy) attribute id 0 - real Ingredients and
+                    // Allergens data collided on it in the live browser
+                    // check. A product can't have two attributes sharing a
+                    // name, so the name is the safe key.
+                    <details
+                      key={attr.name}
+                      className="group w-full border-b-[1.256px] border-shell lg:border-b-2"
                     >
-                      <button
-                        type="button"
-                        onClick={() => toggleAccordion(item.key)}
-                        className="flex w-full cursor-pointer items-center justify-between py-[7.538px] lg:py-[12px]"
-                      >
+                      <summary className="flex w-full cursor-pointer list-none items-center justify-between py-[7.538px] [&::-webkit-details-marker]:hidden lg:py-[12px]">
                         {/* Figma names Neulis Sans, which this project stands in
                             for with DM Sans - the same mapping the info bar
                             below already uses. */}
                         <span className="font-dm text-[12.563px] text-cocoa lg:text-[20px]">
-                          {item.label}
+                          {attr.name}
                         </span>
                         <img
                           src={iconChevronDown}
                           alt=""
-                          className={`h-[5.025px] w-[10.05px] transition-transform duration-200 lg:h-[8px] lg:w-[16px] ${
-                            isOpen ? "rotate-180" : ""
-                          }`}
+                          className="h-[5.025px] w-[10.05px] transition-transform duration-200 group-open:rotate-180 lg:h-[8px] lg:w-[16px]"
                         />
-                      </button>
-                      {isOpen && (
-                        <p className="pb-[7.538px] font-parkinsans text-[12.563px] text-[#9e8e7f] lg:pb-[12px] lg:text-[16px]">
-                          {item.content}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      </summary>
+                      <p className="pb-[7.538px] font-parkinsans text-[12.563px] text-[#9e8e7f] lg:pb-[12px] lg:text-[16px]">
+                        {attr.value}
+                      </p>
+                    </details>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

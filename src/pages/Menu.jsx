@@ -215,7 +215,11 @@ function BreadCard({ item, qty, onAdd, onInc, onDec, onSelectPackSize }) {
 
 function LunchboxGroup({ step, title, options, selected, onSelect }) {
   return (
-    <div className="box-border w-full rounded-[16px] border border-shell bg-cream p-[16px] lg:h-[344.88px] lg:w-[393.65px] lg:rounded-[15.87px] lg:border-[0.99px] lg:p-[15.87px]">
+    // No fixed lg: height: Figma's 344.88px is exactly this content's own
+    // auto-layout height for two options (one row), so auto reproduces it
+    // pixel-for-pixel - and lets the card grow for a wrapped third/fourth
+    // option instead of the extra row spilling out past a fixed-height box.
+    <div className="box-border w-full rounded-[16px] border border-shell bg-cream p-[16px] lg:w-[393.65px] lg:rounded-[15.87px] lg:border-[0.99px] lg:p-[15.87px]">
       <div className="flex flex-col items-center gap-[16px] lg:gap-[23.8px]">
         <div className="flex items-center justify-center gap-[12px] lg:h-[39px] lg:gap-[9.92px]">
           <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-cocoa font-parkinsans text-[13px] text-white lg:size-[29.75px] lg:text-[19.83px] lg:leading-[19.83px]">
@@ -225,7 +229,12 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
             {title}
           </p>
         </div>
-        <div className="flex w-full items-start justify-center gap-[12px] lg:gap-[23.8px]">
+        {/* Two options fill the row exactly as before: basis of "half the
+            row minus half the gap" times two, plus the one gap between them,
+            sums to 100%. flex-wrap means a third (or fourth) option that no
+            longer fits drops to a new line, where justify-center on the
+            parent centres it under the first two. */}
+        <div className="flex w-full flex-wrap items-start justify-center gap-[12px] lg:gap-[23.8px]">
           {options.map((opt) => {
             const isSelected = selected === opt.name;
             return (
@@ -233,7 +242,7 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
                 key={opt.name}
                 type="button"
                 onClick={() => onSelect(opt.name)}
-                className="flex flex-1 cursor-pointer flex-col items-center gap-[12px] lg:gap-[23.8px]"
+                className="flex grow-0 basis-[calc(50%-6px)] cursor-pointer flex-col items-center gap-[12px] lg:basis-[calc(50%-11.9px)] lg:gap-[23.8px]"
               >
                 <div className="flex w-full flex-col items-center gap-[8px] lg:gap-[14px]">
                   <img
@@ -578,7 +587,13 @@ export default function Menu() {
                   Select one option from each category
                 </p>
               </div>
-              <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:items-center lg:justify-center lg:gap-[47.6px]">
+              {/* lg:items-start, not -center: a group's card can now grow
+                  taller than its siblings when its own options wrap onto a
+                  second line, and centering the row's cross-axis on the
+                  tallest card would drop the shorter cards out of top
+                  alignment. Two/three same-height cards (today's real
+                  catalogue) look identical either way. */}
+              <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-start lg:justify-center lg:gap-[47.6px]">
                 <LunchboxGroup
                   step={1}
                   title="CHoose your Bread"
