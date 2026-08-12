@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import CategoryStrip from "../components/CategoryStrip.jsx";
 import SeasonalSpecials from "../components/SeasonalSpecials.jsx";
@@ -11,10 +11,12 @@ import {
   fetchByTagSlug,
   fetchProductBySlug,
 } from "../lib/woo.js";
+import { fetchQuote } from "../lib/quote.js";
 import PLACEHOLDER_PRODUCT_IMAGE from "../lib/placeholderImage.js";
 import flowerYellow from "../assets/shared/flower-yellow.svg";
 import blobButton from "../assets/menu/blob-button.svg";
 import blobSpecials from "../assets/menu/blob-specials.svg";
+import blobSampler from "../assets/menu/blob-sampler.svg";
 import lunchboxIconsSprite from "../assets/menu/lunchbox-icons-sprite.png";
 import lunchboxArrowLeft from "../assets/menu/lunchbox-arrow-left.svg";
 import lunchboxArrowRight from "../assets/menu/lunchbox-arrow-right.svg";
@@ -55,10 +57,10 @@ const CHECKERBOARD_BG = {
   backgroundPosition: "calc(50% - 690px) 0",
 };
 
-/* Scalloped seam under the Lunch Box section: 17 circles of r=57.73 spaced 86.6
-   apart, filled with the section's own #f4e7e3 so the pink edge reads as bumps.
-   They overlap, so they are split across two gradient layers that each tile at
-   double the pitch. */
+/* Scalloped seam under the Lunch Box/Sampler Box carousel: 17 circles of
+   r=57.73 spaced 86.6 apart, filled with the section's own #f4e7e3 so the
+   pink edge reads as bumps. They overlap, so they are split across two
+   gradient layers that each tile at double the pitch. */
 const SCALLOP_DESKTOP = {
   backgroundImage: [
     "radial-gradient(circle at 27.73px 57.73px, #f4e7e3 57.73px, transparent 57.74px)",
@@ -76,9 +78,32 @@ const SCALLOP_MOBILE = {
   backgroundRepeat: "repeat-x",
 };
 
+// Shown for any money figure whose quote hasn't landed yet - same convention
+// as Cart.jsx's PENDING: never a fabricated $0.00, never blank beside a
+// label.
+const PENDING = "—";
+
+// A staged add-on always starts at a quantity of one - this is a UI step
+// amount ("add one more of this"), not a catalog fact, so it is the one
+// number in the add-on copy that is fine to be a constant rather than come
+// from the product.
+const ADDON_STEP = 1;
+
+// Confirmed live against the real store (wp-cli, not guessed): the parallel
+// agent building these in WooCommerce landed on sampler-*-choice/-addon,
+// not a samplerbox-* prefix. fetchByTagSlug already degrades an unmatched
+// or not-yet-tagged slug to [], so a slot simply renders nothing if this
+// ever drifts again - never a crash.
+const SAMPLER_BREAD_TAG = "sampler-bread-choice";
+const SAMPLER_CRACKER_TAG = "sampler-cracker-choice";
+const SAMPLER_ADDON_BREAD_TAG = "sampler-bread-addon";
+const SAMPLER_ADDON_CRACKER_TAG = "sampler-cracker-addon";
+
 /* Crop windows into the shared lunchbox-icons-sprite.png - each "what's
    inside" icon zooms into a different region of one collage photo, exactly
-   as exported from Figma. */
+   as exported from Figma. Reused byte-for-byte by the Sampler Box's own
+   "what's inside" row (confirmed against Figma node 379:2 - it crops the
+   exact same sprite at the exact same coordinates). */
 const LUNCHBOX_INSIDE = [
   {
     label: "Bread",
@@ -109,6 +134,148 @@ const LUNCHBOX_INSIDE = [
     },
   },
 ];
+
+const SAMPLERBOX_INSIDE = [
+  {
+    label: "Bread",
+    desc: "Mini-loaves of either our OG Sourdough or Japanese Milk Bread",
+    gap: LUNCHBOX_INSIDE[0].gap,
+    crop: LUNCHBOX_INSIDE[0].crop,
+  },
+  {
+    label: "CRAckers",
+    desc: "Either the trial bags of Doc’s Cheddar Cracks or Chief’s White Cheddar Crackers",
+    gap: LUNCHBOX_INSIDE[1].gap,
+    crop: LUNCHBOX_INSIDE[1].crop,
+  },
+  {
+    label: "Sweets",
+    desc: "(1) Blueberry Muffin, (1) Chocolate Orange Muffin, (1) White Chocolate Lemon Cookie and (1) Chocolate Chip Cookie",
+    gap: LUNCHBOX_INSIDE[2].gap,
+    crop: LUNCHBOX_INSIDE[2].crop,
+  },
+];
+
+// A tag-fetched product only needs its name and photo to render as a chooser
+// option; shared by the Lunch Box and Sampler Box tag-loading effects below.
+function toBoxOption(p) {
+  return { name: p.name, img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE };
+}
+
+// Some of the Sampler Box's add-ons turned out to be the same *variable*
+// crackers already sold on the main menu (confirmed live: sampler-cracker-
+// addon tags Doc's/Chief's, both variable with real pack sizes) - fetchByTagSlug
+// already runs every result through the same /variations merge as the main
+// menu, so a variable addon already carries `packSizes` here. Selling one
+// needs a variation id, exactly like BreadCard's pack-size pills, and the
+// cart line needs an options.size tag so it can never silently merge its
+// quantity into an unrelated pack size of the same product already in the
+// cart (the same bug class the pack-size work fixed for the menu grid). A
+// simple addon (the bread mini-loaf-priced full loaves) has no packSizes and
+// needs none of this - it's already an ordinary line.
+function addonPurchaseInfo(addon) {
+  const packSize = addon.packSizes?.[0];
+  return {
+    priceFormatted: packSize ? packSize.priceFormatted : addon.priceFormatted,
+    variationId: packSize?.id,
+    options: packSize ? { size: packSize.name } : undefined,
+  };
+}
+
+function usePrefersReducedMotion() {
+  const query = "(prefers-reduced-motion: reduce)";
+  const [reduced, setReduced] = useState(() => window.matchMedia?.(query).matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const handler = () => setReduced(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return reduced;
+}
+
+/* Drives a persistent 3-slot [prev][current][next] track. Going "next" slides
+   the track to reveal the right-hand slot; going "previous" slides it to
+   reveal the left-hand one - the two visibly move in opposite directions,
+   and because the offset always animates from the resting -100% rather than
+   snapping between arbitrary indices, wrapping from the last panel back to
+   the first keeps travelling the same direction instead of reversing.
+   With reduced motion, go() swaps the index directly and the track never
+   leaves its resting offset, so nothing slides. */
+function useCarousel(count, reducedMotion) {
+  const [index, setIndex] = useState(0);
+  const [dir, setDir] = useState(0); // -1 previous, +1 next, 0 idle
+
+  const go = (direction) => {
+    if (reducedMotion) {
+      setIndex((i) => (i + direction + count) % count);
+      return;
+    }
+    if (dir !== 0) return; // one transition in flight at a time
+    setDir(direction);
+  };
+
+  const handleTransitionEnd = () => {
+    if (dir === 0) return;
+    setIndex((i) => (i + dir + count) % count);
+    setDir(0);
+  };
+
+  const prevIndex = (index - 1 + count) % count;
+  const nextIndex = (index + 1) % count;
+  const offset = dir === 1 ? -200 : dir === -1 ? 0 : -100;
+  const trackStyle = {
+    transform: `translateX(${offset}%)`,
+    // Only ever animated while dir is non-zero (an active go()); the
+    // snap-back to resting -100% after handleTransitionEnd resets dir to 0
+    // in the same render that resets the offset, so it lands instantly
+    // instead of visibly sliding backwards.
+    transition: dir === 0 ? "none" : "transform 420ms ease",
+  };
+
+  return { index, prevIndex, nextIndex, dir, trackStyle, go, handleTransitionEnd };
+}
+
+function useSwipe(onSwipe) {
+  const startX = useRef(null);
+  const SWIPE_THRESHOLD = 40;
+  return {
+    onTouchStart: (e) => {
+      startX.current = e.touches[0]?.clientX ?? null;
+    },
+    onTouchEnd: (e) => {
+      if (startX.current === null) return;
+      const deltaX = (e.changedTouches[0]?.clientX ?? startX.current) - startX.current;
+      startX.current = null;
+      if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
+      onSwipe(deltaX < 0 ? 1 : -1);
+    },
+  };
+}
+
+/* Renders one synced slot of the carousel (title row or body). The two
+   off-screen slots stay in the DOM only while actively animating towards
+   them (dir matches their side) - at rest they're empty, so only one
+   panel's content (and its data-fetching, its cart handlers) exists at a
+   time. aria-hidden + inert keeps a mid-transition off-screen slot out of
+   the tab order and the accessibility tree. */
+function CarouselTrack({ carousel, panels, field, onTransitionEnd, testId, outerClassName = "" }) {
+  const { index, prevIndex, nextIndex, dir, trackStyle } = carousel;
+  return (
+    <div className={`w-full overflow-hidden ${outerClassName}`}>
+      <div className="flex" style={trackStyle} onTransitionEnd={onTransitionEnd} data-testid={testId}>
+        <div className="w-full shrink-0" aria-hidden="true" inert>
+          {dir === -1 ? panels[prevIndex][field] : null}
+        </div>
+        <div className="w-full shrink-0">{panels[index][field]}</div>
+        <div className="w-full shrink-0" aria-hidden="true" inert>
+          {dir === 1 ? panels[nextIndex][field] : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function BreadCard({ item, qty, onAdd, onInc, onDec, onSelectPackSize }) {
   return (
@@ -213,13 +380,64 @@ function BreadCard({ item, qty, onAdd, onInc, onDec, onSelectPackSize }) {
   );
 }
 
-function LunchboxGroup({ step, title, options, selected, onSelect }) {
+/* Shared by the Lunch Box and Sampler Box sections - the icon+text row
+   "joined by round plus icons" (WHAT'S INSIDE / HERE IS WHAT'S INSIDE THE
+   PACK). Only the heading copy and item text differ between them; the icon
+   sprite, crop math and layout are identical (confirmed against Figma). */
+function WhatsInsideRow({ heading, items }) {
+  return (
+    <div className="flex w-full flex-col items-center gap-[16px] lg:gap-[15.87px]">
+      <p className="font-display text-[11.4px] uppercase text-cocoa lg:text-[39.66px] lg:leading-[44px]">
+        {heading}
+      </p>
+      <div className="flex w-full flex-col gap-[20px] rounded-[16px] bg-[rgba(251,251,248,0.57)] p-[16px] lg:flex-row lg:items-center lg:justify-center lg:gap-[20.82px] lg:rounded-[15.87px] lg:p-[15.87px]">
+        {items.map((item, i) => (
+          <Fragment key={item.label}>
+            {/* Figma gives each of the three a slightly different
+                icon-to-text gap. */}
+            <div className="flex items-center gap-[16px] lg:gap-[var(--icon-gap)]" style={{ "--icon-gap": `${item.gap}px` }}>
+              <div className="relative grid size-[54px] shrink-0 place-items-center overflow-hidden rounded-full bg-shell lg:size-[96.19px]">
+                <img
+                  src={lunchboxIconsSprite}
+                  alt=""
+                  className="absolute max-w-none"
+                  style={item.crop}
+                />
+              </div>
+              <div className="flex flex-col gap-[4px] text-cocoa">
+                <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[38.67px]">
+                  {item.label}
+                </p>
+                <p className="font-parkinsans text-[13px] lg:text-[19.83px] lg:leading-[28px]">
+                  {item.desc}
+                </p>
+              </div>
+            </div>
+            {i < items.length - 1 && (
+              <img
+                src={iconRoundPlus}
+                alt=""
+                className="size-[20px] shrink-0 self-center lg:size-[31.73px]"
+              />
+            )}
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* One "Choose your X" card: a step badge, options with a radio dot, and -
+   only when the caller passes them - optional paid add-on rows below the
+   options (Sampler Box's bread/cracker add-ons; the Lunch Box passes none
+   and renders exactly as it always has). */
+function LunchboxGroup({ step, title, options, selected, onSelect, addons, addonQty, onAddonAdd, onAddonInc, onAddonDec }) {
   return (
     // No fixed lg: height: Figma's 344.88px is exactly this content's own
     // auto-layout height for two options (one row), so auto reproduces it
     // pixel-for-pixel - and lets the card grow for a wrapped third/fourth
     // option instead of the extra row spilling out past a fixed-height box.
-    <div className="box-border w-full rounded-[16px] border border-shell bg-cream p-[16px] lg:w-[393.65px] lg:rounded-[15.87px] lg:border-[0.99px] lg:p-[15.87px]">
+    <div className="box-border flex w-full flex-col items-center gap-[24px] rounded-[16px] border border-shell bg-cream p-[16px] lg:w-[393.65px] lg:gap-[32px] lg:rounded-[15.87px] lg:border-[0.99px] lg:p-[15.87px]">
       <div className="flex flex-col items-center gap-[16px] lg:gap-[23.8px]">
         <div className="flex items-center justify-center gap-[12px] lg:h-[39px] lg:gap-[9.92px]">
           <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-cocoa font-parkinsans text-[13px] text-white lg:size-[29.75px] lg:text-[19.83px] lg:leading-[19.83px]">
@@ -264,6 +482,76 @@ function LunchboxGroup({ step, title, options, selected, onSelect }) {
           })}
         </div>
       </div>
+      {addons && addons.length > 0 && (
+        <div className="flex w-full flex-col gap-[12px] lg:gap-[16px]">
+          {addons.map((addon) => {
+            const qty = addonQty(addon.id);
+            // A variable addon (e.g. the cracker add-ons, which turned out
+            // to be the same pack-sized crackers already on the main menu)
+            // prices from its first pack size, not its own price field -
+            // same convention as BreadCard's pack-size pills.
+            const { priceFormatted } = addonPurchaseInfo(addon);
+            return (
+              <div
+                key={addon.id}
+                className="flex w-full items-center gap-[17px] rounded-[8px] border border-shell py-[8px] pl-[16px] pr-[8px]"
+              >
+                <p className="flex-1 font-parkinsans text-[13px] text-cocoa lg:text-[16px]">
+                  {`Add (${ADDON_STEP}) ${addon.name}?`}
+                </p>
+                {qty > 0 ? (
+                  <div className="flex w-[66px] shrink-0 items-center justify-between rounded-[6.623px] border border-terracotta px-[6.623px] py-[3.312px] font-parkinsans text-[13px] text-terracotta lg:text-[16px]">
+                    <button
+                      type="button"
+                      aria-label={`Decrease ${addon.name} quantity`}
+                      onClick={() => onAddonDec(addon)}
+                      className="cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span>{qty}</span>
+                    <button
+                      type="button"
+                      aria-label={`Increase ${addon.name} quantity`}
+                      onClick={() => onAddonInc(addon)}
+                      className="cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={`Add ${addon.name}, +${priceFormatted}`}
+                    onClick={() => onAddonAdd(addon)}
+                    className="w-[66px] shrink-0 cursor-pointer rounded-[6.623px] bg-terracotta py-[3.312px] font-parkinsans text-[13px] text-white lg:text-[16px]"
+                  >
+                    {`+${priceFormatted}`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Shared by the Lunch Box's and Sampler Box's own price/cart bars - both are
+// a "- qty +" pill of the exact same geometry (confirmed against Figma nodes
+// 379:109 and the existing Lunch Box bar). labelPrefix disambiguates the two
+// bars' aria-labels since the carousel can, briefly, have both mounted.
+function BoxQtyStepper({ qty, onInc, onDec, labelPrefix }) {
+  return (
+    <div className="flex items-center gap-[24px] rounded-full border-2 border-taupe px-[15px] py-[8px] font-parkinsans text-[16px] font-semibold text-taupe lg:h-[56px] lg:w-[170px] lg:justify-between lg:rounded-[96.34px] lg:px-[15.41px] lg:py-0">
+      <button type="button" aria-label={`Decrease ${labelPrefix} quantity`} onClick={onDec} className="cursor-pointer">
+        -
+      </button>
+      <span>{qty}</span>
+      <button type="button" aria-label={`Increase ${labelPrefix} quantity`} onClick={onInc} className="cursor-pointer">
+        +
+      </button>
     </div>
   );
 }
@@ -280,14 +568,34 @@ export default function Menu() {
   const [selectedPackSizes, setSelectedPackSizes] = useState({});
   const [selectedBread, setSelectedBread] = useState("");
   const [selectedCracker, setSelectedCracker] = useState("");
-  const [selectedDessert, setSelectedDessert] = useState("");
   const [lunchboxQty, setLunchboxQty] = useState(1);
-  const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [], dessert: [] });
+  const [lunchbox, setLunchbox] = useState({ bread: [], cracker: [] });
   const [lunchBoxProduct, setLunchBoxProduct] = useState(null);
   // The loading state is otherwise indistinguishable from the empty state
   // (both show zero visible products), so every visitor would see "More
   // treats coming soon!" flash before the real catalogue lands.
   const [loading, setLoading] = useState(true);
+
+  // Sampler Box - same shape of state as the Lunch Box above, plus its own
+  // paid add-ons (keyed by product id -> staged quantity) and its own live
+  // quote for the bottom bar, since unlike the Lunch Box its total isn't
+  // just one product's own price.
+  const [samplerbox, setSamplerbox] = useState({
+    bread: [],
+    cracker: [],
+    addonsBread: [],
+    addonsCracker: [],
+  });
+  const [samplerBoxProduct, setSamplerBoxProduct] = useState(null);
+  const [selectedSamplerBread, setSelectedSamplerBread] = useState("");
+  const [selectedSamplerCracker, setSelectedSamplerCracker] = useState("");
+  const [samplerAddonQty, setSamplerAddonQty] = useState({});
+  const [samplerQty, setSamplerQty] = useState(1);
+  const [samplerQuote, setSamplerQuote] = useState(null);
+
+  const reducedMotion = usePrefersReducedMotion();
+  const carousel = useCarousel(2, reducedMotion);
+  const swipe = useSwipe(carousel.go);
 
   useEffect(() => {
     let active = true;
@@ -321,30 +629,322 @@ export default function Menu() {
     Promise.all([
       fetchByTagSlug("lunchbox-bread"),
       fetchByTagSlug("lunchbox-cracker"),
-      fetchByTagSlug("lunchbox-dessert"),
-    ]).then(([bread, cracker, dessert]) => {
+    ]).then(([bread, cracker]) => {
       if (!active) return;
-      const toOption = (p) => ({
-        name: p.name,
-        img: p.images[0]?.src ?? PLACEHOLDER_PRODUCT_IMAGE,
-      });
       setLunchbox({
-        bread: bread.map(toOption),
-        cracker: cracker.map(toOption),
-        dessert: dessert.map(toOption),
+        bread: bread.map(toBoxOption),
+        cracker: cracker.map(toBoxOption),
       });
       setSelectedBread(bread[0]?.name ?? "");
       setSelectedCracker(cracker[0]?.name ?? "");
-      setSelectedDessert(dessert[0]?.name ?? "");
     });
     return () => {
       active = false;
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchByTagSlug(SAMPLER_BREAD_TAG),
+      fetchByTagSlug(SAMPLER_CRACKER_TAG),
+      fetchByTagSlug(SAMPLER_ADDON_BREAD_TAG),
+      fetchByTagSlug(SAMPLER_ADDON_CRACKER_TAG),
+      fetchProductBySlug("sampler-box"),
+    ]).then(([bread, cracker, addonsBread, addonsCracker, samplerBox]) => {
+      if (!active) return;
+      setSamplerbox({
+        bread: bread.map(toBoxOption),
+        cracker: cracker.map(toBoxOption),
+        // Add-on rows need the full product (id, name, priceFormatted) to
+        // become an ordinary cart line, not just the name/photo a chooser
+        // option needs - so these are kept as fetchByTagSlug returned them.
+        addonsBread,
+        addonsCracker,
+      });
+      setSelectedSamplerBread(bread[0]?.name ?? "");
+      setSelectedSamplerCracker(cracker[0]?.name ?? "");
+      setSamplerBoxProduct(samplerBox);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const addonQty = (id) => samplerAddonQty[id] ?? 0;
+  const setAddonQty = (id, qty) =>
+    setSamplerAddonQty((prev) => {
+      if (qty <= 0) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: qty };
+    });
+  const handleAddonAdd = (addon) => setAddonQty(addon.id, ADDON_STEP);
+  const handleAddonInc = (addon) => setAddonQty(addon.id, addonQty(addon.id) + 1);
+  const handleAddonDec = (addon) => setAddonQty(addon.id, addonQty(addon.id) - 1);
+
+  const allSamplerAddons = [...samplerbox.addonsBread, ...samplerbox.addonsCracker];
+  const handleAddSamplerBox = () => {
+    if (!samplerBoxProduct) return;
+    cart.add(samplerBoxProduct, samplerQty, {
+      bread: selectedSamplerBread,
+      cracker: selectedSamplerCracker,
+    });
+    // Ordinary product lines, not part of the box's own options - each
+    // add-on is its own line with its own id, exactly like adding it from a
+    // menu card would be. A variable addon (the crackers) also carries the
+    // variation id and an options.size tag, same as a pack-size pill, so it
+    // can't silently merge its quantity into a different pack size of the
+    // same product already in the cart.
+    allSamplerAddons.forEach((addon) => {
+      const qty = addonQty(addon.id);
+      if (qty <= 0) return;
+      const info = addonPurchaseInfo(addon);
+      cart.add(addon, qty, info.options, info.variationId);
+    });
+  };
+
+  // The bottom bar's figure is a live server quote of the box at its current
+  // quantity plus whichever add-ons are staged - never summed in React. A
+  // string key of "id:variationId:qty" triples (not the lines array itself)
+  // so the debounce effect below only re-quotes when something actually
+  // priced changed.
+  const samplerAddonLines = allSamplerAddons
+    .map((addon) => {
+      const qty = addonQty(addon.id);
+      if (qty <= 0) return null;
+      return { id: addon.id, qty, variationId: addonPurchaseInfo(addon).variationId };
+    })
+    .filter(Boolean);
+  const samplerLines = samplerBoxProduct
+    ? [{ id: samplerBoxProduct.id, qty: samplerQty }, ...samplerAddonLines]
+    : [];
+  const samplerLinesKey = samplerLines
+    .map((l) => `${l.id}:${l.variationId ?? 0}:${l.qty}`)
+    .join(",");
+
+  useEffect(() => {
+    // Nothing to quote yet (the box hasn't loaded) - samplerQuote is already
+    // null from its initial state, so there's nothing to reset here.
+    if (samplerLines.length === 0) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetchQuote({ lines: samplerLines, signal: controller.signal }).then((result) => {
+        if (controller.signal.aborted) return;
+        setSamplerQuote(result);
+      });
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [samplerLinesKey]);
+
   const activeItems = products.filter((p) =>
     p.categories.some((c) => c.slug === activeCategory),
   );
+
+  const lunchBoxTitle = (
+    <div className="flex flex-col items-center gap-[12px] lg:w-[890px] lg:gap-[19px]">
+      <div className="relative inline-flex items-center justify-center">
+        <img
+          src={blobSpecials}
+          alt=""
+          className="absolute right-[-6px] h-[61px] w-[91px] lg:right-[-10px] lg:h-[104px] lg:w-[165px]"
+        />
+        <p className="relative text-center font-display text-[15.2px] text-cocoa lg:text-[64px] lg:leading-[70px]">
+          LUNCH BOX Specials
+        </p>
+      </div>
+      <p className="max-w-[828px] text-center font-parkinsans text-[15px] text-cocoa lg:w-[828px] lg:text-[20px] lg:leading-[34px]">
+        A thoughtfully curated meal featuring fresh bread, handcrafted
+        crackers, and a sweet treat; perfect for lunch, gifting, or
+        sharing.
+      </p>
+    </div>
+  );
+
+  const lunchBoxBody = (
+    <div className="flex w-full flex-col items-center gap-[48px] lg:w-[1294px] lg:gap-[92.22px]">
+      <WhatsInsideRow heading="WHAT’S INSIDE" items={LUNCHBOX_INSIDE} />
+
+      <div className="flex w-full flex-col items-center gap-[24px] lg:gap-[34.7px]">
+        <div className="flex flex-col items-center text-center text-cocoa">
+          <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[43.63px]">
+            BUILD YOUR LUNCH BOX
+          </p>
+          <p className="font-parkinsans text-[14px] lg:text-[20px] lg:leading-[28px]">
+            Select one option from each category
+          </p>
+        </div>
+        {/* lg:items-start, not -center: a group's card can now grow
+            taller than its siblings when its own options wrap onto a
+            second line, and centering the row's cross-axis on the
+            tallest card would drop the shorter cards out of top
+            alignment. Two/three same-height cards (today's real
+            catalogue) look identical either way. */}
+        <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-start lg:justify-center lg:gap-[47.6px]">
+          <LunchboxGroup
+            step={1}
+            title="CHoose your Bread"
+            options={lunchbox.bread}
+            selected={selectedBread}
+            onSelect={setSelectedBread}
+          />
+          <LunchboxGroup
+            step={2}
+            title="CHoose your Crackers"
+            options={lunchbox.cracker}
+            selected={selectedCracker}
+            onSelect={setSelectedCracker}
+          />
+        </div>
+      </div>
+
+      {/* Price / cart bar */}
+      <div className="flex w-full flex-col items-start gap-[16px] lg:h-[56px] lg:w-[1286px] lg:flex-row lg:items-center lg:gap-[33px]">
+        <div className="grid place-items-center rounded-[16px] bg-[#cc8a7a] px-[16px] py-[8px] lg:h-[55px] lg:w-[123px] lg:px-0 lg:py-0">
+          <p className="font-parkinsans text-[22px] text-white lg:text-[28px] lg:leading-[39px]">
+            {lunchBoxProduct?.priceFormatted}
+          </p>
+        </div>
+        <p className="font-parkinsans text-[16px] text-cocoa lg:w-[723.47px] lg:text-[20px] lg:leading-[28px]">
+          One complete lunch box
+          <br />
+          with your selections
+        </p>
+        <div className="flex items-center gap-[16px] lg:gap-[33px]">
+          <BoxQtyStepper
+            qty={lunchboxQty}
+            onInc={() => setLunchboxQty((q) => q + 1)}
+            onDec={() => setLunchboxQty((q) => Math.max(1, q - 1))}
+            labelPrefix="Lunch Box"
+          />
+          <button
+            type="button"
+            aria-label="Add Lunch Box to Cart"
+            onClick={() => {
+              if (!lunchBoxProduct) return;
+              cart.add(lunchBoxProduct, lunchboxQty, {
+                bread: selectedBread,
+                cracker: selectedCracker,
+              });
+            }}
+            className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[24px] py-[16px] font-parkinsans text-[16px] text-white lg:grid lg:h-[54px] lg:w-[170.53px] lg:place-items-center lg:rounded-[96.35px] lg:px-0 lg:py-0"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const samplerBoxTitle = (
+    <div className="flex flex-col items-center gap-[12px] lg:w-[890px] lg:gap-[19px]">
+      {/* Same lockup family as the site's other script-word titles ("Our
+          PRODUCTS", "SEASONAL specials"): a plain uppercase word next to a
+          cursive one, the cursive word sitting on its own blob (node 379:2's
+          own asset - it isn't blob-specials, a byte comparison confirmed a
+          different shape). Centered via flex rather than Figma's absolute
+          offsets, which are tuned to Figma's own text metrics, not ours. */}
+      <div className="flex items-center justify-center gap-[6px] lg:gap-[10px]">
+        <p className="font-parkinsans text-[15.2px] font-medium uppercase tracking-[-0.76px] text-cocoa lg:text-[33.6px] lg:tracking-[-1.68px]">
+          SAmpler
+        </p>
+        <div className="relative inline-flex items-center justify-center">
+          <img src={blobSampler} alt="" className="absolute h-[43px] w-[68px] lg:h-[94.8px] lg:w-[150px]" />
+          <p className="relative font-rochester text-[19.6px] text-cocoa lg:text-[43.2px]">box</p>
+        </div>
+      </div>
+      <p className="max-w-[680px] text-center font-parkinsans text-[15px] text-cocoa lg:w-[680px] lg:text-[24px] lg:leading-[34px]">
+        Can’t decide between sweet, savory, crusty, or cheesy? Good news: You
+        don’t have to.
+      </p>
+    </div>
+  );
+
+  const samplerBoxBody = (
+    <div className="flex w-full flex-col items-center gap-[48px] lg:w-[1294px] lg:gap-[92.22px]">
+      <WhatsInsideRow heading="HERE IS WHAT’S INSIDE THE PACK" items={SAMPLERBOX_INSIDE} />
+
+      <div className="flex w-full flex-col items-center gap-[24px] lg:gap-[34.7px]">
+        <div className="flex flex-col items-center text-center text-cocoa">
+          <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[43.63px]">
+            YOU CAN CHOOSE AMONG THESE
+          </p>
+          <p className="font-parkinsans text-[14px] lg:text-[20px] lg:leading-[28px]">
+            Select one option from each category
+          </p>
+        </div>
+        <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-start lg:justify-center lg:gap-[47.6px]">
+          <LunchboxGroup
+            step={1}
+            title="CHoose your Bread"
+            options={samplerbox.bread}
+            selected={selectedSamplerBread}
+            onSelect={setSelectedSamplerBread}
+            addons={samplerbox.addonsBread}
+            addonQty={addonQty}
+            onAddonAdd={handleAddonAdd}
+            onAddonInc={handleAddonInc}
+            onAddonDec={handleAddonDec}
+          />
+          <LunchboxGroup
+            step={2}
+            title="CHoose your Crackers"
+            options={samplerbox.cracker}
+            selected={selectedSamplerCracker}
+            onSelect={setSelectedSamplerCracker}
+            addons={samplerbox.addonsCracker}
+            addonQty={addonQty}
+            onAddonAdd={handleAddonAdd}
+            onAddonInc={handleAddonInc}
+            onAddonDec={handleAddonDec}
+          />
+        </div>
+      </div>
+
+      {/* Price / cart bar - subtotalFormatted is the box's own line plus
+          every staged add-on line, summed server-side by /quote; nothing
+          here adds money in React. */}
+      <div className="flex w-full flex-col items-start gap-[16px] lg:h-[56px] lg:w-[1286px] lg:flex-row lg:items-center lg:gap-[33px]">
+        <div className="grid place-items-center rounded-[16px] bg-[#cc8a7a] px-[16px] py-[8px] lg:h-[55px] lg:w-[123px] lg:px-0 lg:py-0">
+          <p className="font-parkinsans text-[22px] text-white lg:text-[28px] lg:leading-[39px]">
+            {samplerQuote?.subtotalFormatted || PENDING}
+          </p>
+        </div>
+        <p className="font-parkinsans text-[16px] text-cocoa lg:w-[723.47px] lg:text-[20px] lg:leading-[28px]">
+          One complete lunch box
+          <br />
+          with your selections
+        </p>
+        <div className="flex items-center gap-[16px] lg:gap-[33px]">
+          <BoxQtyStepper
+            qty={samplerQty}
+            onInc={() => setSamplerQty((q) => q + 1)}
+            onDec={() => setSamplerQty((q) => Math.max(1, q - 1))}
+            labelPrefix="Sampler Box"
+          />
+          <button
+            type="button"
+            aria-label="Add Sampler Box to Cart"
+            onClick={handleAddSamplerBox}
+            className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[24px] py-[16px] font-parkinsans text-[16px] text-white lg:grid lg:h-[54px] lg:w-[170.53px] lg:place-items-center lg:rounded-[96.35px] lg:px-0 lg:py-0"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const panels = [
+    { name: "Lunch Box", title: lunchBoxTitle, body: lunchBoxBody },
+    { name: "Sampler Box", title: samplerBoxTitle, body: samplerBoxBody },
+  ];
 
   return (
     <main className="w-full overflow-x-hidden bg-cream">
@@ -493,41 +1093,43 @@ export default function Menu() {
         </div>
       </section>
 
-      {/* checkerboard band bridging Our Menu and the Lunch Box section */}
+      {/* checkerboard band bridging Our Menu and the Lunch Box/Sampler Box carousel */}
       <div
         className="h-[20px] w-full lg:-mt-[3px] lg:h-[60px]"
         style={CHECKERBOARD_BG}
       />
 
-      {/* LUNCH BOX SPECIALS */}
-      <section className="relative w-full bg-[#f4e7e3] px-[16px] py-[60px] lg:h-[1636.66px] lg:px-0 lg:py-0 lg:pt-[136px]">
-        <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[48px] lg:gap-[127px]">
-          <div className="flex w-full items-center justify-center gap-[16px] lg:h-[157px] lg:gap-[64px]">
-            <button type="button" aria-label="Previous lunch box" className="shrink-0 cursor-pointer">
+      {/* LUNCH BOX / SAMPLER BOX carousel - two panels looping continuously
+          in both directions. No fixed section height any more: the two
+          panels are genuinely different heights (the Sampler Box's add-on
+          rows), so the section sizes to whichever panel is showing. */}
+      <section className="relative w-full bg-[#f4e7e3] px-[16px] py-[60px] lg:px-0 lg:pb-[148px] lg:pt-[136px]">
+        <div
+          className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-[48px] lg:gap-[127px]"
+          data-testid="menu-carousel"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
+          <div className="flex w-full items-center justify-center gap-[16px] lg:gap-[64px]">
+            <button
+              type="button"
+              aria-label={`Previous: ${panels[carousel.prevIndex].name}`}
+              onClick={() => carousel.go(-1)}
+              className="shrink-0 cursor-pointer"
+            >
               <img
                 src={lunchboxArrowLeft}
                 alt=""
-                className="h-[14px] w-[12px] rotate-180 lg:h-[23.85px] lg:w-[20.36px] lg:rotate-0"
+                className="h-[14px] w-[12px] rotate-180 lg:h-[23.85px] lg:w-[20.36px]"
               />
             </button>
-            <div className="flex flex-col items-center gap-[12px] lg:w-[890px] lg:gap-[19px]">
-              <div className="relative inline-flex items-center justify-center">
-                <img
-                  src={blobSpecials}
-                  alt=""
-                  className="absolute right-[-6px] h-[61px] w-[91px] lg:right-[-10px] lg:h-[104px] lg:w-[165px]"
-                />
-                <p className="relative text-center font-display text-[15.2px] text-cocoa lg:text-[64px] lg:leading-[70px]">
-                  LUNCH BOX Specials
-                </p>
-              </div>
-              <p className="max-w-[828px] text-center font-parkinsans text-[15px] text-cocoa lg:w-[828px] lg:text-[20px] lg:leading-[34px]">
-                A thoughtfully curated meal featuring fresh bread, handcrafted
-                crackers, and a sweet treat; perfect for lunch, gifting, or
-                sharing.
-              </p>
-            </div>
-            <button type="button" aria-label="Next lunch box" className="shrink-0 cursor-pointer">
+            <CarouselTrack carousel={carousel} panels={panels} field="title" outerClassName="lg:w-[890px]" />
+            <button
+              type="button"
+              aria-label={`Next: ${panels[carousel.nextIndex].name}`}
+              onClick={() => carousel.go(1)}
+              className="shrink-0 cursor-pointer"
+            >
               <img
                 src={lunchboxArrowRight}
                 alt=""
@@ -536,136 +1138,13 @@ export default function Menu() {
             </button>
           </div>
 
-          <div className="flex w-full flex-col items-center gap-[48px] lg:w-[1294px] lg:gap-[92.22px]">
-            {/* What's inside */}
-            <div className="flex w-full flex-col items-center gap-[16px] lg:gap-[15.87px]">
-              <p className="font-display text-[11.4px] uppercase text-cocoa lg:text-[39.66px] lg:leading-[44px]">
-                WHAT&rsquo;S INSIDE
-              </p>
-              <div className="flex w-full flex-col gap-[20px] rounded-[16px] bg-[rgba(251,251,248,0.57)] p-[16px] lg:flex-row lg:items-center lg:justify-center lg:gap-[20.82px] lg:rounded-[15.87px] lg:p-[15.87px]">
-                {LUNCHBOX_INSIDE.map((item, i) => (
-                  <Fragment key={item.label}>
-                    {/* Figma gives each of the three a slightly different
-                        icon-to-text gap. */}
-                    <div className="flex items-center gap-[16px] lg:gap-[var(--icon-gap)]" style={{ "--icon-gap": `${item.gap}px` }}>
-                      <div className="relative grid size-[54px] shrink-0 place-items-center overflow-hidden rounded-full bg-shell lg:size-[96.19px]">
-                        <img
-                          src={lunchboxIconsSprite}
-                          alt=""
-                          className="absolute max-w-none"
-                          style={item.crop}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-[4px] text-cocoa">
-                        <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[38.67px]">
-                          {item.label}
-                        </p>
-                        <p className="font-parkinsans text-[13px] lg:text-[19.83px] lg:leading-[28px]">
-                          {item.desc}
-                        </p>
-                      </div>
-                    </div>
-                    {i < LUNCHBOX_INSIDE.length - 1 && (
-                      <img
-                        src={iconRoundPlus}
-                        alt=""
-                        className="size-[20px] shrink-0 self-center lg:size-[31.73px]"
-                      />
-                    )}
-                  </Fragment>
-                ))}
-              </div>
-            </div>
-
-            {/* Build your lunch box */}
-            <div className="flex w-full flex-col items-center gap-[24px] lg:gap-[34.7px]">
-              <div className="flex flex-col items-center text-center text-cocoa">
-                <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[43.63px]">
-                  BUILD YOUR LUNCH BOX
-                </p>
-                <p className="font-parkinsans text-[14px] lg:text-[20px] lg:leading-[28px]">
-                  Select one option from each category
-                </p>
-              </div>
-              {/* lg:items-start, not -center: a group's card can now grow
-                  taller than its siblings when its own options wrap onto a
-                  second line, and centering the row's cross-axis on the
-                  tallest card would drop the shorter cards out of top
-                  alignment. Two/three same-height cards (today's real
-                  catalogue) look identical either way. */}
-              <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-start lg:justify-center lg:gap-[47.6px]">
-                <LunchboxGroup
-                  step={1}
-                  title="CHoose your Bread"
-                  options={lunchbox.bread}
-                  selected={selectedBread}
-                  onSelect={setSelectedBread}
-                />
-                <LunchboxGroup
-                  step={2}
-                  title="CHoose your Crackers"
-                  options={lunchbox.cracker}
-                  selected={selectedCracker}
-                  onSelect={setSelectedCracker}
-                />
-                <LunchboxGroup
-                  step={3}
-                  title="CHoose your Dessert"
-                  options={lunchbox.dessert}
-                  selected={selectedDessert}
-                  onSelect={setSelectedDessert}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Price / cart bar */}
-          <div className="flex w-full flex-col items-start gap-[16px] lg:h-[56px] lg:w-[1286px] lg:flex-row lg:items-center lg:gap-[33px]">
-            <div className="grid place-items-center rounded-[16px] bg-[#cc8a7a] px-[16px] py-[8px] lg:h-[55px] lg:w-[123px] lg:px-0 lg:py-0">
-              <p className="font-parkinsans text-[22px] text-white lg:text-[28px] lg:leading-[39px]">
-                {lunchBoxProduct?.priceFormatted}
-              </p>
-            </div>
-            <p className="font-parkinsans text-[16px] text-cocoa lg:w-[723.47px] lg:text-[20px] lg:leading-[28px]">
-              One complete lunch box
-              <br />
-              with your selections
-            </p>
-            <div className="flex items-center gap-[16px] lg:gap-[33px]">
-              <div className="flex items-center gap-[24px] rounded-full border-2 border-taupe px-[15px] py-[8px] font-parkinsans text-[16px] font-semibold text-taupe lg:h-[56px] lg:w-[170px] lg:justify-between lg:rounded-[96.34px] lg:px-[15.41px] lg:py-0">
-                <button
-                  type="button"
-                  onClick={() => setLunchboxQty((q) => Math.max(1, q - 1))}
-                  className="cursor-pointer"
-                >
-                  -
-                </button>
-                <span>{lunchboxQty}</span>
-                <button
-                  type="button"
-                  onClick={() => setLunchboxQty((q) => q + 1)}
-                  className="cursor-pointer"
-                >
-                  +
-                </button>
-              </div>
-              <button
-                type="button"
-                aria-label="Add Lunch Box to Cart"
-                onClick={() => {
-                  if (!lunchBoxProduct) return;
-                  cart.add(lunchBoxProduct, lunchboxQty, {
-                    bread: selectedBread,
-                    cracker: selectedCracker,
-                    dessert: selectedDessert,
-                  });
-                }}
-                className="cursor-pointer whitespace-nowrap rounded-full bg-taupe px-[24px] py-[16px] font-parkinsans text-[16px] text-white lg:grid lg:h-[54px] lg:w-[170.53px] lg:place-items-center lg:rounded-[96.35px] lg:px-0 lg:py-0"
-              >
-                Add to Cart
-              </button>
-            </div>
-          </div>
+          <CarouselTrack
+            carousel={carousel}
+            panels={panels}
+            field="body"
+            onTransitionEnd={carousel.handleTransitionEnd}
+            testId="menu-carousel-track"
+          />
         </div>
       </section>
 

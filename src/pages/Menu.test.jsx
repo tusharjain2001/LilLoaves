@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import Menu from './Menu.jsx'
+import Cart from './Cart.jsx'
 import { CartProvider } from '../context/CartContext.jsx'
 import * as woo from '../lib/woo.js'
+import * as quoteLib from '../lib/quote.js'
+import * as pickupLib from '../lib/pickup.js'
 
 const STORAGE_KEY = 'lilloaves:cart'
 
@@ -389,7 +392,10 @@ describe('Menu lunch box', () => {
     renderMenu()
     await waitFor(() => expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-bread'))
     expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-cracker')
-    expect(woo.fetchByTagSlug).toHaveBeenCalledWith('lunchbox-dessert')
+    // The Lunch Box dropped its "Choose your Dessert" chooser - the dessert
+    // stays in the box, it's just no longer customer-selected, so the
+    // builder never fetches this tag any more.
+    expect(woo.fetchByTagSlug).not.toHaveBeenCalledWith('lunchbox-dessert')
   })
 
   it('renders no options for a tag with no products yet', async () => {
@@ -414,11 +420,10 @@ describe('Menu lunch box', () => {
     )
     renderMenu()
     expect(screen.getByText('CHoose your Crackers')).toBeTruthy()
-    expect(screen.getByText('CHoose your Dessert')).toBeTruthy()
-    // Only the bread column has an option to select; crackers/dessert have
-    // none. "CHoose your Crackers" renders synchronously on first paint
-    // regardless of the tag fetch, so it is not a reliable proxy for "the
-    // async selection has landed" - wait on the actual selected marker.
+    // Only the bread column has an option to select; crackers have none.
+    // "CHoose your Crackers" renders synchronously on first paint regardless
+    // of the tag fetch, so it is not a reliable proxy for "the async
+    // selection has landed" - wait on the actual selected marker.
     await waitFor(() => expect(screen.getAllByAltText('Selected')).toHaveLength(1))
   })
 })
@@ -523,7 +528,7 @@ describe('Menu lunch box add to cart', () => {
     categories: [],
   })
 
-  it('adds product 15 to the cart carrying the selected bread/cracker/dessert options', async () => {
+  it('adds product 15 to the cart carrying the selected bread/cracker options', async () => {
     woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
     woo.fetchByTagSlug.mockImplementation(async (slug) =>
       slug === 'lunchbox-bread'
@@ -532,6 +537,10 @@ describe('Menu lunch box add to cart', () => {
     )
     renderMenu()
     await waitFor(() => expect(screen.getByAltText('Selected')).toBeTruthy())
+    // The bread selection and the Lunch Box product itself resolve from two
+    // separate effects - wait for both to have actually landed in state
+    // before clicking, not just for the selection marker.
+    await waitFor(() => expect(screen.getByText('$39.00')).toBeTruthy())
 
     fireEvent.click(screen.getByLabelText('Add Lunch Box to Cart'))
 
@@ -540,14 +549,20 @@ describe('Menu lunch box add to cart', () => {
       const line = stored.find((l) => l.id === 15)
       expect(line).toBeTruthy()
       expect(line.qty).toBe(1)
-      expect(line.options).toEqual({ bread: 'Sour Dough', cracker: '', dessert: '' })
+      // No dessert key any more - the dessert is still in the box, it's
+      // just not a customer selection, so there is nothing to carry for it.
+      expect(line.options).toEqual({ bread: 'Sour Dough', cracker: '' })
     })
   })
 
   it('respects the lunch box quantity stepper when adding', async () => {
     woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
     renderMenu()
-    await waitFor(() => expect(woo.fetchProductBySlug).toHaveBeenCalledWith('lunch-box'))
+    // Waiting for the price to render (not just for the mock to have been
+    // called) is load-bearing: the click below no-ops until the resolved
+    // product has actually landed in state, and merely having been called
+    // races that under load.
+    await waitFor(() => expect(screen.getByText('$39.00')).toBeTruthy())
 
     fireEvent.click(screen.getByText('+'))
     fireEvent.click(screen.getByLabelText('Add Lunch Box to Cart'))
@@ -558,19 +573,22 @@ describe('Menu lunch box add to cart', () => {
     })
   })
 
-  it('adds without crashing when the cracker and dessert columns have no options available yet', async () => {
+  it('adds without crashing when the cracker column has no options available yet', async () => {
     // Default beforeEach mocks fetchByTagSlug to resolve [] for every tag,
-    // so bread/cracker/dessert all have no selection - this is today's real
+    // so bread/cracker both have no selection - this is today's real
     // catalogue state (only lunchbox-bread is tagged).
     woo.fetchProductBySlug.mockResolvedValue(LUNCH_BOX_PRODUCT)
     renderMenu()
-    await waitFor(() => expect(woo.fetchProductBySlug).toHaveBeenCalledWith('lunch-box'))
+    // See the comment on the quantity-stepper test above: wait for the
+    // resolved product to actually be in state, not just for the fetch to
+    // have been called.
+    await waitFor(() => expect(screen.getByText('$39.00')).toBeTruthy())
 
     fireEvent.click(screen.getByLabelText('Add Lunch Box to Cart'))
 
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
-      expect(stored.find((l) => l.id === 15).options).toEqual({ bread: '', cracker: '', dessert: '' })
+      expect(stored.find((l) => l.id === 15).options).toEqual({ bread: '', cracker: '' })
     })
   })
 
@@ -585,5 +603,326 @@ describe('Menu lunch box add to cart', () => {
     // so assert on cart contents rather than localStorage presence.
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
     expect(stored.find((l) => l.id === 15)).toBeUndefined()
+  })
+})
+
+// The Lunch Box section is now a two-panel carousel (Lunch Box, Sampler
+// Box). At rest only the current panel is mounted at all - the two
+// off-screen slots stay empty until a transition is actually under way -
+// so these queries never have to disambiguate duplicate content the way a
+// permanently-3-mounted carousel would.
+describe('Menu carousel', () => {
+  it('slides forward and backward with visibly different transforms', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+    const track = screen.getByTestId('menu-carousel-track')
+
+    fireEvent.click(screen.getByLabelText('Next: Sampler Box'))
+    // Forward travel slides the track past its resting -100% towards -200%.
+    expect(track.style.transform).toBe('translateX(-200%)')
+
+    fireEvent.transitionEnd(track)
+    await waitFor(() => expect(screen.getByLabelText('Add Sampler Box to Cart')).toBeTruthy())
+    expect(screen.queryByLabelText('Add Lunch Box to Cart')).toBeNull()
+
+    fireEvent.click(screen.getByLabelText('Previous: Lunch Box'))
+    // Backward travel goes the other way, towards 0% - not a mirror of the
+    // same -200% value forward travel used.
+    expect(track.style.transform).toBe('translateX(0%)')
+  })
+
+  it('loops forward past the last panel back to the first', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+    const track = screen.getByTestId('menu-carousel-track')
+
+    fireEvent.click(screen.getByLabelText('Next: Sampler Box'))
+    fireEvent.transitionEnd(track)
+    await waitFor(() => expect(screen.getByLabelText('Add Sampler Box to Cart')).toBeTruthy())
+
+    fireEvent.click(screen.getByLabelText('Next: Lunch Box'))
+    fireEvent.transitionEnd(track)
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+    expect(screen.queryByLabelText('Add Sampler Box to Cart')).toBeNull()
+  })
+
+  it('loops backward past the first panel to the last', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+    const track = screen.getByTestId('menu-carousel-track')
+
+    fireEvent.click(screen.getByLabelText('Previous: Sampler Box'))
+    fireEvent.transitionEnd(track)
+    await waitFor(() => expect(screen.getByLabelText('Add Sampler Box to Cart')).toBeTruthy())
+  })
+
+  it('gives the arrows real, keyboard-reachable buttons labelled with their destination', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+
+    const prev = screen.getByLabelText('Previous: Sampler Box')
+    const next = screen.getByLabelText('Next: Sampler Box')
+    expect(prev.tagName).toBe('BUTTON')
+    expect(next.tagName).toBe('BUTTON')
+  })
+
+  it('swipes: a touch drag left advances to the next panel', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+    const track = screen.getByTestId('menu-carousel-track')
+    const swipeArea = screen.getByTestId('menu-carousel')
+
+    fireEvent.touchStart(swipeArea, { touches: [{ clientX: 300 }] })
+    fireEvent.touchEnd(swipeArea, { changedTouches: [{ clientX: 100 }] })
+    expect(track.style.transform).toBe('translateX(-200%)')
+
+    fireEvent.transitionEnd(track)
+    await waitFor(() => expect(screen.getByLabelText('Add Sampler Box to Cart')).toBeTruthy())
+  })
+
+  it('honours prefers-reduced-motion by swapping panels without any sliding transform', async () => {
+    window.matchMedia = vi.fn().mockImplementation((query) => ({
+      matches: true,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    renderMenu()
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+    const track = screen.getByTestId('menu-carousel-track')
+
+    fireEvent.click(screen.getByLabelText('Next: Sampler Box'))
+
+    // No transitionend to wait out - the swap already happened, and the
+    // track never left its resting transform/transition.
+    expect(track.style.transition).toBe('none')
+    expect(track.style.transform).toBe('translateX(-100%)')
+    await waitFor(() => expect(screen.getByLabelText('Add Sampler Box to Cart')).toBeTruthy())
+  })
+
+  afterEach(() => {
+    delete window.matchMedia
+  })
+})
+
+describe('Menu sampler box', () => {
+  const SAMPLER_BOX_PRODUCT = product({
+    id: 50,
+    slug: 'sampler-box',
+    name: 'Sampler Box',
+    priceFormatted: '$50.00',
+    categories: [],
+  })
+  const BREAD_OPTION = product({ id: 60, slug: 'sourdough-mini', name: 'Sourdough Mini Loaf' })
+  const CRACKER_OPTION = product({ id: 61, slug: 'docs-mini', name: 'Docs Mini Crackers' })
+  const ADDON = product({
+    id: 70,
+    slug: 'sourdough-mini-loaf-addon',
+    name: 'Sourdough Mini Loaf',
+    priceFormatted: '$6.00',
+  })
+
+  function mockSamplerTags({ addonsBread = [], addonsCracker = [] } = {}) {
+    woo.fetchByTagSlug.mockImplementation(async (slug) => {
+      if (slug === 'sampler-bread-choice') return [BREAD_OPTION]
+      if (slug === 'sampler-cracker-choice') return [CRACKER_OPTION]
+      if (slug === 'sampler-bread-addon') return addonsBread
+      if (slug === 'sampler-cracker-addon') return addonsCracker
+      return []
+    })
+  }
+
+  async function openSamplerBox() {
+    await waitFor(() => expect(screen.getByLabelText('Add Lunch Box to Cart')).toBeTruthy())
+    const track = screen.getByTestId('menu-carousel-track')
+    fireEvent.click(screen.getByLabelText('Next: Sampler Box'))
+    fireEvent.transitionEnd(track)
+    await waitFor(() => expect(screen.getByLabelText('Add Sampler Box to Cart')).toBeTruthy())
+  }
+
+  it('builds both choosers and both add-on slots from their own sampler-*-choice/-addon tags', async () => {
+    mockSamplerTags()
+    renderMenu()
+    await waitFor(() => expect(woo.fetchByTagSlug).toHaveBeenCalledWith('sampler-bread-choice'))
+    expect(woo.fetchByTagSlug).toHaveBeenCalledWith('sampler-cracker-choice')
+    expect(woo.fetchByTagSlug).toHaveBeenCalledWith('sampler-bread-addon')
+    expect(woo.fetchByTagSlug).toHaveBeenCalledWith('sampler-cracker-addon')
+    expect(woo.fetchProductBySlug).toHaveBeenCalledWith('sampler-box')
+  })
+
+  it('renders nothing for an add-on slot with no tagged products, without crashing the panel', async () => {
+    mockSamplerTags() // both add-on slots default to []
+    renderMenu()
+    await openSamplerBox()
+
+    expect(screen.getByText('Sourdough Mini Loaf')).toBeTruthy()
+    expect(screen.getByText('Docs Mini Crackers')).toBeTruthy()
+    expect(screen.queryByText(/^Add \(1\)/)).toBeNull()
+  })
+
+  it('toggling an add-on on and back off restores the pill', async () => {
+    mockSamplerTags({ addonsBread: [ADDON] })
+    renderMenu()
+    await openSamplerBox()
+
+    fireEvent.click(screen.getByLabelText('Add Sourdough Mini Loaf, +$6.00'))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Decrease Sourdough Mini Loaf quantity')).toBeTruthy(),
+    )
+
+    fireEvent.click(screen.getByLabelText('Decrease Sourdough Mini Loaf quantity'))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Add Sourdough Mini Loaf, +$6.00')).toBeTruthy(),
+    )
+  })
+
+  it('choosing a bread and a cracker and adding an add-on adds the box and the add-on to the cart with the server-quoted total shown', async () => {
+    mockSamplerTags({ addonsBread: [ADDON] })
+    woo.fetchProductBySlug.mockImplementation(async (slug) =>
+      slug === 'sampler-box' ? SAMPLER_BOX_PRODUCT : null,
+    )
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue({
+      ok: true,
+      lines: [],
+      subtotalFormatted: '$56.00',
+      deliveryFormatted: '',
+      discountFormatted: '',
+      taxFormatted: '',
+      totalFormatted: '$56.00',
+      errors: [],
+    })
+
+    renderMenu()
+    await openSamplerBox()
+
+    fireEvent.click(screen.getByText('Sourdough Mini Loaf'))
+    fireEvent.click(screen.getByText('Docs Mini Crackers'))
+    fireEvent.click(screen.getByLabelText('Add Sourdough Mini Loaf, +$6.00'))
+
+    // The bottom bar's figure is whatever the server quoted - never summed
+    // in React - for exactly the staged box + add-on lines.
+    await waitFor(() => expect(screen.getByText('$56.00')).toBeTruthy())
+    expect(quoteLib.fetchQuote).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lines: [
+          { id: 50, qty: 1 },
+          { id: 70, qty: 1 },
+        ],
+      }),
+    )
+
+    fireEvent.click(screen.getByLabelText('Add Sampler Box to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      const boxLine = stored.find((l) => l.id === 50)
+      const addonLine = stored.find((l) => l.id === 70)
+      expect(boxLine).toBeTruthy()
+      expect(boxLine.qty).toBe(1)
+      expect(boxLine.options).toEqual({ bread: 'Sourdough Mini Loaf', cracker: 'Docs Mini Crackers' })
+      // An add-on is an ordinary product line - bare id/qty, no options,
+      // exactly like adding it stand-alone from a menu card would be.
+      expect(addonLine).toBeTruthy()
+      expect(addonLine.qty).toBe(1)
+      expect(addonLine.options).toBeUndefined()
+    })
+  })
+
+  it('a variable add-on (real catalogue: the crackers) prices from its first pack size and carries a variation id and size tag into the cart', async () => {
+    const CRACKER_ADDON = product({
+      id: 80,
+      slug: 'docs-crackers',
+      name: 'Docs Crackers',
+      priceFormatted: '$7.00',
+      packSizes: [
+        { id: 81, name: '5oz', slug: '5oz', price: 7, priceFormatted: '$7.00', inStock: true, purchasable: true },
+        { id: 82, name: '10oz', slug: '10oz', price: 12, priceFormatted: '$12.00', inStock: true, purchasable: true },
+      ],
+    })
+    mockSamplerTags({ addonsCracker: [CRACKER_ADDON] })
+    woo.fetchProductBySlug.mockImplementation(async (slug) =>
+      slug === 'sampler-box' ? SAMPLER_BOX_PRODUCT : null,
+    )
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue({
+      ok: true,
+      lines: [],
+      subtotalFormatted: '$57.00',
+      deliveryFormatted: '',
+      discountFormatted: '',
+      taxFormatted: '',
+      totalFormatted: '$57.00',
+      errors: [],
+    })
+
+    renderMenu()
+    await openSamplerBox()
+
+    // Prices from packSizes[0], not the parent's own priceFormatted.
+    expect(screen.getByLabelText('Add Docs Crackers, +$7.00')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Add Docs Crackers, +$7.00'))
+    await waitFor(() => expect(screen.getByLabelText('Decrease Docs Crackers quantity')).toBeTruthy())
+
+    await waitFor(() =>
+      expect(quoteLib.fetchQuote).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          lines: [
+            { id: 50, qty: 1 },
+            { id: 80, qty: 1, variationId: 81 },
+          ],
+        }),
+      ),
+    )
+
+    fireEvent.click(screen.getByLabelText('Add Sampler Box to Cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      const addonLine = stored.find((l) => l.id === 80)
+      expect(addonLine).toBeTruthy()
+      expect(addonLine.qty).toBe(1)
+      expect(addonLine.variationId).toBe(81)
+      // Same guard as the pack-size pills: an options.size tag so this can
+      // never silently merge its quantity into a different pack size of the
+      // same crackers already in the cart from the main menu.
+      expect(addonLine.options).toEqual({ size: '5oz' })
+    })
+  })
+
+  it('an add-on cart line can be removed again like any ordinary line', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { id: 50, qty: 1, name: 'Sampler Box', image: '', priceFormatted: '$50.00', options: { bread: 'Sourdough Mini Loaf', cracker: 'Docs Mini Crackers' } },
+        { id: 70, qty: 1, name: 'Sourdough Mini Loaf', image: '', priceFormatted: '$6.00' },
+      ]),
+    )
+    vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue({ ok: true, stores: [] })
+    vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue({
+      ok: true,
+      lines: [],
+      subtotalFormatted: '$56.00',
+      deliveryFormatted: '$0.00',
+      discountFormatted: '$0.00',
+      taxFormatted: '$0.00',
+      totalFormatted: '$56.00',
+      errors: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <CartProvider>
+          <Cart />
+        </CartProvider>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByText('Sourdough Mini Loaf')).toBeTruthy())
+    fireEvent.click(screen.getByLabelText('Remove Sourdough Mini Loaf from cart'))
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      expect(stored.find((l) => l.id === 70)).toBeUndefined()
+      expect(stored.find((l) => l.id === 50)).toBeTruthy()
+    })
   })
 })
