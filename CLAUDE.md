@@ -45,6 +45,14 @@ The Store API exposes a variable product's attribute terms and variation ids, an
 
 Selling one means sending a `variation_id` alongside the parent `id`. WooCommerce needs `add_to_cart($parent, $qty, $variation)` — passing a variation id as the product id does not work. `/quote` and the handoff both validate that the variation genuinely belongs to the parent and is purchasable; it is a selector, never a price.
 
+### Box contents are tags, driven from the product editor
+
+What appears in the Lunch Box and Sampler Box comes from product tags — `lunchbox-bread|cracker|dessert` and `sampler-{bread,cracker}-{choice,addon}` — read through the ordinary `products/tags` endpoint. **Storing them as tags is deliberate**: the storefront, the Store API and the proxy need no special route, and nothing has to be migrated when the owner changes her mind.
+
+She never types a slug. The plugin adds controls to the product editor that read and write those tags: a **dropdown** for the Lunch Box, because its three roles are mutually exclusive, and **four checkboxes** for the Sampler Box, because they are not — Doc's and Chief's are the only crackers, so they must be both the included choice and the paid add-on at once.
+
+Sampler add-ons are ordinary products added as their own cart lines, so WooCommerce prices them and `/quote` needed no change. The add-on row shows the product's real price — the `+$6.00`/`+$5.00` in Figma are mockups.
+
 ### The money rule
 
 **No money arithmetic anywhere in React.** The Store API returns minor-unit strings (`"2113"` with `currency_minor_unit: 2` means $21.13).
@@ -161,6 +169,8 @@ Every one of these was found by running against the real server, not by reading 
 |---|---|
 | Products | The client's real catalogue. Breads (Sourdough, Japanese Milk Bread) and Lunch Box **15** are simple. Muffins **82/84/86**, cookies **88/91** and crackers **94/97** are **variable**, sharing the global `pa_pack-size` attribute |
 | Pack sizes | Muffins *Pack of 4* $10 · Cookies *Single* $5 / *Box of 6* $20 · Crackers *5 oz* $7 / *10 oz* $12. All owner-editable in `wp-admin` — **never hardcode a size, price or count** |
+| Boxes | Lunch Box **15** ($39) and Sampler Box **104** ($50), plus mini loaves **105/106** ($6). The Menu carousel loops between the two boxes; each offers **two** choosers (bread, cracker). The Lunch Box's dessert is included but no longer customer-chosen |
+| Box prices | **$50 and $6 came from a Figma mockup, not the client** — she must confirm them |
 | Delivery zone | Postcodes 92866–92869, flat rate **$5.00**. Test with **92868 / Orange / CA**; **90210** is out of area |
 | Pickup | `local_pickup` on zones 1 **and** 0 |
 | Coupon | `LOAF10` = 10% off |
