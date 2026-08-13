@@ -416,15 +416,15 @@ describe('Menu lunch box', () => {
   })
 })
 
-// LunchboxGroup lays its options out flex + justify-center, each option
-// taking a basis of about half the row - two sit per line at their original
-// full-bleed width, and a third (or fourth) that no longer fits wraps onto a
-// new, centred line instead of squeezing every option thinner. jsdom does
-// not compute real flexbox layout, so these assert the wrap is wired up
-// (flex-wrap on the row, a shared basis on every option, no per-item
-// flex-1 that would squeeze instead of wrap) rather than pixel positions -
-// confirmed visually in the browser at 390px and 1440px per the task.
-describe('Menu lunch box option wrapping', () => {
+// LunchboxGroup lays its options out on ONE line, each taking a basis of
+// about half the row, and scrolls sideways past two rather than wrapping.
+// Wrapping is what turned Dessert's five options into three stacked rows
+// and a lone centred orphan, tripling that card's height and breaking the
+// three cards' alignment. jsdom computes no real flexbox layout, so these
+// assert the mechanism is wired up - no flex-wrap, overflow-x-auto on the
+// row, and shrink-0 plus a shared basis on every option so the browser
+// scrolls instead of compressing them - rather than pixel positions.
+describe('Menu lunch box options stay on one line', () => {
   const breadOptions = (count) =>
     Array.from({ length: count }, (_, i) =>
       product({ id: 100 + i, slug: `bread-${i}`, name: `Bread ${i}` }),
@@ -440,14 +440,16 @@ describe('Menu lunch box option wrapping', () => {
     const buttons = [0, 1].map((i) => screen.getByText(`Bread ${i}`).closest('button'))
     const row = buttons[0].parentElement;
     expect(row).toBe(buttons[1].parentElement)
-    expect(row.className).toMatch(/flex-wrap/)
+    // Two options fit exactly, so nothing scrolls and nothing has moved.
+    expect(row.className).not.toMatch(/flex-wrap/)
+    expect(row.className).toMatch(/overflow-x-auto/)
     buttons.forEach((btn) => {
       expect(btn.className).toMatch(/basis-\[calc\(50%-6px\)\]/)
       expect(btn.className).not.toMatch(/\bflex-1\b/)
     })
   })
 
-  it('wraps a third option onto a new line instead of squeezing all three thinner', async () => {
+  it('keeps a third option on the same line, reachable by scrolling', async () => {
     woo.fetchByTagSlug.mockImplementation(async (slug) =>
       slug === 'lunchbox-bread' ? breadOptions(3) : [],
     )
@@ -458,14 +460,18 @@ describe('Menu lunch box option wrapping', () => {
     expect(screen.getByText('Bread 1')).toBeTruthy()
     const buttons = [0, 1, 2].map((i) => screen.getByText(`Bread ${i}`).closest('button'))
     const row = buttons[0].parentElement
-    expect(row.className).toMatch(/flex-wrap/)
+    expect(row.className).not.toMatch(/flex-wrap/)
+    expect(row.className).toMatch(/overflow-x-auto/)
     buttons.forEach((btn) => {
       expect(btn.parentElement).toBe(row)
       expect(btn.className).toMatch(/basis-\[calc\(50%-6px\)\]/)
+      // Without shrink-0 the browser squeezes three options thinner to fit
+      // instead of scrolling.
+      expect(btn.className).toMatch(/shrink-0/)
     })
   })
 
-  it('wraps four options two-per-line without dropping any of them', async () => {
+  it('keeps four options on the line without dropping any of them', async () => {
     woo.fetchByTagSlug.mockImplementation(async (slug) =>
       slug === 'lunchbox-bread' ? breadOptions(4) : [],
     )
@@ -475,11 +481,11 @@ describe('Menu lunch box option wrapping', () => {
     ;[0, 1, 2, 3].forEach((i) => expect(screen.getByText(`Bread ${i}`)).toBeTruthy())
   })
 
-  // The restored Dessert chooser is the group with a real 5-option catalogue
-  // today (5 products tagged lunchbox-dessert) - same wrap mechanism as
-  // above, exercised on the Dessert column specifically so this wraps
-  // 2-2-1 rather than silently only ever being tested on Bread.
-  it('wraps five dessert options across three lines (2-2-1) without dropping any', async () => {
+  // Dessert is the group with a real 5-option catalogue today (5 products
+  // tagged lunchbox-dessert), and the one the client flagged: wrapping put
+  // it on three lines with a lone centred orphan. Exercised on the Dessert
+  // column specifically rather than only ever on Bread.
+  it('keeps all five dessert options on one scrolling line, none dropped', async () => {
     const dessertOptions = Array.from({ length: 5 }, (_, i) =>
       product({ id: 200 + i, slug: `dessert-${i}`, name: `Dessert ${i}` }),
     )
@@ -491,10 +497,12 @@ describe('Menu lunch box option wrapping', () => {
 
     const buttons = [0, 1, 2, 3, 4].map((i) => screen.getByText(`Dessert ${i}`).closest('button'))
     const row = buttons[0].parentElement
-    expect(row.className).toMatch(/flex-wrap/)
+    expect(row.className).not.toMatch(/flex-wrap/)
+    expect(row.className).toMatch(/overflow-x-auto/)
     buttons.forEach((btn) => {
       expect(btn.parentElement).toBe(row)
       expect(btn.className).toMatch(/basis-\[calc\(50%-6px\)\]/)
+      expect(btn.className).toMatch(/shrink-0/)
     })
   })
 })
@@ -508,6 +516,79 @@ describe('Menu group cards wrapping', () => {
     expect(row).toBeTruthy()
     expect(row.className).toMatch(/lg:flex-wrap/)
     expect(row.className).toMatch(/lg:justify-center/)
+  })
+
+  // The three cards' natural heights differ by however many lines the
+  // longest product name wraps to - "Chief's White Cheddar Cayenne
+  // Crackers" is four lines where "Sourdough Bread" is two - which left the
+  // row visibly ragged. jsdom computes no layout, so this asserts the
+  // stretch is wired up rather than measuring pixels.
+  it('makes all three group cards the same height, with the radio dots aligned', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread'
+        ? [product({ id: 100, slug: 'bread-0', name: 'Bread 0' })]
+        : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Bread 0')).toBeTruthy())
+
+    const row = screen.getByText('CHoose your Bread').closest('.lg\\:flex-row')
+    expect(row.className).toMatch(/lg:items-stretch/)
+    // ...and not the old top-alignment, which let them end at different y.
+    expect(row.className).not.toMatch(/lg:items-start/)
+
+    // The card must NOT set its own height: a flex item only stretches while
+    // its height is auto, so an lg:h-full here resolved to 100% of an
+    // auto-height row - back to content height - and cancelled the stretch.
+    const card = row.firstElementChild
+    expect(card.className).toMatch(/lg:w-\[393\.65px\]/)
+    expect(card.className).not.toMatch(/h-full/)
+
+    // Each option fills its card's height and pins its radio to the bottom,
+    // so the dots line up within a card and between cards.
+    const option = screen.getByText('Bread 0').closest('button')
+    expect(option.className).toMatch(/justify-between/)
+    expect(option.parentElement.className).toMatch(/items-stretch/)
+  })
+
+  // The native scrollbar only appeared in the card that overflowed, and ate
+  // height from that card alone - which is what knocked its radio dots out
+  // of line with the other two. Hiding it keeps every card identical.
+  it('hides the native scrollbar so it cannot eat height from one card only', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
+
+    const row = screen.getByText('CHoose your Bread').closest('.lg\\:flex-row')
+    const scroller = row.querySelector('.overflow-x-auto')
+    expect(scroller.className).toMatch(/\[scrollbar-width:none\]/)
+    expect(scroller.className).toMatch(/webkit-scrollbar/)
+  })
+
+  it('outlines the chosen option, and reserves that border when unselected', async () => {
+    woo.fetchByTagSlug.mockImplementation(async (slug) =>
+      slug === 'lunchbox-bread'
+        ? [
+            product({ id: 100, slug: 'bread-0', name: 'Bread 0' }),
+            product({ id: 101, slug: 'bread-1', name: 'Bread 1' }),
+          ]
+        : [],
+    )
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('Bread 1')).toBeTruthy())
+
+    const first = screen.getByText('Bread 0').closest('button')
+    const second = screen.getByText('Bread 1').closest('button')
+
+    // Figma outlines the selection (nodes 379:306 / 379:309 / 379:310).
+    expect(first.className).toMatch(/border-terracotta/)
+    // The unselected one carries the same border width in transparent, so
+    // choosing never nudges the row by a pixel.
+    expect(second.className).toMatch(/border-transparent/)
+    expect(second.className).toMatch(/rounded-\[17px\]/)
+
+    fireEvent.click(second)
+    expect(second.className).toMatch(/border-terracotta/)
+    expect(screen.getByText('Bread 0').closest('button').className).toMatch(/border-transparent/)
   })
 })
 

@@ -380,6 +380,24 @@ function BreadCard({ item, qty, onAdd, onInc, onDec, onSelectPackSize }) {
   );
 }
 
+/**
+ * Every heading inside the two box sections.
+ *
+ * These were `font-display`, which is Ligema DEMO - a decorative face whose
+ * lowercase renders script-like, so "LUNCH BOX Specials" came out in two
+ * apparent fonts and "WHAT'S INSIDE" came out wide and light. Figma sets all
+ * of them in Parkinsans Medium (nodes 247:13061, 247:13068, 247:13088,
+ * 247:13096) with -1.6px tracking at 32px, -1.2px at 24px and -1px at 20px -
+ * the same -0.05em at every size, so it is written once as an em value
+ * instead of three pixel values that would drift apart.
+ *
+ * Alignment is deliberately NOT in here: the three section headings are
+ * centred and the BREAD/CRACKERS/DESSERT labels are left-aligned, and two
+ * competing text-align utilities on one element resolve by stylesheet order,
+ * not by the order they appear in the class string.
+ */
+const BOX_HEADING = "font-parkinsans font-medium uppercase tracking-[-0.05em] text-cocoa";
+
 /* Shared by the Lunch Box and Sampler Box sections - the icon+text row
    "joined by round plus icons" (WHAT'S INSIDE / HERE IS WHAT'S INSIDE THE
    PACK). Only the heading copy and item text differ between them; the icon
@@ -387,7 +405,7 @@ function BreadCard({ item, qty, onAdd, onInc, onDec, onSelectPackSize }) {
 function WhatsInsideRow({ heading, items }) {
   return (
     <div className="flex w-full flex-col items-center gap-[16px] lg:gap-[15.87px]">
-      <p className="font-display text-[11.4px] uppercase text-cocoa lg:text-[39.66px] lg:leading-[44px]">
+      <p className={`${BOX_HEADING} text-center text-[19px] lg:text-[32px]`}>
         {heading}
       </p>
       <div className="flex w-full flex-col gap-[20px] rounded-[16px] bg-[rgba(251,251,248,0.57)] p-[16px] lg:flex-row lg:items-center lg:justify-center lg:gap-[20.82px] lg:rounded-[15.87px] lg:p-[15.87px]">
@@ -405,7 +423,7 @@ function WhatsInsideRow({ heading, items }) {
                 />
               </div>
               <div className="flex flex-col gap-[4px] text-cocoa">
-                <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[38.67px]">
+                <p className={`${BOX_HEADING} text-[16px] lg:text-[24px]`}>
                   {item.label}
                 </p>
                 <p className="font-parkinsans text-[13px] lg:text-[19.83px] lg:leading-[28px]">
@@ -431,28 +449,130 @@ function WhatsInsideRow({ heading, items }) {
    only when the caller passes them - optional paid add-on rows below the
    options (Sampler Box's bread/cracker add-ons; the Lunch Box passes none
    and renders exactly as it always has). */
-function LunchboxGroup({ step, title, options, selected, onSelect, addons, addonQty, onAddonAdd, onAddonInc, onAddonDec }) {
+/**
+ * Drives one horizontally scrolling options row.
+ *
+ * The row's native scrollbar is hidden (see the row's classes) for two
+ * reasons: a chunky grey bar is wrong against this palette, and - because it
+ * only appears in the card that actually overflows - it ate height from that
+ * card alone and knocked its radio dots out of line with the other two.
+ *
+ * This replaces it with arrows that only exist while there is somewhere to
+ * go, so a two-option card renders exactly as Figma draws it and nothing is
+ * hidden without a way to reach it.
+ */
+function useHorizontalScroller(deps) {
+  const ref = useRef(null);
+  const [reach, setReach] = useState({ left: false, right: false });
+
+  const measureFrom = (el) => {
+    if (!el) return;
+    // A sub-pixel slack: scrollLeft is fractional on zoomed/HiDPI displays,
+    // so an exact comparison leaves the arrow enabled at the very end.
+    const max = el.scrollWidth - el.clientWidth;
+    setReach({ left: el.scrollLeft > 1, right: el.scrollLeft < max - 1 });
+  };
+
+  // Reads the element off the event rather than the ref, so nothing touches
+  // ref.current during render.
+  const onScroll = (event) => measureFrom(event.currentTarget);
+
+  useEffect(() => {
+    const measure = () => measureFrom(ref.current);
+    measure();
+    const el = ref.current;
+    // jsdom has no ResizeObserver; the measure above still runs, so tests
+    // see the initial state rather than crashing.
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+
+  // Just under one option, so the row always lands mid-option and it stays
+  // obvious there is more - snap-start then settles it onto the next one.
+  const page = (direction) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * el.clientWidth * 0.5, behavior: "smooth" });
+  };
+
+  return { ref, reach, onScroll, page };
+}
+
+/* The round scroll arrow either side of an overflowing options row. Reuses
+   the carousel's own triangle, at the radio dot's size, so it reads as part
+   of the same section rather than a new control. */
+function ScrollArrow({ direction, onClick }) {
+  const isLeft = direction === "left";
   return (
-    // No fixed lg: height: Figma's 344.88px is exactly this content's own
-    // auto-layout height for two options (one row), so auto reproduces it
-    // pixel-for-pixel - and lets the card grow for a wrapped third/fourth
-    // option instead of the extra row spilling out past a fixed-height box.
+    <button
+      type="button"
+      aria-label={isLeft ? "Show previous options" : "Show more options"}
+      onClick={onClick}
+      className={`absolute top-[42px] z-10 grid size-[26px] cursor-pointer place-items-center rounded-full border border-shell bg-cream/95 shadow-sm transition-colors hover:bg-white lg:top-[58px] lg:size-[32px] ${
+        isLeft ? "left-0" : "right-0"
+      }`}
+    >
+      <img
+        src={isLeft ? lunchboxArrowLeft : lunchboxArrowRight}
+        alt=""
+        className="h-[10px] w-[8px] lg:h-[12px] lg:w-[10px]"
+      />
+    </button>
+  );
+}
+
+function LunchboxGroup({ step, title, options, selected, onSelect, addons, addonQty, onAddonAdd, onAddonInc, onAddonDec }) {
+  // Destructured, not kept as one object: the react-hooks/refs rule treats
+  // any property read off a value that holds a ref as a render-time ref access.
+  const { ref: optionsRef, reach, onScroll, page } = useHorizontalScroller([options.length]);
+
+  return (
+    // No explicit height, deliberately: the row above sets lg:items-stretch,
+    // and a flex item only stretches while its own height is `auto`. An
+    // lg:h-full here resolved to 100% of an auto-height row - i.e. back to
+    // content height - and silently cancelled the stretch, which is why the
+    // three cards still ended at different heights.
     <div className="box-border flex w-full flex-col items-center gap-[24px] rounded-[16px] border border-shell bg-cream p-[16px] lg:w-[393.65px] lg:gap-[32px] lg:rounded-[15.87px] lg:border-[0.99px] lg:p-[15.87px]">
-      <div className="flex flex-col items-center gap-[16px] lg:gap-[23.8px]">
+      {/* w-full, and min-w-0 on the row below: without a definite width here
+          the auto-sized column would simply grow to fit all the options and
+          they would never scroll - it would just overflow the card. */}
+      <div className="flex w-full min-w-0 flex-1 flex-col items-center gap-[16px] lg:gap-[23.8px]">
         <div className="flex items-center justify-center gap-[12px] lg:h-[39px] lg:gap-[9.92px]">
           <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-cocoa font-parkinsans text-[13px] text-white lg:size-[29.75px] lg:text-[19.83px] lg:leading-[19.83px]">
             {step}
           </span>
-          <p className="whitespace-nowrap font-display text-[8.5px] uppercase text-cocoa lg:text-[35.7px] lg:leading-[39px]">
+          <p className={`${BOX_HEADING} whitespace-nowrap text-center text-[14px] lg:text-[20px]`}>
             {title}
           </p>
         </div>
-        {/* Two options fill the row exactly as before: basis of "half the
-            row minus half the gap" times two, plus the one gap between them,
-            sums to 100%. flex-wrap means a third (or fourth) option that no
-            longer fits drops to a new line, where justify-center on the
-            parent centres it under the first two. */}
-        <div className="flex w-full flex-wrap items-start justify-center gap-[12px] lg:gap-[23.8px]">
+        {/* Two options fill the row exactly as Figma draws it: a basis of
+            "half the row minus half the gap", twice, plus the one gap
+            between them, sums to 100% - so the common case is untouched.
+
+            Beyond two, the row scrolls sideways rather than wrapping. It
+            used to wrap, which turned Dessert's five options into three
+            stacked rows and a lone centred orphan, tripling the card's
+            height and breaking the three cards' alignment. Scrolling keeps
+            every card the same height whatever the owner tags, and keeps the
+            options on one line as designed. `shrink-0` is what stops the
+            browser compressing five options to fit instead of scrolling.
+
+            items-stretch + justify-between on each option pins the radio
+            dot to the bottom, so the dots line up whether a name wraps to
+            two lines ("Sourdough Bread") or four ("Chief's White Cheddar
+            Cayenne Crackers"). Paired with flex-1 up the chain, that also
+            makes the dots line up *between* cards, not just within one. */}
+        <div className="relative flex w-full min-w-0 flex-1">
+          {reach.left && <ScrollArrow direction="left" onClick={() => page(-1)} />}
+          {reach.right && <ScrollArrow direction="right" onClick={() => page(1)} />}
+          <div
+            ref={optionsRef}
+            onScroll={onScroll}
+            className="flex w-full min-w-0 snap-x snap-mandatory items-stretch gap-[12px] overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] lg:gap-[23.8px] [&::-webkit-scrollbar]:hidden"
+          >
           {options.map((opt) => {
             const isSelected = selected === opt.name;
             return (
@@ -460,7 +580,14 @@ function LunchboxGroup({ step, title, options, selected, onSelect, addons, addon
                 key={opt.name}
                 type="button"
                 onClick={() => onSelect(opt.name)}
-                className="flex grow-0 basis-[calc(50%-6px)] cursor-pointer flex-col items-center gap-[12px] lg:basis-[calc(50%-11.9px)] lg:gap-[23.8px]"
+                /* Figma outlines the chosen option (nodes 379:306 / 379:309 /
+                   379:310): a terracotta hairline at radius 17 with 4px of
+                   padding and 8px below. The unselected state carries the
+                   same border width and padding in transparent, so choosing
+                   one never nudges the row by a pixel. */
+                className={`flex shrink-0 grow-0 basis-[calc(50%-6px)] snap-start cursor-pointer flex-col items-center justify-between gap-[12px] rounded-[17px] border px-[4px] pb-[8px] pt-[4px] transition-colors lg:basis-[calc(50%-11.9px)] lg:gap-[23.8px] ${
+                  isSelected ? "border-terracotta" : "border-transparent"
+                }`}
               >
                 <div className="flex w-full flex-col items-center gap-[8px] lg:gap-[14px]">
                   <img
@@ -480,6 +607,7 @@ function LunchboxGroup({ step, title, options, selected, onSelect, addons, addon
               </button>
             );
           })}
+          </div>
         </div>
       </div>
       {addons && addons.length > 0 && (
@@ -753,15 +881,26 @@ export default function Menu() {
 
   const lunchBoxTitle = (
     <div className="flex flex-col items-center gap-[12px] lg:w-[890px] lg:gap-[19px]">
-      <div className="relative inline-flex items-center justify-center">
-        <img
-          src={blobSpecials}
-          alt=""
-          className="absolute right-[-6px] h-[61px] w-[91px] lg:right-[-10px] lg:h-[104px] lg:w-[165px]"
-        />
-        <p className="relative text-center font-display text-[15.2px] text-cocoa lg:text-[64px] lg:leading-[70px]">
-          LUNCH BOX Specials
+      {/* Two faces, not one: Figma sets "LUNCH BOX" in Parkinsans Regular
+          (387:6399) and "specials" in Rochester on its blob (387:6398). It
+          was a single font-display string, and Ligema DEMO's script-like
+          lowercase made the second word *look* like a different face while
+          the first came out wrong. Same lockup the Sampler Box title below
+          already uses. */}
+      <div className="flex items-center justify-center gap-[6px] lg:gap-[10px]">
+        <p className="font-parkinsans text-[15.2px] uppercase tracking-[-0.05em] text-cocoa lg:text-[33.6px]">
+          LUNCH BOX
         </p>
+        <div className="relative inline-flex items-center justify-center">
+          <img
+            src={blobSpecials}
+            alt=""
+            className="absolute h-[43px] w-[68px] lg:h-[94.8px] lg:w-[150px]"
+          />
+          <p className="relative font-rochester text-[19.6px] text-cocoa lg:text-[43.2px]">
+            specials
+          </p>
+        </div>
       </div>
       <p className="max-w-[828px] text-center font-parkinsans text-[15px] text-cocoa lg:w-[828px] lg:text-[20px] lg:leading-[34px]">
         A thoughtfully curated meal featuring fresh bread, handcrafted
@@ -777,20 +916,21 @@ export default function Menu() {
 
       <div className="flex w-full flex-col items-center gap-[24px] lg:gap-[34.7px]">
         <div className="flex flex-col items-center text-center text-cocoa">
-          <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[43.63px]">
+          <p className={`${BOX_HEADING} text-center text-[19px] lg:text-[32px]`}>
             BUILD YOUR LUNCH BOX
           </p>
           <p className="font-parkinsans text-[14px] lg:text-[20px] lg:leading-[28px]">
             Select one option from each category
           </p>
         </div>
-        {/* lg:items-start, not -center: a group's card can now grow
-            taller than its siblings when its own options wrap onto a
-            second line, and centering the row's cross-axis on the
-            tallest card would drop the shorter cards out of top
-            alignment. Two/three same-height cards (today's real
-            catalogue) look identical either way. */}
-        <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-start lg:justify-center lg:gap-[47.6px]">
+        {/* lg:items-stretch, so all three cards are as tall as the
+            tallest. Their natural heights differ by however many lines
+            the longest product name happens to wrap to - "Chief's White
+            Cheddar Cayenne Crackers" is four lines where "Sourdough
+            Bread" is two - which left the row visibly ragged. Figma
+            stretches them too (nodes 247:13111 / 247:13131 wrap their
+            cards in a self-stretch row with h-full). */}
+        <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-stretch lg:justify-center lg:gap-[47.6px]">
           <LunchboxGroup
             step={1}
             title="CHoose your Bread"
@@ -884,14 +1024,14 @@ export default function Menu() {
 
       <div className="flex w-full flex-col items-center gap-[24px] lg:gap-[34.7px]">
         <div className="flex flex-col items-center text-center text-cocoa">
-          <p className="font-display text-[10.4px] uppercase lg:text-[39.66px] lg:leading-[43.63px]">
+          <p className={`${BOX_HEADING} text-center text-[19px] lg:text-[32px]`}>
             YOU CAN CHOOSE AMONG THESE
           </p>
           <p className="font-parkinsans text-[14px] lg:text-[20px] lg:leading-[28px]">
             Select one option from each category
           </p>
         </div>
-        <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-start lg:justify-center lg:gap-[47.6px]">
+        <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-stretch lg:justify-center lg:gap-[47.6px]">
           <LunchboxGroup
             step={1}
             title="CHoose your Bread"
