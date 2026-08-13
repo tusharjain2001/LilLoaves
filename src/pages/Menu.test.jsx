@@ -564,6 +564,33 @@ describe('Menu group cards wrapping', () => {
     expect(scroller.className).toMatch(/webkit-scrollbar/)
   })
 
+  it('puts the scroll arrows below the options, pointing opposite ways', async () => {
+    renderMenu()
+    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
+
+    const back = screen.getAllByLabelText('Show previous options')[0]
+    const forward = screen.getAllByLabelText('Show more options')[0]
+
+    // Below the options, not layered over them - an absolutely positioned
+    // arrow sat on top of the photograph it was pointing at.
+    expect(back.className).not.toMatch(/absolute/)
+    const scroller = back.closest('.lg\\:w-\\[393\\.65px\\]').querySelector('.overflow-x-auto')
+    expect(scroller.contains(back)).toBe(false)
+
+    // lunchbox-arrow-left.svg and -right.svg are byte-identical - both point
+    // right - so the back arrow only points back if it is turned. Without
+    // this both arrows rendered pointing the same way.
+    expect(back.querySelector('img').className).toMatch(/rotate-180/)
+    expect(forward.querySelector('img').className).not.toMatch(/rotate-180/)
+
+    // Rendered in every card, so all three reserve the same strip and the
+    // radio dots stay on one line; jsdom computes no layout, so nothing
+    // overflows and the pair is both hidden and unusable here.
+    expect(back.disabled).toBe(true)
+    expect(forward.disabled).toBe(true)
+    expect(back.parentElement.className).toMatch(/invisible/)
+  })
+
   it('outlines the chosen option, and reserves that border when unselected', async () => {
     woo.fetchByTagSlug.mockImplementation(async (slug) =>
       slug === 'lunchbox-bread'

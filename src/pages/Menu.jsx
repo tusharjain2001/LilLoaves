@@ -502,23 +502,29 @@ function useHorizontalScroller(deps) {
 }
 
 /* The round scroll arrow either side of an overflowing options row. Reuses
-   the carousel's own triangle, at the radio dot's size, so it reads as part
-   of the same section rather than a new control. */
-function ScrollArrow({ direction, onClick }) {
+   the carousel's own triangle so it reads as part of the same section.
+
+   lunchbox-arrow-left.svg and -right.svg are byte-identical - both point
+   right - so the left one has to be turned, exactly as the carousel below
+   already does it. Rendering the file named "left" without rotating it is
+   why both arrows pointed the same way.
+
+   Kept small and below the options rather than floating over them: sitting
+   on top of a photograph it covered part of whatever it was pointing at. */
+function ScrollArrow({ direction, disabled, onClick }) {
   const isLeft = direction === "left";
   return (
     <button
       type="button"
       aria-label={isLeft ? "Show previous options" : "Show more options"}
+      disabled={disabled}
       onClick={onClick}
-      className={`absolute top-[42px] z-10 grid size-[26px] cursor-pointer place-items-center rounded-full border border-shell bg-cream/95 shadow-sm transition-colors hover:bg-white lg:top-[58px] lg:size-[32px] ${
-        isLeft ? "left-0" : "right-0"
-      }`}
+      className="grid size-[22px] cursor-pointer place-items-center rounded-full border border-shell bg-white transition-opacity disabled:cursor-default disabled:opacity-30 lg:size-[26px]"
     >
       <img
-        src={isLeft ? lunchboxArrowLeft : lunchboxArrowRight}
+        src={lunchboxArrowRight}
         alt=""
-        className="h-[10px] w-[8px] lg:h-[12px] lg:w-[10px]"
+        className={`h-[9px] w-[8px] lg:h-[11px] lg:w-[9px] ${isLeft ? "rotate-180" : ""}`}
       />
     </button>
   );
@@ -565,9 +571,7 @@ function LunchboxGroup({ step, title, options, selected, onSelect, addons, addon
             two lines ("Sourdough Bread") or four ("Chief's White Cheddar
             Cayenne Crackers"). Paired with flex-1 up the chain, that also
             makes the dots line up *between* cards, not just within one. */}
-        <div className="relative flex w-full min-w-0 flex-1">
-          {reach.left && <ScrollArrow direction="left" onClick={() => page(-1)} />}
-          {reach.right && <ScrollArrow direction="right" onClick={() => page(1)} />}
+        <div className="flex w-full min-w-0 flex-1">
           <div
             ref={optionsRef}
             onScroll={onScroll}
@@ -608,6 +612,20 @@ function LunchboxGroup({ step, title, options, selected, onSelect, addons, addon
             );
           })}
           </div>
+        </div>
+
+        {/* Below the options, never over them - and rendered in every card,
+            not only the ones that overflow. `invisible` still occupies its
+            space, so all three cards reserve the same strip and the radio
+            dots above stay on one line. Both arrows always show, the
+            unusable one dimmed, so the pair never shifts as you scroll. */}
+        <div
+          className={`flex shrink-0 items-center justify-center gap-[14px] ${
+            reach.left || reach.right ? "" : "invisible"
+          }`}
+        >
+          <ScrollArrow direction="left" disabled={!reach.left} onClick={() => page(-1)} />
+          <ScrollArrow direction="right" disabled={!reach.right} onClick={() => page(1)} />
         </div>
       </div>
       {addons && addons.length > 0 && (
