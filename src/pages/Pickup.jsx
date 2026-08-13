@@ -5,6 +5,7 @@ import CartItemsPanel from "../components/CartItemsPanel.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { fetchQuote } from "../lib/quote.js";
 import { fetchPickupConfig, slotValue, pickupDayCopy } from "../lib/pickup.js";
+import { sendOrderNotification } from "../lib/notify.js";
 import waveRose from "../assets/pickup/wave-rose.svg";
 import iconLocation from "../assets/pickup/icon-location.svg";
 import arrowLeft from "../assets/pickup/arrow-left.svg";
@@ -130,6 +131,12 @@ export default function Pickup() {
   // Set by Share Info with the Owner, never by typing - so the mandatory-field
   // error can't scold a customer who hasn't finished filling the form in yet.
   const [contactAttempted, setContactAttempted] = useState(false);
+  // Place Order sends the two confirmation emails and only then shows the
+  // "Hurray" screen. Flipped synchronously inside the handler, before the
+  // request is even built, so a second click hits a disabled button rather
+  // than racing the first into a duplicate pair of emails.
+  const [placing, setPlacing] = useState(false);
+  const [placeError, setPlaceError] = useState("");
   // Which of the five frames above is on screen. See STAGE_ORDER.
   const [stage, setStage] = useState("cart");
   // null means "hasn't landed yet". Same WooCommerce > Fulfilment config
@@ -238,6 +245,46 @@ export default function Pickup() {
   const chooseSlot = (value) => {
     setSelectedTime(value);
     setStage("confirm");
+  };
+
+  /**
+   * Place Order is the only irreversible step on this page: it emails the
+   * bakery the order and the customer their confirmation. Since the flow
+   * places no WooCommerce order, those two emails are the whole record - so
+   * the "Hurray" screen is shown only after the send actually succeeds. A
+   * failure keeps the customer here with a way to retry, rather than telling
+   * them an order landed that nobody received.
+   */
+  const handlePlaceOrder = async () => {
+    setPlacing(true);
+    setPlaceError("");
+
+    const result = await sendOrderNotification({
+      lines: cart.lines,
+      contact: { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
+      // Machine values, never display labels - ll_find_store() and
+      // ll_pickup_slot_valid() on the backend validate against these.
+      pickup: {
+        store: pickupStore?.id ?? "",
+        date: effectiveDate ?? "",
+        slot: effectiveSlot ?? "",
+      },
+      coupon: appliedCoupon,
+    });
+
+    if (result.ok) {
+      setStage("done");
+      // Nothing left to price, and leaving it filled would let a back
+      // navigation re-place the same basket.
+      cart.clear();
+      return;
+    }
+
+    setPlacing(false);
+    setPlaceError(
+      result.error ||
+        "We couldn't send your order just now. Please check your connection and try again.",
+    );
   };
 
   const showsPickupBand = STAGE_ORDER.indexOf(stage) >= STAGE_ORDER.indexOf("contact");
@@ -475,13 +522,24 @@ export default function Pickup() {
                   Please click on the button below to confirm your choices.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setStage("done")}
-                className={FILLED_BUTTON_CLASSES}
-              >
-                Place Order
-              </button>
+              <div className="flex flex-col items-center gap-[12px]">
+                {placeError && (
+                  <p
+                    role="alert"
+                    className="text-center font-parkinsans text-[12px] text-[#c80000] lg:text-[17px]"
+                  >
+                    {placeError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handlePlaceOrder}
+                  disabled={placing}
+                  className={`${FILLED_BUTTON_CLASSES} disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {placing ? "Placing Order…" : "Place Order"}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex w-full flex-col items-center gap-[32px] lg:gap-[64px]">

@@ -4,6 +4,7 @@ import Pickup from './Pickup.jsx'
 import { CartProvider } from '../context/CartContext.jsx'
 import * as pickupLib from '../lib/pickup.js'
 import * as quoteLib from '../lib/quote.js'
+import * as notifyLib from '../lib/notify.js'
 
 const STORAGE_KEY = 'lilloaves:cart'
 
@@ -100,6 +101,9 @@ beforeEach(() => {
   // default it to a real, working response so tests that don't care about
   // pricing aren't forced to mock it too.
   vi.spyOn(quoteLib, 'fetchQuote').mockResolvedValue(makeQuote())
+  // Place Order emails the bakery and the customer. Default it to a working
+  // send; the tests that care about failure override it.
+  vi.spyOn(notifyLib, 'sendOrderNotification').mockResolvedValue({ ok: true, error: '' })
 })
 
 afterEach(() => {
@@ -349,26 +353,83 @@ describe('Pickup stages 4 and 5 - confirm, then confirmed', () => {
     expect(screen.queryByText('please select')).toBeNull()
   })
 
-  it('placing the order shows the confirmation state with a way back home', async () => {
-    await startAtSelect()
+  const placeOrder = async () => {
     fireEvent.click(screen.getByText('Pick Up Time'))
     fireEvent.click(await screen.findByText('2:00 PM - 2:30 PM'))
     fireEvent.click(screen.getByText('Place Order'))
+  }
 
-    expect(screen.getByText('Hurray! Order Confirmed')).toBeTruthy()
+  it('placing the order shows the confirmation state with a way back home', async () => {
+    await startAtSelect()
+    await placeOrder()
+
+    expect(await screen.findByText('Hurray! Order Confirmed')).toBeTruthy()
     expect(screen.getByText('Return to Homepage').closest('a').getAttribute('href')).toBe('/')
     expect(screen.queryByText('Place Order')).toBeNull()
   })
 
   it('keeps the cart off screen all the way through to the confirmation', async () => {
     await startAtSelect()
-    fireEvent.click(screen.getByText('Pick Up Time'))
-    fireEvent.click(await screen.findByText('2:00 PM - 2:30 PM'))
-    fireEvent.click(screen.getByText('Place Order'))
+    await placeOrder()
 
+    await screen.findByText('Hurray! Order Confirmed')
     expect(screen.queryByText('Blueberry Muffin')).toBeNull()
     expect(screen.queryByText('Proceed to Pickup')).toBeNull()
     // No going back once the order is placed.
     expect(screen.queryByText('Go Back to Step 01')).toBeNull()
+  })
+
+  it('emails the order with ids and quantities only, and machine pickup values', async () => {
+    await startAtSelect()
+    await placeOrder()
+    await screen.findByText('Hurray! Order Confirmed')
+
+    expect(notifyLib.sendOrderNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contact: { name: 'Jess', email: 'jess@example.com', phone: '714-555-0123' },
+        // The date's and slot's machine values, never the "9 Aug" /
+        // "2:00 PM - 2:30 PM" labels the customer saw.
+        pickup: {
+          store: 'orange-county-store',
+          date: '2026-08-09',
+          slot: '14:00-14:30',
+        },
+      }),
+    )
+    // No prices, names or images are handed to the mailer - it re-prices.
+    const sent = notifyLib.sendOrderNotification.mock.calls[0][0]
+    expect(sent.lines.every((l) => !('priceFormatted' in l && l.priceFormatted === undefined))).toBe(true)
+  })
+
+  it('empties the cart once the order is actually away', async () => {
+    await startAtSelect()
+    await placeOrder()
+    await screen.findByText('Hurray! Order Confirmed')
+
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY))).toEqual([])
+    })
+  })
+
+  it('does not claim the order landed when the email could not be sent', async () => {
+    notifyLib.sendOrderNotification.mockResolvedValue({ ok: false, error: 'Upstream unreachable' })
+    await startAtSelect()
+    await placeOrder()
+
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toMatch(/upstream unreachable/i)
+    expect(screen.queryByText('Hurray! Order Confirmed')).toBeNull()
+    // Still on the confirm screen, and retryable.
+    expect(screen.getByText('Place Order')).toBeTruthy()
+    // The basket survives a failed send - it is the only copy of the order.
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY))).toHaveLength(1)
+  })
+
+  it('falls back to plain words when the failure carries no message', async () => {
+    notifyLib.sendOrderNotification.mockResolvedValue({ ok: false, error: '' })
+    await startAtSelect()
+    await placeOrder()
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/try again/i)
   })
 })
