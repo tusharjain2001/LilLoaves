@@ -140,6 +140,39 @@ describe('Pickup stage 1 - the cart, same shape as the delivery cart', () => {
     })
   })
 
+  // The bug: the remove button is a flex sibling of the name column, so a
+  // long name ("Doc's Cheddar Cheese Crackers" wraps to two lines and adds a
+  // pack-size row) squeezed it until the bin collapsed to a few pixels - one
+  // line of the cart had a bin and the next did not.
+  it('keeps a full-size remove button on every line, however long the name', async () => {
+    vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue(PICKUP_CONFIG)
+    seedCart([
+      MUFFIN,
+      {
+        id: 97,
+        qty: 1,
+        name: "Doc's Cheddar Cheese Crackers",
+        image: 'crackers.png',
+        priceFormatted: '$12.00',
+        variationId: 99,
+        options: { size: '10 oz bag' },
+      },
+    ])
+    renderPickup()
+
+    const buttons = [
+      screen.getByLabelText('Remove Blueberry Muffin from cart'),
+      screen.getByLabelText("Remove Doc's Cheddar Cheese Crackers from cart"),
+    ]
+    buttons.forEach((button) => {
+      // A fixed size on the img alone doesn't survive: the button and its
+      // wrapper are what the browser shrinks.
+      expect(button.className).toMatch(/shrink-0/)
+      expect(button.parentElement.className).toMatch(/shrink-0/)
+      expect(button.querySelector('img').className).toMatch(/size-\[30px\]/)
+    })
+  })
+
   it('decrementing a line at quantity 1 removes it, same as Cart.jsx', async () => {
     vi.spyOn(pickupLib, 'fetchPickupConfig').mockResolvedValue(PICKUP_CONFIG)
     seedCart([{ ...MUFFIN, qty: 1 }])

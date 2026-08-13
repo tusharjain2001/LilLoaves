@@ -381,9 +381,9 @@ describe('Menu lunch box', () => {
 
   it('renders three choosers for the Lunch Box - Bread, Crackers and Dessert', async () => {
     renderMenu()
-    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
-    expect(screen.getByText('CHoose your Crackers')).toBeTruthy()
-    expect(screen.getByText('CHoose your Dessert')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('The Main Loaf')).toBeTruthy())
+    expect(screen.getByText('The Salty Crunch')).toBeTruthy()
+    expect(screen.getByText('The Sweet Pack')).toBeTruthy()
   })
 
   it('renders no options for a tag with no products yet', async () => {
@@ -407,9 +407,9 @@ describe('Menu lunch box', () => {
       slug === 'lunchbox-bread' ? [product()] : [],
     )
     renderMenu()
-    expect(screen.getByText('CHoose your Crackers')).toBeTruthy()
+    expect(screen.getByText('The Salty Crunch')).toBeTruthy()
     // Only the bread column has an option to select; crackers have none.
-    // "CHoose your Crackers" renders synchronously on first paint regardless
+    // "The Salty Crunch" renders synchronously on first paint regardless
     // of the tag fetch, so it is not a reliable proxy for "the async
     // selection has landed" - wait on the actual selected marker.
     await waitFor(() => expect(screen.getAllByAltText('Selected')).toHaveLength(1))
@@ -510,9 +510,9 @@ describe('Menu lunch box options stay on one line', () => {
 describe('Menu group cards wrapping', () => {
   it('lets the Bread/Crackers/Dessert group-card row wrap on desktop instead of overflowing', async () => {
     renderMenu()
-    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('The Main Loaf')).toBeTruthy())
 
-    const row = screen.getByText('CHoose your Bread').closest('.lg\\:flex-row')
+    const row = screen.getByText('The Main Loaf').closest('.lg\\:flex-row')
     expect(row).toBeTruthy()
     expect(row.className).toMatch(/lg:flex-wrap/)
     expect(row.className).toMatch(/lg:justify-center/)
@@ -532,7 +532,7 @@ describe('Menu group cards wrapping', () => {
     renderMenu()
     await waitFor(() => expect(screen.getByText('Bread 0')).toBeTruthy())
 
-    const row = screen.getByText('CHoose your Bread').closest('.lg\\:flex-row')
+    const row = screen.getByText('The Main Loaf').closest('.lg\\:flex-row')
     expect(row.className).toMatch(/lg:items-stretch/)
     // ...and not the old top-alignment, which let them end at different y.
     expect(row.className).not.toMatch(/lg:items-start/)
@@ -556,9 +556,9 @@ describe('Menu group cards wrapping', () => {
   // of line with the other two. Hiding it keeps every card identical.
   it('hides the native scrollbar so it cannot eat height from one card only', async () => {
     renderMenu()
-    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('The Main Loaf')).toBeTruthy())
 
-    const row = screen.getByText('CHoose your Bread').closest('.lg\\:flex-row')
+    const row = screen.getByText('The Main Loaf').closest('.lg\\:flex-row')
     const scroller = row.querySelector('.overflow-x-auto')
     expect(scroller.className).toMatch(/\[scrollbar-width:none\]/)
     expect(scroller.className).toMatch(/webkit-scrollbar/)
@@ -566,7 +566,7 @@ describe('Menu group cards wrapping', () => {
 
   it('puts the scroll arrows below the options, pointing opposite ways', async () => {
     renderMenu()
-    await waitFor(() => expect(screen.getByText('CHoose your Bread')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('The Main Loaf')).toBeTruthy())
 
     const back = screen.getAllByLabelText('Show previous options')[0]
     const forward = screen.getAllByLabelText('Show more options')[0]

@@ -951,21 +951,21 @@ export default function Menu() {
         <div className="flex w-full flex-col items-center gap-[24px] lg:flex-row lg:flex-wrap lg:items-stretch lg:justify-center lg:gap-[47.6px]">
           <LunchboxGroup
             step={1}
-            title="CHoose your Bread"
+            title="The Main Loaf"
             options={lunchbox.bread}
             selected={selectedBread}
             onSelect={setSelectedBread}
           />
           <LunchboxGroup
             step={2}
-            title="CHoose your Crackers"
+            title="The Salty Crunch"
             options={lunchbox.cracker}
             selected={selectedCracker}
             onSelect={setSelectedCracker}
           />
           <LunchboxGroup
             step={3}
-            title="CHoose your Dessert"
+            title="The Sweet Pack"
             options={lunchbox.dessert}
             selected={selectedDessert}
             onSelect={setSelectedDessert}

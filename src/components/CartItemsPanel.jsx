@@ -67,9 +67,9 @@ export default function CartItemsPanel({ quoteLineTotals }) {
               alt={line.name}
               className="h-[147px] w-[177px] shrink-0 rounded-[3px] object-cover lg:h-[122px] lg:w-[148px] lg:rounded-[8px]"
             />
-            <div className="flex flex-1 flex-col items-start gap-[13px] lg:flex-row lg:items-center lg:justify-between lg:gap-[67px]">
-              <div className="flex flex-col gap-[13px] lg:flex-row lg:items-center lg:gap-[84px]">
-                <div className="flex flex-col gap-[2px] lg:gap-[3px]">
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-[13px] lg:flex-row lg:items-center lg:justify-between lg:gap-[67px]">
+              <div className="flex min-w-0 flex-col gap-[13px] lg:flex-row lg:items-center lg:gap-[84px]">
+                <div className="flex min-w-0 flex-col gap-[2px] lg:gap-[3px]">
                   <p className="font-parkinsans text-[16px] text-cocoa lg:text-[24px]">
                     {line.name}
                   </p>
@@ -111,17 +111,24 @@ export default function CartItemsPanel({ quoteLineTotals }) {
                   </button>
                 </div>
               </div>
-              <div className="hidden items-center gap-[35px] lg:flex">
-                <p className="font-parkinsans text-[24px] text-cocoa">
+              {/* shrink-0 all the way down, and nowrap on the total: this
+                  block is a flex sibling of the name column, so a long name
+                  ("Doc's Cheddar Cheese Crackers", two lines plus a pack-size
+                  row) squeezed it until the bin collapsed to a few pixels -
+                  visible on one line of the cart and not the next. A fixed
+                  size on the img alone doesn't save it; the button and this
+                  wrapper are what the browser was shrinking. */}
+              <div className="hidden shrink-0 items-center gap-[35px] lg:flex">
+                <p className="whitespace-nowrap font-parkinsans text-[24px] text-cocoa">
                   {quoteLineTotals.get(`${line.id}:${line.variationId ?? 0}`) || PENDING}
                 </p>
                 <button
                   type="button"
                   aria-label={`Remove ${line.name} from cart`}
                   onClick={() => cart.remove(line.id, line.options)}
-                  className="cursor-pointer"
+                  className="shrink-0 cursor-pointer"
                 >
-                  <img src={iconBin} alt="" className="size-[30px]" />
+                  <img src={iconBin} alt="" className="size-[30px] shrink-0" />
                 </button>
               </div>
             </div>
