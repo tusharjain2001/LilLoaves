@@ -189,7 +189,7 @@ Every one of these was found by running against the real server, not by reading 
 - Only the first configured store is ever used — no multi-store picker
 - **A sale price on a *variation* won't show its struck-through "was" price.** `/variations` returns only the current price, so the strikethrough stays tied to the parent. Nothing is on sale today
 - Chocolate Muffins has no photo, and Dinner Rolls sits as a draft awaiting a price
-- Ingredients and allergens are unpublished — the client's own doc says they must verify them first
+- Ingredients and allergens: the client asked for the feature to be dropped entirely (2026-08-13) — removed from the catalogue and the storefront, not merely unverified. Don't rebuild it without asking her again
 
 ---
 

@@ -92,24 +92,6 @@ describe('Menu', () => {
     expect(screen.queryByText(/<p/)).toBeNull()
   })
 
-  it('shows the tagline only - never the ingredients/allergens custom attributes - on a menu card', async () => {
-    woo.fetchProducts.mockResolvedValue([
-      product({
-        summary: 'Crisp crust, airy crumb.',
-        customAttributes: [
-          { id: 0, name: 'Ingredients', value: 'Flour, water, sourdough starter, and sea salt.' },
-          { id: 1, name: 'Allergens', value: 'Contains wheat and gluten.' },
-        ],
-      }),
-    ])
-    renderMenu()
-    await waitFor(() => expect(screen.getByText('Crisp crust, airy crumb.')).toBeTruthy())
-    expect(screen.queryByText(/Flour, water, sourdough starter/)).toBeNull()
-    expect(screen.queryByText(/Contains wheat and gluten/)).toBeNull()
-    expect(screen.queryByText('Ingredients')).toBeNull()
-    expect(screen.queryByText('Allergens')).toBeNull()
-  })
-
   it('shows a placeholder image rather than a broken image when the product has none', async () => {
     woo.fetchProducts.mockResolvedValue([product({ images: [] })])
     renderMenu()

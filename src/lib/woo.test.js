@@ -142,62 +142,6 @@ describe('normalizeProduct', () => {
   })
 })
 
-// Ingredients/Allergens arrive as custom (non-taxonomy) product attributes,
-// distinguished from a real taxonomy attribute like pa_pack-size by
-// `taxonomy: null` and `has_variations: false` - pa_pack-size is a live
-// selling feature (Menu/Product's pack-size pills) and must never be parsed
-// as ingredient text.
-describe('normalizeProduct customAttributes', () => {
-  const PACK_SIZE_ATTR = {
-    id: 3, name: 'Pack Size', taxonomy: 'pa_pack-size', has_variations: true,
-    terms: [{ id: 10, name: 'Pack of 4', slug: 'pack-of-4' }],
-  }
-  const INGREDIENTS_ATTR = {
-    id: 0, name: 'Ingredients', taxonomy: null, has_variations: false,
-    terms: [{ id: 0, name: 'Flour, water, sourdough starter, and sea salt.', slug: 'flour-water' }],
-  }
-  // WooCommerce gives every custom (non-taxonomy) attribute id 0 - it is
-  // only global/taxonomy attributes (like pa_pack-size) that get a real
-  // attribute_id. Confirmed live: Ingredients and Allergens both arrived
-  // with id 0, which is why nothing downstream (React keys included) may
-  // treat id as unique.
-  const ALLERGENS_ATTR = {
-    id: 0, name: 'Allergens', taxonomy: null, has_variations: false,
-    terms: [{ id: 0, name: 'Contains wheat and gluten.', slug: 'contains-wheat' }],
-  }
-
-  it('extracts custom attributes as name/value pairs', () => {
-    const p = normalizeProduct({ ...RAW, attributes: [INGREDIENTS_ATTR, ALLERGENS_ATTR] })
-    expect(p.customAttributes).toEqual([
-      { id: 0, name: 'Ingredients', value: 'Flour, water, sourdough starter, and sea salt.' },
-      { id: 0, name: 'Allergens', value: 'Contains wheat and gluten.' },
-    ])
-  })
-
-  it('excludes a taxonomy attribute like pa_pack-size', () => {
-    const p = normalizeProduct({ ...RAW, attributes: [PACK_SIZE_ATTR, INGREDIENTS_ATTR] })
-    expect(p.customAttributes.map((a) => a.name)).toEqual(['Ingredients'])
-  })
-
-  it('excludes a custom attribute with no term value (food-safety: never render an empty allergen box)', () => {
-    const p = normalizeProduct({ ...RAW, attributes: [{ ...ALLERGENS_ATTR, terms: [] }] })
-    expect(p.customAttributes).toEqual([])
-  })
-
-  it('defaults to an empty array when the product has no attributes', () => {
-    const p = normalizeProduct(RAW)
-    expect(p.customAttributes).toEqual([])
-  })
-
-  it('decodes HTML entities in a custom attribute value', () => {
-    const p = normalizeProduct({
-      ...RAW,
-      attributes: [{ ...INGREDIENTS_ATTR, terms: [{ id: 0, name: 'Doc&#8217;s recipe.', slug: 'x' }] }],
-    })
-    expect(p.customAttributes[0].value).toBe('Doc’s recipe.')
-  })
-})
-
 describe('fetchProducts', () => {
   it('calls the proxy, not WordPress', async () => {
     jsonOnce([RAW])
