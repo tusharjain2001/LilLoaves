@@ -23,6 +23,7 @@ import lunchboxArrowRight from "../assets/menu/lunchbox-arrow-right.svg";
 import iconRoundPlus from "../assets/menu/icon-round-plus.svg";
 import radioSelected from "../assets/menu/radio-selected.svg";
 import radioUnselected from "../assets/menu/radio-unselected.svg";
+import scallopSeam from "../assets/menu/scallop-seam.svg";
 
 /* Desktop geometry is taken verbatim from the Figma Menu page (node 247:13050,
    a 1440-wide canvas). The navbar overlays the hero there, so the hero runs from
@@ -57,25 +58,35 @@ const CHECKERBOARD_BG = {
   backgroundPosition: "calc(50% - 690px) 0",
 };
 
-/* Scalloped seam under the Lunch Box/Sampler Box carousel: 17 circles of
-   r=57.73 spaced 86.6 apart, filled with the section's own #f4e7e3 so the
-   pink edge reads as bumps. They overlap, so they are split across two
-   gradient layers that each tile at double the pitch. */
+/* Scalloped seam under the Lunch Box/Sampler Box carousel - Figma node
+   247:13447 (Group 153): circles of r=57.73 spaced 86.6 apart, filled with
+   the section's own #f4e7e3 so the pink edge reads as bumps.
+
+   This was two repeating radial-gradients. It could not work: the circles
+   overlap (d=115.46 against a 86.6 pitch), and a background tile clips its
+   own paint at the tile edge, so every circle lost the part that should have
+   run under its neighbour. That is the row of flat vertical cuts it left.
+   scallop-seam.svg carries one tile of the real geometry, neighbours
+   included, so it repeats seamlessly instead. */
 const SCALLOP_DESKTOP = {
-  backgroundImage: [
-    "radial-gradient(circle at 27.73px 57.73px, #f4e7e3 57.73px, transparent 57.74px)",
-    "radial-gradient(circle at 114.33px 57.73px, #f4e7e3 57.73px, transparent 57.74px)",
-  ].join(","),
-  backgroundSize: "173.2px 115.46px",
+  backgroundImage: `url(${scallopSeam})`,
+  backgroundSize: "86.6px 115.46px",
   backgroundRepeat: "repeat-x",
-  backgroundPosition: `${CANVAS_ORIGIN} 0`,
+  // The tile's own circle sits at its centre, where Figma's first circle sits
+  // 15.57px earlier - this keeps the bumps in the same phase as the canvas.
+  backgroundPosition: `calc(${CANVAS_ORIGIN} - 15.57px) 0`,
 };
 
+/* Same tile at the mobile pitch. Anchored to the *bottom*: the strip is only
+   38px of the tile's 75, so this keeps the scalloped lower edge and clips the
+   solid middle, giving a pink band that ends in bumps. Anchoring it to the
+   top would show the tile's upper scallop instead and cut the bottom off
+   flat - the seam upside down. */
 const SCALLOP_MOBILE = {
-  backgroundImage:
-    "radial-gradient(circle at 50% 0%, #f4e7e3 37.6px, transparent 37.7px)",
-  backgroundSize: "56.23px 38px",
+  backgroundImage: `url(${scallopSeam})`,
+  backgroundSize: "56.23px 75px",
   backgroundRepeat: "repeat-x",
+  backgroundPosition: "center bottom",
 };
 
 // Shown for any money figure whose quote hasn't landed yet - same convention

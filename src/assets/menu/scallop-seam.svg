@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="86.5962" height="115.4616" viewBox="0 0 86.5962 115.4616" preserveAspectRatio="none" fill="none">
+  <!--
+    One repeat of the scalloped seam under the Lunch Box section, taken from
+    Figma node 247:13447 (Group 153): circles of r=57.7308 spaced 86.5962
+    apart, filled #F4E7E3.
+
+    Figma draws all seventeen at fixed positions. This is one tile of that
+    same geometry, so it repeats seamlessly at any viewport width. Because a
+    circle (d=115.4616) is wider than the spacing, the tile has to carry its
+    two neighbours as well - they supply the lower corners the centre circle
+    curves away from. That overlap is exactly what a repeating CSS
+    radial-gradient could not express: each tile clipped its own circle at
+    the tile edge, leaving the flat vertical cuts this replaces.
+  -->
+  <g fill="#F4E7E3">
+    <circle cx="-43.2981" cy="57.7308" r="57.7308"/>
+    <circle cx="43.2981" cy="57.7308" r="57.7308"/>
+    <circle cx="129.8943" cy="57.7308" r="57.7308"/>
+  </g>
+</svg>
