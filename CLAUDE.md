@@ -11,7 +11,7 @@ A US bakery's storefront (Orange County, CA). React SPA, pixel-built from Figma,
 Two deployables, one domain.
 
 ```
-                     lilloaves.com  (domain at GoDaddy)
+                     lilloaves.com  (domain at Namecheap)
                               │
         ┌─────────────────────┴──────────────────────┐
         │                                            │
@@ -174,7 +174,7 @@ Every one of these was found by running against the real server, not by reading 
 | Delivery zone | Postcodes 92866–92869, flat rate **$5.00**. Test with **92868 / Orange / CA**; **90210** is out of area |
 | Pickup | `local_pickup` on zones 1 **and** 0 |
 | Coupon | `LOAF10` = 10% off |
-| Gateway | Cash on Delivery only — **Stripe vs Square is undecided** |
+| Gateway | **Stripe, in test mode**, plus Cash on Delivery. Card / Apple Pay / Google Pay / Link only — everything else (Klarna, Affirm, Cash App, regional methods) is deliberately off in Stripe's payment method configuration `pmc_1U3EeB…`. The plugin caches that config **20 minutes**; `WC_Stripe_Payment_Method_Configurations::clear_payment_method_configuration_cache()` after changing it, or a stale PaymentIntent will still offer the old set |
 | Currency | USD, taxes disabled (US food tax is state-specific and unresolved) |
 
 ---
@@ -184,7 +184,9 @@ Every one of these was found by running against the real server, not by reading 
 - **The Lunch Box's chosen options reach checkout but aren't saved onto the order.** The client sends them; `ll_handoff()` reads only `id`/`qty`. Needs storing as line-item meta
 - **No desktop layout for collection in the cart** — Figma never drew one, so desktop routes to `/pickup`
 - **Store address and hours are placeholders** (`1234 Example Ave`), and that address goes into customer emails
-- No payment gateway beyond COD
+- **Stripe is in test mode with test keys.** Live keys, and re-pointing the webhook at the production hostname, are still to do
+- **`/pickup` places no WooCommerce order at all** — it only emails. The real order-creating pickup flow is the cart's own toggle, but `OrderHero` links to `/pickup`. Harmless under COD; with Stripe a customer schedules a collection and is never charged
+- **Moving to `lilloaves.com` / `shop.lilloaves.com` needs more than DNS**: `VITE_WP_CHECKOUT_URL` is baked at build time so a **redeploy** is required, `WP_STORE_URL` must change, the Stripe webhook must be recreated for the new host, and Apple Pay needs domain verification there
 - `Pickup.jsx`'s month chevrons are non-functional
 - Only the first configured store is ever used — no multi-store picker
 - **A sale price on a *variation* won't show its struck-through "was" price.** `/variations` returns only the current price, so the strikethrough stays tied to the parent. Nothing is on sale today
